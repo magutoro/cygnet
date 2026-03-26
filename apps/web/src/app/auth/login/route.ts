@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { headers } from "next/headers";
 
 function sanitizeNextPath(value: string | null): string {
   const candidate = String(value || "").trim();
@@ -11,13 +10,9 @@ function sanitizeNextPath(value: string | null): string {
 
 export async function GET(request: Request) {
   const supabase = await createClient();
-  const headersList = await headers();
   const requestUrl = new URL(request.url);
   const next = sanitizeNextPath(requestUrl.searchParams.get("next"));
-  const origin =
-    headersList.get("x-forwarded-proto") && headersList.get("host")
-      ? `${headersList.get("x-forwarded-proto")}://${headersList.get("host")}`
-      : "http://localhost:3000";
+  const origin = requestUrl.origin;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
