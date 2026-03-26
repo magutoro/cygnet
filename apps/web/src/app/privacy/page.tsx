@@ -1,249 +1,274 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies, headers } from "next/headers";
+import {
+  LANGUAGE_COOKIE_KEY,
+  detectLanguageFromAcceptLanguage,
+  normalizeLanguage,
+} from "@/lib/language";
 
 export const metadata: Metadata = {
   title: "Privacy Policy – Cygnet",
-  description: "How Cygnet handles profile data, storage, and user controls.",
+  description: "How Cygnet handles profile data, synced data, local passwords, and user controls.",
 };
 
-export default function PrivacyPage() {
+const COPY = {
+  en: {
+    backToWebsite: "Back to website",
+    title: "Cygnet Privacy Policy",
+    updated: "Last updated: March 27, 2026",
+    intro:
+      "Cygnet provides a Chrome extension and web dashboard for autofilling job application forms. This page explains what is stored locally, what may be synced to Cygnet, and what we can and cannot access.",
+    sections: [
+      {
+        title: "1) What data Cygnet may handle",
+        paragraphs: [
+          "Depending on which features you use, Cygnet may handle profile information such as your name, email, phone number, address, birth date, education history, work history, links, notes, resume files, parsed resume text, and extension preferences.",
+          "Cygnet also reads page and form metadata such as field labels, placeholders, input names, and surrounding structure on pages where autofill is used so it can match your saved data to the correct fields.",
+        ],
+        bullets: [
+          "Profile fields you enter in the extension or dashboard",
+          "Resume files and parsed resume text if you upload resumes",
+          "Extension preferences and panel state",
+          "Saved login entries if you use the login-saving feature",
+        ],
+      },
+      {
+        title: "2) Where data is stored",
+        paragraphs: [
+          "Your profile data and extension settings are stored in browser extension storage. Depending on your browser configuration, that may include Chrome Sync.",
+          "If you sign in to Cygnet and use sync features, your profile data and resumes are also stored in Cygnet's secured Supabase backend so they can appear on the web dashboard and sync across devices.",
+          "Saved login passwords are different: they are stored locally in the extension only, protected with local encryption and your passphrase, and are not uploaded to Cygnet's servers.",
+        ],
+        bullets: [
+          "Saved login passwords stay local to your browser extension",
+          "Cygnet does not upload or read saved login passwords",
+          "Profile and resume data may be stored in Supabase when you use Cygnet account sync",
+        ],
+      },
+      {
+        title: "3) What Cygnet can access",
+        paragraphs: [
+          "If you only use local extension storage and do not use Cygnet account sync, Cygnet as a company does not receive your extension-only profile data or your saved login passwords.",
+          "If you sign in and sync your profile or resumes through Cygnet, that synced data is stored in our backend. Authorized Cygnet operators may be able to access synced profile or resume data when necessary for service operations, troubleshooting, security, abuse prevention, or legal compliance.",
+          "Cygnet cannot access your saved login passwords because those passwords are kept locally in the extension and are not sent to our backend.",
+        ],
+      },
+      {
+        title: "4) How data is used and shared",
+        paragraphs: [
+          "We use data to provide autofill, account sync, dashboard editing, resume management, and related support and security functions.",
+          "We do not sell personal data and do not share profile data with advertising networks or data brokers.",
+        ],
+        bullets: [
+          "Google and Supabase are used for authentication and account-backed sync",
+          "Supabase Storage is used for uploaded resume files",
+          "If you use optional AI resume parsing, resume text may be sent to OpenAI for parsing",
+          "Data is inserted into third-party job application websites only when you choose to autofill",
+        ],
+      },
+      {
+        title: "5) Retention and user controls",
+        paragraphs: [
+          "Local extension data remains until you edit it, delete it, clear browser storage, or uninstall the extension.",
+          "Synced profile and resume data remains until you update or delete it from your account, subject to reasonable backup and operational retention.",
+        ],
+        bullets: [
+          "You can edit or delete profile data in the extension and dashboard",
+          "You can delete uploaded resumes from the dashboard",
+          "You can uninstall the extension to stop local extension processing",
+          "You can disable Chrome Sync if you do not want browser-level sync",
+        ],
+      },
+      {
+        title: "6) Security",
+        paragraphs: [
+          "We use reasonable security measures for synced account data, including authenticated access controls and backend security features such as Row-Level Security where applicable.",
+          "Even so, no system is completely risk-free. We recommend not storing highly sensitive secrets unless you truly need them, and we especially recommend against putting government IDs, financial account information, or other unnecessary sensitive data into profile notes.",
+        ],
+      },
+      {
+        title: "7) Contact",
+        paragraphs: ["For privacy questions, contact:"],
+      },
+    ],
+    contactNameLabel: "Name/Company",
+    contactNameValue: "Cygnet",
+    contactEmailLabel: "Email",
+    contactWebsiteLabel: "Website",
+    footer: "All rights reserved.",
+  },
+  ja: {
+    backToWebsite: "サイトに戻る",
+    title: "Cygnet プライバシーポリシー",
+    updated: "最終更新日: 2026年3月27日",
+    intro:
+      "Cygnet は、求人応募フォームの自動入力を支援する Chrome 拡張機能と Web ダッシュボードを提供しています。このページでは、ローカルに保存される情報、Cygnet に同期される可能性がある情報、そして当社がアクセスできる情報とできない情報を説明します。",
+    sections: [
+      {
+        title: "1) Cygnet が取り扱う可能性のある情報",
+        paragraphs: [
+          "ご利用機能に応じて、氏名、メールアドレス、電話番号、住所、生年月日、学歴、職歴、各種リンク、メモ、履歴書ファイル、履歴書の解析結果、拡張機能の設定などを取り扱う場合があります。",
+          "また、自動入力を行うページでは、入力欄ラベル、プレースホルダー、input 名、周辺のフォーム構造などのページ・フォーム情報を読み取り、保存済みデータを適切な欄に対応付けます。",
+        ],
+        bullets: [
+          "拡張機能またはダッシュボードで入力したプロフィール情報",
+          "履歴書をアップロードした場合の履歴書ファイルと解析テキスト",
+          "拡張機能の設定やパネル状態",
+          "ログイン保存機能を使った場合の保存済みログイン情報",
+        ],
+      },
+      {
+        title: "2) 情報の保存場所",
+        paragraphs: [
+          "プロフィール情報と拡張機能設定は、ブラウザ拡張機能のストレージに保存されます。ブラウザ設定によっては Chrome Sync が含まれる場合があります。",
+          "Cygnet にログインして同期機能を使う場合、プロフィール情報と履歴書は、Web ダッシュボード表示や端末間同期のために、Cygnet の保護された Supabase バックエンドにも保存されます。",
+          "保存済みログインのパスワードは扱いが異なります。これらは拡張機能内にのみローカル保存され、ローカル暗号化とパスフレーズで保護され、Cygnet のサーバーにはアップロードされません。",
+        ],
+        bullets: [
+          "保存済みログインのパスワードはブラウザ拡張機能内だけに保存されます",
+          "Cygnet は保存済みログインのパスワードをアップロードせず、読むこともできません",
+          "プロフィールと履歴書は、Cygnet アカウント同期を使う場合に Supabase に保存されることがあります",
+        ],
+      },
+      {
+        title: "3) Cygnet がアクセスできる情報",
+        paragraphs: [
+          "ローカル拡張機能ストレージのみを利用し、Cygnet のアカウント同期を使わない場合、会社としての Cygnet は、そのローカル専用プロフィール情報や保存済みログインパスワードを受け取りません。",
+          "一方で、Cygnet にログインしてプロフィールや履歴書を同期した場合、その同期データは当社バックエンドに保存されます。サービス運用、トラブル対応、セキュリティ、悪用防止、法令対応のために必要な範囲で、権限を持つ Cygnet 担当者が同期済みプロフィールまたは履歴書データにアクセスできる場合があります。",
+          "ただし、保存済みログインのパスワードは拡張機能内にのみ保持され、当社バックエンドへ送信されないため、Cygnet はそれらのパスワードへアクセスできません。",
+        ],
+      },
+      {
+        title: "4) 情報の利用目的と共有",
+        paragraphs: [
+          "当社は、自動入力、アカウント同期、ダッシュボード編集、履歴書管理、関連するサポートおよびセキュリティ機能の提供のために情報を利用します。",
+          "当社は個人データを販売せず、広告ネットワークやデータブローカーにプロフィール情報を提供しません。",
+        ],
+        bullets: [
+          "認証とアカウント同期には Google と Supabase を利用します",
+          "アップロードされた履歴書ファイルには Supabase Storage を利用します",
+          "任意の AI 履歴書解析を使う場合、履歴書テキストが OpenAI に送信されることがあります",
+          "第三者の求人応募サイトへの入力は、ユーザーが自動入力を実行したときにのみ行われます",
+        ],
+      },
+      {
+        title: "5) 保存期間とユーザーのコントロール",
+        paragraphs: [
+          "ローカル拡張機能データは、編集・削除、ブラウザストレージの削除、または拡張機能のアンインストールまで保持されます。",
+          "同期済みのプロフィール情報と履歴書は、アカウント上で更新または削除されるまで保持されます。ただし、合理的なバックアップや運用上の保持が行われる場合があります。",
+        ],
+        bullets: [
+          "プロフィール情報は拡張機能とダッシュボードで編集・削除できます",
+          "アップロードした履歴書はダッシュボードから削除できます",
+          "拡張機能をアンインストールするとローカル処理を停止できます",
+          "ブラウザレベルの同期を望まない場合は Chrome Sync を無効化できます",
+        ],
+      },
+      {
+        title: "6) セキュリティ",
+        paragraphs: [
+          "同期されたアカウントデータについては、認証済みアクセス制御や、必要に応じた Row-Level Security など、合理的なセキュリティ対策を講じます。",
+          "それでも、完全にリスクのないシステムは存在しません。特に、政府発行 ID、金融口座情報、その他不要に機微な情報は、プロフィールのメモ等に保存しないことを推奨します。",
+        ],
+      },
+      {
+        title: "7) お問い合わせ",
+        paragraphs: ["プライバシーに関するお問い合わせ先:"],
+      },
+    ],
+    contactNameLabel: "名称 / 会社名",
+    contactNameValue: "Cygnet",
+    contactEmailLabel: "メールアドレス",
+    contactWebsiteLabel: "Webサイト",
+    footer: "All rights reserved.",
+  },
+} as const;
+
+export default async function PrivacyPage() {
+  const cookieStore = await cookies();
+  const headerStore = await headers();
+  const lang =
+    normalizeLanguage(cookieStore.get(LANGUAGE_COOKIE_KEY)?.value) ||
+    detectLanguageFromAcceptLanguage(headerStore.get("accept-language"));
+  const t = COPY[lang];
+
   return (
-    <div className="min-h-screen">
-      {/* ── Nav ── */}
-      <nav className="sticky top-0 z-50 border-b border-brand-line/60 bg-brand-bg/80 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" className="text-xl font-bold tracking-tight text-brand-ink">
-            Cygnet
+    <>
+      <main className="min-h-screen bg-brand-bg">
+        <div className="mx-auto max-w-3xl px-6 py-14">
+          <Link
+            href="/"
+            className="mb-6 inline-flex items-center gap-1 text-sm font-semibold text-brand-strong transition-colors hover:text-brand-ink"
+          >
+            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
+            {t.backToWebsite}
           </Link>
-        </div>
-      </nav>
 
-      <main className="mx-auto max-w-3xl px-6 pb-24 pt-12">
-        <Link
-          href="/"
-          className="mb-6 inline-flex items-center gap-1 text-sm font-semibold text-brand-strong transition-colors hover:text-brand-ink"
-        >
-          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-          </svg>
-          Back to website
-        </Link>
+          <div className="rounded-2xl border border-brand-line bg-white p-8 shadow-sm sm:p-10">
+            <h1 className="text-3xl font-extrabold tracking-tight text-brand-ink sm:text-4xl">
+              {t.title}
+            </h1>
+            <p className="mt-2 text-sm text-brand-muted">{t.updated}</p>
+            <p className="mt-6 leading-relaxed text-brand-muted">{t.intro}</p>
 
-        <div className="rounded-2xl border border-brand-line bg-white p-8 shadow-sm sm:p-10">
-          <h1 className="text-3xl font-extrabold tracking-tight text-brand-ink sm:text-4xl">
-            Cygnet Privacy Policy
-          </h1>
-          <p className="mt-2 text-sm text-brand-muted">Last updated: March 9, 2026</p>
+            {t.sections.map((section) => (
+              <section key={section.title} className="mt-10">
+                <h2 className="text-lg font-semibold text-brand-ink">{section.title}</h2>
+                {section.paragraphs.map((paragraph) => (
+                  <p key={paragraph} className="mt-2 leading-relaxed text-brand-muted">
+                    {paragraph}
+                  </p>
+                ))}
+                {"bullets" in section && section.bullets ? (
+                  <ul className="mt-3 list-disc space-y-1 pl-6 text-brand-muted">
+                    {section.bullets.map((bullet) => (
+                      <li key={bullet}>{bullet}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </section>
+            ))}
 
-          <p className="mt-6 leading-relaxed text-brand-muted">
-            Cygnet (&ldquo;we&rdquo;, &ldquo;our&rdquo;, or &ldquo;us&rdquo;) provides a Chrome
-            extension that helps users autofill job application forms.
-          </p>
-
-          {/* 1 */}
-          <h2 className="mt-10 text-lg font-semibold text-brand-ink">
-            1) What data Cygnet handles
-          </h2>
-          <p className="mt-2 leading-relaxed text-brand-muted">
-            Cygnet may handle profile data that users choose to enter, including:
-          </p>
-          <ul className="mt-3 list-disc space-y-1 pl-6 text-brand-muted">
-            <li>Name fields (kanji, furigana, English)</li>
-            <li>Preferred name</li>
-            <li>Email address and mobile email address</li>
-            <li>Phone number</li>
-            <li>Birth date</li>
-            <li>Gender</li>
-            <li>Password (if user stores one)</li>
-            <li>Address information (postal code, prefecture, city, address line 1, address line 2)</li>
-            <li>Education and career profile fields (for example university, faculty, graduation year, company, links, and notes)</li>
-            <li>Extension preferences (for example autofill enabled/disabled and panel state)</li>
-          </ul>
-          <p className="mt-3 leading-relaxed text-brand-muted">
-            Cygnet also reads form field labels/attributes on pages where autofill is used so it can
-            map your saved profile data to the correct form fields.
-          </p>
-
-          {/* 2 */}
-          <h2 className="mt-10 text-lg font-semibold text-brand-ink">
-            2) How data is collected
-          </h2>
-          <p className="mt-2 leading-relaxed text-brand-muted">Data is collected:</p>
-          <ul className="mt-3 list-disc space-y-1 pl-6 text-brand-muted">
-            <li>When you manually enter or edit your profile in the extension settings</li>
-            <li>When you use extension features such as Autofill, Refresh, and copy-to-clipboard from the profile panel</li>
-            <li>From form structure metadata on the active page (for example input names, labels, placeholders, autocomplete attributes) to detect where to fill data</li>
-          </ul>
-          <p className="mt-3 leading-relaxed text-brand-muted">
-            Cygnet does not require account creation and does not collect analytics or telemetry in its
-            current version.
-          </p>
-
-          {/* 3 */}
-          <h2 className="mt-10 text-lg font-semibold text-brand-ink">
-            3) How data is used
-          </h2>
-          <p className="mt-2 leading-relaxed text-brand-muted">
-            Data is used only to provide extension features, including:
-          </p>
-          <ul className="mt-3 list-disc space-y-1 pl-6 text-brand-muted">
-            <li>Autofilling forms on websites you visit</li>
-            <li>Displaying your saved profile in the in-page panel and popup</li>
-            <li>Copying profile values to your clipboard when you click copy targets</li>
-            <li>Saving your preferences and profile for reuse</li>
-          </ul>
-
-          {/* 4 */}
-          <h2 className="mt-10 text-lg font-semibold text-brand-ink">
-            4) Data sharing and third parties
-          </h2>
-          <p className="mt-2 leading-relaxed text-brand-muted">
-            Cygnet does not sell your personal data and does not share your profile data with
-            advertising networks or data brokers.
-          </p>
-          <p className="mt-3 leading-relaxed text-brand-muted">
-            Data may be shared only in the following ways:
-          </p>
-          <ul className="mt-3 list-disc space-y-1 pl-6 text-brand-muted">
-            <li>
-              With websites where you choose to autofill forms (the data is inserted into those forms by
-              your action)
-            </li>
-            <li>
-              With Google Chrome storage infrastructure when Chrome Sync is enabled in your browser
-              account (because extension settings may be stored in{" "}
-              <code className="rounded bg-brand-bg px-1.5 py-0.5 text-xs font-medium text-brand-ink">
-                chrome.storage.sync
-              </code>
-              )
-            </li>
-          </ul>
-          <p className="mt-3 leading-relaxed text-brand-muted">
-            No other third-party sharing is performed in the current version.
-          </p>
-
-          {/* 5 */}
-          <h2 className="mt-10 text-lg font-semibold text-brand-ink">
-            5) Data storage and retention
-          </h2>
-          <ul className="mt-3 list-disc space-y-1 pl-6 text-brand-muted">
-            <li>
-              Data is stored in your browser extension storage (
-              <code className="rounded bg-brand-bg px-1.5 py-0.5 text-xs font-medium text-brand-ink">
-                chrome.storage.sync
-              </code>{" "}
-              or{" "}
-              <code className="rounded bg-brand-bg px-1.5 py-0.5 text-xs font-medium text-brand-ink">
-                chrome.storage.local
-              </code>
-              , depending on browser availability/settings)
-            </li>
-            <li>
-              We do not operate a remote Cygnet backend for profile storage in the current version
-            </li>
-            <li>
-              Data remains stored until you edit or delete it, remove browser sync data, or uninstall the
-              extension
-            </li>
-          </ul>
-
-          {/* 6 */}
-          <h2 className="mt-10 text-lg font-semibold text-brand-ink">
-            6) Permissions and access scope
-          </h2>
-          <p className="mt-2 leading-relaxed text-brand-muted">
-            Cygnet requests extension permissions such as{" "}
-            <code className="rounded bg-brand-bg px-1.5 py-0.5 text-xs font-medium text-brand-ink">
-              storage
-            </code>
-            ,{" "}
-            <code className="rounded bg-brand-bg px-1.5 py-0.5 text-xs font-medium text-brand-ink">
-              activeTab
-            </code>
-            ,{" "}
-            <code className="rounded bg-brand-bg px-1.5 py-0.5 text-xs font-medium text-brand-ink">
-              scripting
-            </code>
-            , and host access to support autofill across many job sites.
-          </p>
-          <p className="mt-3 leading-relaxed text-brand-muted">
-            These permissions are used only for user-facing autofill and profile features.
-          </p>
-
-          {/* 7 */}
-          <h2 className="mt-10 text-lg font-semibold text-brand-ink">7) Security</h2>
-          <p className="mt-2 leading-relaxed text-brand-muted">
-            We aim to minimize data handling and keep processing local in the extension. However, no
-            software environment is completely risk-free. Users should avoid storing highly sensitive
-            secrets unless necessary and should keep their browser and operating system updated.
-          </p>
-
-          {/* 8 */}
-          <h2 className="mt-10 text-lg font-semibold text-brand-ink">
-            8) Your choices and controls
-          </h2>
-          <p className="mt-2 leading-relaxed text-brand-muted">You can:</p>
-          <ul className="mt-3 list-disc space-y-1 pl-6 text-brand-muted">
-            <li>View, edit, or delete profile fields in the extension settings</li>
-            <li>Toggle autofill behavior in the extension UI</li>
-            <li>Uninstall the extension to stop all data handling by Cygnet</li>
-            <li>Disable Chrome Sync (if desired) to avoid sync-based storage</li>
-          </ul>
-
-          {/* 9 */}
-          <h2 className="mt-10 text-lg font-semibold text-brand-ink">9) Children</h2>
-          <p className="mt-2 leading-relaxed text-brand-muted">
-            Cygnet is not directed to children under 13, and we do not knowingly collect data from
-            children.
-          </p>
-
-          {/* 10 */}
-          <h2 className="mt-10 text-lg font-semibold text-brand-ink">
-            10) Changes to this policy
-          </h2>
-          <p className="mt-2 leading-relaxed text-brand-muted">
-            We may update this policy from time to time. Updated versions will be posted at this URL with
-            a new &ldquo;Last updated&rdquo; date.
-          </p>
-
-          {/* 11 */}
-          <h2 className="mt-10 text-lg font-semibold text-brand-ink">11) Contact</h2>
-          <p className="mt-2 leading-relaxed text-brand-muted">For privacy questions, contact:</p>
-          <ul className="mt-3 list-disc space-y-1 pl-6 text-brand-muted">
-            <li>Name/Company: Cygnet</li>
-            <li>
-              Email:{" "}
-              <a
-                href="mailto:markoguro@gmail.com"
-                className="text-brand-strong underline decoration-brand/30 underline-offset-2 transition-colors hover:text-brand-ink"
-              >
-                markoguro@gmail.com
-              </a>
-            </li>
-            <li>
-              Website:{" "}
-              <a
-                href="https://cygnet-two.vercel.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand-strong underline decoration-brand/30 underline-offset-2 transition-colors hover:text-brand-ink"
-              >
-                https://cygnet-two.vercel.app
-              </a>
-            </li>
-          </ul>
+            <ul className="mt-3 list-disc space-y-1 pl-6 text-brand-muted">
+              <li>
+                {t.contactNameLabel}: {t.contactNameValue}
+              </li>
+              <li>
+                {t.contactEmailLabel}:{" "}
+                <a
+                  href="mailto:markoguro@gmail.com"
+                  className="text-brand-strong underline decoration-brand/30 underline-offset-2 transition-colors hover:text-brand-ink"
+                >
+                  markoguro@gmail.com
+                </a>
+              </li>
+              <li>
+                {t.contactWebsiteLabel}:{" "}
+                <a
+                  href="https://cygnet-two.vercel.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-strong underline decoration-brand/30 underline-offset-2 transition-colors hover:text-brand-ink"
+                >
+                  https://cygnet-two.vercel.app
+                </a>
+              </li>
+            </ul>
+          </div>
         </div>
       </main>
 
-      {/* ── Footer ── */}
       <footer className="border-t border-brand-line/60 bg-white/40">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 py-10 sm:flex-row">
           <div className="text-sm font-semibold text-brand-ink">Cygnet</div>
           <p className="text-xs text-brand-muted">
-            &copy; {new Date().getFullYear()} Cygnet. All rights reserved.
+            &copy; {new Date().getFullYear()} Cygnet. {t.footer}
           </p>
         </div>
       </footer>
-    </div>
+    </>
   );
 }

@@ -94,7 +94,7 @@ export default async function DashboardPage() {
           <div className="w-full max-w-sm rounded-2xl border border-brand-line bg-white/86 p-6 text-center shadow-xl">
             <p className="text-sm font-semibold text-brand-ink">{t.login}</p>
             <a
-              href="/auth/login?next=/dashboard"
+              href="/auth/consent?next=/dashboard"
               className="mt-4 inline-flex items-center justify-center rounded-lg bg-brand-strong px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-ink"
             >
               {t.loginWithGoogle}

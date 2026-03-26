@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/components/LanguageProvider";
 import {
   type Profile,
   type ProfileKey,
@@ -29,11 +30,16 @@ type ChoiceOption = {
   label: string;
 };
 
+type LocalizedText = {
+  en: string;
+  ja: string;
+};
+
 type FieldDef = {
   key: ProfileKey;
-  label: string;
-  type?: "text" | "email" | "date" | "textarea";
-  placeholder?: string;
+  label: string | LocalizedText;
+  type?: "text" | "email" | "date" | "textarea" | "monthSelect";
+  placeholder?: string | LocalizedText;
   options?: readonly ChoiceOption[];
   multiOptions?: readonly ChoiceOption[];
   full?: boolean;
@@ -41,7 +47,7 @@ type FieldDef = {
 };
 
 type SectionDef = {
-  title: string;
+  title: string | LocalizedText;
   fields: FieldDef[];
 };
 
@@ -161,52 +167,56 @@ const LICENSE_CERTIFICATION_OPTIONS: ChoiceOption[] = [
 
 const MAIN_SECTIONS: SectionDef[] = [
   {
-    title: "Basic info",
+    title: { en: "Basic info", ja: "基本情報" },
     fields: [
-      { key: "lastNameKanji", label: "Last name (漢字)", placeholder: "山田" },
-      { key: "firstNameKanji", label: "First name (漢字)", placeholder: "太郎" },
-      { key: "lastNameKana", label: "Last name (カナ)", placeholder: "やまだ" },
-      { key: "firstNameKana", label: "First name (カナ)", placeholder: "たろう" },
-      { key: "lastNameEnglish", label: "Last name (English)", placeholder: "Yamada" },
-      { key: "firstNameEnglish", label: "First name (English)", placeholder: "Taro" },
-      { key: "preferredName", label: "Preferred name" },
-      { key: "gender", label: "Gender", options: GENDER_OPTIONS },
-      { key: "birthDate", label: "Birth date", type: "date" },
+      { key: "lastNameKanji", label: { en: "Last name (Kanji)", ja: "姓（漢字）" }, placeholder: "山田" },
+      { key: "firstNameKanji", label: { en: "First name (Kanji)", ja: "名（漢字）" }, placeholder: "太郎" },
+      { key: "lastNameKana", label: { en: "Last name (Kana)", ja: "姓（かな）" }, placeholder: "やまだ" },
+      { key: "firstNameKana", label: { en: "First name (Kana)", ja: "名（かな）" }, placeholder: "たろう" },
+      { key: "lastNameEnglish", label: { en: "Last name (English)", ja: "姓（英字）" }, placeholder: "Yamada" },
+      { key: "firstNameEnglish", label: { en: "First name (English)", ja: "名（英字）" }, placeholder: "Taro" },
+      { key: "preferredName", label: { en: "Preferred name", ja: "希望名" } },
+      { key: "gender", label: { en: "Gender", ja: "性別" }, options: GENDER_OPTIONS },
+      { key: "birthDate", label: { en: "Birth date", ja: "生年月日" }, type: "date" },
     ],
   },
   {
-    title: "Contact & address",
+    title: { en: "Contact & address", ja: "連絡先・住所" },
     fields: [
-      { key: "email", label: "Email", type: "email" },
-      { key: "mobileEmail", label: "Mobile email", type: "email" },
-      { key: "phone", label: "Phone", placeholder: "090-1234-5678" },
-      { key: "postalCode", label: "Postal code", placeholder: "100-0001" },
-      { key: "prefecture", label: "Prefecture", placeholder: "東京都" },
-      { key: "city", label: "City", placeholder: "千代田区" },
-      { key: "addressLine1", label: "Address line 1" },
-      { key: "addressLine2", label: "Address line 2" },
+      { key: "email", label: { en: "Email", ja: "メールアドレス" }, type: "email" },
+      { key: "mobileEmail", label: { en: "Mobile email", ja: "携帯メール" }, type: "email" },
+      { key: "phone", label: { en: "Phone", ja: "電話番号" }, placeholder: "090-1234-5678" },
+      { key: "postalCode", label: { en: "Postal code", ja: "郵便番号" }, placeholder: "100-0001" },
+      { key: "prefecture", label: { en: "Prefecture", ja: "都道府県" }, placeholder: "東京都" },
+      { key: "city", label: { en: "City", ja: "市区町村" }, placeholder: "千代田区" },
+      { key: "addressLine1", label: { en: "Address line 1", ja: "住所1" } },
+      { key: "addressLine2", label: { en: "Address line 2", ja: "住所2" } },
     ],
   },
   {
-    title: "Education",
+    title: { en: "Education", ja: "学歴" },
     fields: [
-      { key: "educationType", label: "School type", options: EDUCATION_TYPE_OPTIONS },
-      { key: "universityKanaInitial", label: "University kana initial" },
-      { key: "university", label: "University", placeholder: "東京大学" },
-      { key: "universityPrefecture", label: "University prefecture" },
-      { key: "faculty", label: "Faculty" },
-      { key: "department", label: "Department" },
-      { key: "humanitiesScienceType", label: "Arts/Science", options: HUMANITIES_SCIENCE_OPTIONS },
-      { key: "graduationYear", label: "Graduation year/month", placeholder: "2026-03" },
+      { key: "educationType", label: { en: "School type", ja: "学校種別" }, options: EDUCATION_TYPE_OPTIONS },
+      { key: "universityKanaInitial", label: { en: "University kana initial", ja: "大学かな頭文字" } },
+      { key: "university", label: { en: "University", ja: "大学名" }, placeholder: "東京大学" },
+      { key: "universityPrefecture", label: { en: "University prefecture", ja: "大学所在地（都道府県）" } },
+      { key: "faculty", label: { en: "Faculty", ja: "学部" } },
+      { key: "department", label: { en: "Department", ja: "学科" } },
+      { key: "humanitiesScienceType", label: { en: "Arts/Science", ja: "文理区分" }, options: HUMANITIES_SCIENCE_OPTIONS },
+      {
+        key: "graduationYear",
+        label: { en: "Graduation year/month", ja: "卒業年月" },
+        type: "monthSelect",
+      },
     ],
   },
   {
-    title: "Career & links",
+    title: { en: "Career & links", ja: "職歴・リンク" },
     fields: [
-      { key: "company", label: "Company" },
-      { key: "linkedIn", label: "LinkedIn URL" },
-      { key: "github", label: "GitHub URL" },
-      { key: "portfolio", label: "Portfolio URL" },
+      { key: "company", label: { en: "Company", ja: "会社名" } },
+      { key: "linkedIn", label: { en: "LinkedIn URL", ja: "LinkedIn URL" } },
+      { key: "github", label: { en: "GitHub URL", ja: "GitHub URL" } },
+      { key: "portfolio", label: { en: "Portfolio URL", ja: "ポートフォリオ URL" } },
     ],
   },
 ];
@@ -371,6 +381,33 @@ const ADDITIONAL_SECTIONS: SectionDef[] = [
 
 const URL_PROFILE_KEYS: ProfileKey[] = ["linkedIn", "github", "portfolio"];
 
+const EDITOR_COPY = {
+  en: {
+    title: "Profile",
+    save: "Save",
+    saving: "Saving…",
+    mainTab: "Main",
+    additionalTab: "Additional",
+    saved: "Profile saved successfully.",
+    error: "Failed to save. Please try again.",
+    year: "Year",
+    month: "Month",
+    unset: "Unset",
+  },
+  ja: {
+    title: "プロフィール",
+    save: "保存",
+    saving: "保存中…",
+    mainTab: "メイン",
+    additionalTab: "追加情報",
+    saved: "プロフィールを保存しました。",
+    error: "保存に失敗しました。もう一度お試しください。",
+    year: "年",
+    month: "月",
+    unset: "未設定",
+  },
+} as const;
+
 function normalizeProfileLinks(profile: Profile): Profile {
   const next: Profile = { ...profile };
   for (const key of URL_PROFILE_KEYS) {
@@ -381,6 +418,8 @@ function normalizeProfileLinks(profile: Profile): Profile {
 
 const ProfileEditor = forwardRef<ProfileEditorHandle, Props>(
   function ProfileEditor({ initialProfile, userId }, ref) {
+    const { lang } = useLanguage();
+    const t = EDITOR_COPY[lang];
     const [profile, setProfile] = useState<Profile>(initialProfile);
     const [status, setStatus] = useState<SaveStatus>("idle");
     const [activeTab, setActiveTab] = useState<TabKey>("main");
@@ -422,14 +461,14 @@ const ProfileEditor = forwardRef<ProfileEditorHandle, Props>(
     return (
       <div className="rounded-2xl border border-brand-line bg-white p-6 shadow-sm">
         <div className="mb-6 flex items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold text-brand-ink">Profile</h2>
+          <h2 className="text-lg font-semibold text-brand-ink">{t.title}</h2>
           <button
             type="button"
             onClick={save}
             disabled={status === "saving"}
             className="rounded-lg bg-brand-strong px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-ink disabled:opacity-50"
           >
-            {status === "saving" ? "Saving…" : "Save"}
+            {status === "saving" ? t.saving : t.save}
           </button>
         </div>
 
@@ -443,7 +482,7 @@ const ProfileEditor = forwardRef<ProfileEditorHandle, Props>(
                 : "border-brand-line bg-brand-bg/40 text-brand-ink hover:bg-brand-bg"
             }`}
           >
-            メイン
+            {t.mainTab}
           </button>
           <button
             type="button"
@@ -454,32 +493,33 @@ const ProfileEditor = forwardRef<ProfileEditorHandle, Props>(
                 : "border-brand-line bg-brand-bg/40 text-brand-ink hover:bg-brand-bg"
             }`}
           >
-            追加情報
+            {t.additionalTab}
           </button>
         </div>
 
         {status === "saved" && (
           <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700">
-            Profile saved successfully.
+            {t.saved}
           </div>
         )}
         {status === "error" && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
-            Failed to save. Please try again.
+            {t.error}
           </div>
         )}
 
         <div className="space-y-8">
-          {sections.map((section) => (
-            <fieldset key={section.title}>
+          {sections.map((section, index) => (
+            <fieldset key={`${activeTab}-${index}`}>
               <legend className="mb-3 text-sm font-semibold uppercase tracking-wider text-brand">
-                {section.title}
+                {resolveLocalizedText(section.title, lang)}
               </legend>
               <div className="grid gap-4 sm:grid-cols-2">
                 {section.fields.map((field) => (
                   <FieldRenderer
                     key={field.key}
                     field={field}
+                    lang={lang}
                     value={profile[field.key] ?? ""}
                     onChange={(v) => update(field.key, v)}
                   />
@@ -497,17 +537,22 @@ export default ProfileEditor;
 
 function FieldRenderer({
   field,
+  lang,
   value,
   onChange,
 }: {
   field: FieldDef;
+  lang: "en" | "ja";
   value: string;
   onChange: (value: string) => void;
 }) {
+  const label = resolveLocalizedText(field.label, lang) ?? "";
+  const placeholder = resolveLocalizedText(field.placeholder, lang);
+
   if (field.options) {
     return (
       <SelectField
-        label={field.label}
+        label={label}
         value={value}
         options={field.options}
         onChange={onChange}
@@ -519,7 +564,7 @@ function FieldRenderer({
   if (field.multiOptions) {
     return (
       <MultiSelectField
-        label={field.label}
+        label={label}
         value={value}
         options={field.multiOptions}
         onChange={onChange}
@@ -531,26 +576,44 @@ function FieldRenderer({
   if (field.type === "textarea") {
     return (
       <TextareaField
-        label={field.label}
+        label={label}
         value={value}
         rows={field.rows}
-        placeholder={field.placeholder}
+        placeholder={placeholder}
         onChange={onChange}
         full={field.full}
       />
     );
   }
 
+  if (field.type === "monthSelect") {
+    return (
+      <MonthSelectField
+        label={label}
+        value={value}
+        onChange={onChange}
+        full={field.full}
+        lang={lang}
+      />
+    );
+  }
+
   return (
     <InputField
-      label={field.label}
+      label={label}
       type={field.type ?? "text"}
-      placeholder={field.placeholder}
+      placeholder={placeholder}
       value={value}
       onChange={onChange}
       full={field.full}
     />
   );
+}
+
+function resolveLocalizedText(value: string | LocalizedText | undefined, lang: "en" | "ja"): string | undefined {
+  if (!value) return undefined;
+  if (typeof value === "string") return value;
+  return value[lang];
 }
 
 function InputField({
@@ -639,6 +702,74 @@ function SelectField({
         ))}
       </select>
     </label>
+  );
+}
+
+function MonthSelectField({
+  label,
+  value,
+  onChange,
+  full,
+  lang,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  full?: boolean;
+  lang: "en" | "ja";
+}) {
+  const t = EDITOR_COPY[lang];
+  const match = String(value || "").match(/^(\d{4})-(\d{2})$/);
+  const selectedYear = match?.[1] || "";
+  const selectedMonth = match?.[2] || "";
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 71 }, (_, index) => String(currentYear + 10 - index));
+  const monthOptions = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0"));
+
+  const updateValue = (year: string, month: string) => {
+    if (!year || !month) {
+      onChange("");
+      return;
+    }
+    onChange(`${year}-${month}`);
+  };
+
+  return (
+    <div className={`block ${full ? "sm:col-span-2" : ""}`}>
+      <span className="mb-1 block text-xs font-medium text-brand-muted">{label}</span>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="mb-1 block text-[11px] font-medium text-brand-muted/90">{t.year}</span>
+          <select
+            value={selectedYear}
+            onChange={(e) => updateValue(e.target.value, selectedMonth)}
+            className="w-full rounded-lg border border-brand-line bg-brand-bg/40 px-3 py-2 text-sm text-brand-ink transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+          >
+            <option value="">{t.unset}</option>
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[11px] font-medium text-brand-muted/90">{t.month}</span>
+          <select
+            value={selectedMonth}
+            onChange={(e) => updateValue(selectedYear, e.target.value)}
+            className="w-full rounded-lg border border-brand-line bg-brand-bg/40 px-3 py-2 text-sm text-brand-ink transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+          >
+            <option value="">{t.unset}</option>
+            {monthOptions.map((month) => (
+              <option key={month} value={month}>
+                {month}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+    </div>
   );
 }
 

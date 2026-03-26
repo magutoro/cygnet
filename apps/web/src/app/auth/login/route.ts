@@ -9,10 +9,18 @@ function sanitizeNextPath(value: string | null): string {
 }
 
 export async function GET(request: Request) {
-  const supabase = await createClient();
   const requestUrl = new URL(request.url);
   const next = sanitizeNextPath(requestUrl.searchParams.get("next"));
   const origin = requestUrl.origin;
+  const confirmed = requestUrl.searchParams.get("confirmed") === "1";
+
+  if (!confirmed) {
+    return NextResponse.redirect(
+      new URL(`/auth/consent?next=${encodeURIComponent(next)}`, origin),
+    );
+  }
+
+  const supabase = await createClient();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
