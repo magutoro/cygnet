@@ -21,7 +21,11 @@ const DEFAULT_SETTINGS = {
   profile: DEFAULT_PROFILE,
 };
 
-const TRUSTED_EXTERNAL_ORIGINS = new Set(["http://localhost:3000", "http://127.0.0.1:3000"]);
+const TRUSTED_EXTERNAL_ORIGINS = new Set([
+  "https://cygnet-two.vercel.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+]);
 const STATE_VERSION_KEY = "cygnetStateVersion";
 
 function getSenderOrigin(url: string | undefined): string | null {

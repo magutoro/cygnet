@@ -223,12 +223,12 @@ export default function PrivacyPage() {
             <li>
               Website:{" "}
               <a
-                href="https://magutoro.github.io/Cygnet/"
+                href="https://cygnet-two.vercel.app"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-brand-strong underline decoration-brand/30 underline-offset-2 transition-colors hover:text-brand-ink"
               >
-                https://magutoro.github.io/Cygnet/
+                https://cygnet-two.vercel.app
               </a>
             </li>
           </ul>

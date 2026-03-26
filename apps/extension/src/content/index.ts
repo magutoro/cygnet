@@ -178,7 +178,11 @@ const CREDENTIAL_SAVE_DEBOUNCE_MS = 450;
 const CREDENTIAL_CAPTURE_DEDUPE_MS = 5000;
 const OVERLAY_HOST_ID = "cygnet-inpage-overlay";
 const OVERLAY_DOMAIN_STATE_KEY = "overlayDomainState";
-const WEB_BRIDGE_ORIGINS = new Set(["http://localhost:3000", "http://127.0.0.1:3000"]);
+const WEB_BRIDGE_ORIGINS = new Set([
+  "https://cygnet-two.vercel.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+]);
 const WEB_BRIDGE_REQUEST_TYPE = "CYGNET_REQUEST_EXTENSION_ID";
 const WEB_BRIDGE_RESPONSE_TYPE = "CYGNET_EXTENSION_ID";
 

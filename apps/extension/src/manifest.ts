@@ -21,7 +21,11 @@ export default defineManifest({
   action: {},
   options_page: "src/options/index.html",
   externally_connectable: {
-    matches: ["http://localhost/*", "http://127.0.0.1/*"],
+    matches: [
+      "https://cygnet-two.vercel.app/*",
+      "http://localhost/*",
+      "http://127.0.0.1/*",
+    ],
   },
   commands: {
     "run-autofill": {

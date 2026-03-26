@@ -1,5 +1,5 @@
-const DEFAULT_WEB_DASHBOARD_URL = "http://localhost:3000/dashboard";
-const DEFAULT_WEB_LOGIN_URL = "http://localhost:3000/auth/login?next=/dashboard";
+const DEFAULT_WEB_DASHBOARD_URL = "https://cygnet-two.vercel.app/dashboard";
+const DEFAULT_WEB_LOGIN_URL = "https://cygnet-two.vercel.app/auth/login?next=/dashboard";
 
 export function getWebDashboardUrl(): string {
   const configured = String(import.meta.env.VITE_WEB_DASHBOARD_URL || "").trim();
