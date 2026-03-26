@@ -1,0 +1,26 @@
+{
+  "name": "cygnet",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter @cygnet/web dev",
+    "dev:ext": "pnpm --filter @cygnet/extension dev",
+    "build": "turbo run build",
+    "build:web": "turbo run build --filter=@cygnet/web",
+    "build:ext": "turbo run build --filter=@cygnet/extension",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "turbo": "^2",
+    "typescript": "^5.7",
+    "prettier": "^3",
+    "@typescript-eslint/eslint-plugin": "^8",
+    "@typescript-eslint/parser": "^8",
+    "eslint": "^9"
+  },
+  "packageManager": "pnpm@9.14.3",
+  "engines": {
+    "node": ">=20"
+  }
+}

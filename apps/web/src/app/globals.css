@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #edf6ff;
+  --bg-soft: #f6fbff;
+  --primary: #5ba8e8;
+  --primary-strong: #3c91d8;
+  --ink: #1c3551;
+  --muted: #5d7896;
+  --line: #d8e9f9;
+  --card: #ffffff;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: var(--ink);
+  background-color: var(--bg);
+}
+
+@layer base {
+  ::selection {
+    background-color: rgba(91, 168, 232, 0.25);
+  }
+}

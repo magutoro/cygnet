@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cygnet autofill made easy</title>
+    <link rel="stylesheet" href="./styles.css?v=20260307g" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <div class="lang-toggle" role="group" aria-label="Language switcher">
+          <button class="lang-btn active" type="button" data-lang-btn="en" aria-pressed="true">EN</button>
+          <button class="lang-btn" type="button" data-lang-btn="ja" aria-pressed="false">日本語</button>
+        </div>
+
+        <p class="badge" data-i18n="badge">Chrome Extension</p>
+        <h1 data-i18n="title">Cygnet autofill made easy</h1>
+        <p class="subtitle" data-i18n="subtitle">
+          Autofill Japanese job application forms with your saved profile.
+        </p>
+      </header>
+
+      <section class="card">
+        <h2 data-i18n="download_title">Download Extension</h2>
+        <p data-i18n="download_desc">
+          Download the latest package and load it in Chrome extensions.
+        </p>
+        <a class="primary-btn" href="./Cygnet-ex.zip" download data-i18n="download_btn">
+          Download .zip
+        </a>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="privacy_title">Privacy</h2>
+        <p data-i18n="privacy_desc">
+          Read how Cygnet handles profile data, storage, and user controls.
+        </p>
+        <div class="option-row">
+          <a class="option-btn" href="./privacy.html" data-i18n="privacy_open">Read privacy policy</a>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="demo_title">Setup Demo</h2>
+
+        <div class="option-row">
+          <a class="option-btn" href="./cygnet-demo.html" target="_blank" rel="noopener" data-i18n="demo_open">
+            Open demo in new tab
+          </a>
+        </div>
+
+        <div class="demo-wrap">
+          <iframe
+            src="./cygnet-demo.html"
+            title="Cygnet setup demo"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+            tabindex="-1"
+          ></iframe>
+        </div>
+
+        <section class="steps-panel" id="written-steps">
+          <h3 data-i18n="steps_title">Step by Step</h3>
+          <ol class="steps-list">
+            <li>
+              <span>1</span>
+              <p data-i18n="step_1">Download and unzip the extension package.</p>
+            </li>
+            <li>
+              <span>2</span>
+              <p data-i18n="step_2">Open chrome://extensions in Chrome.</p>
+            </li>
+            <li>
+              <span>3</span>
+              <p data-i18n="step_3">Enable Developer mode.</p>
+            </li>
+            <li>
+              <span>4</span>
+              <p data-i18n="step_4">Click Load unpacked and select the extracted folder.</p>
+            </li>
+            <li>
+              <span>5</span>
+              <p data-i18n="step_5">Open profile settings in the extension and save your info.</p>
+            </li>
+            <li>
+              <span>6</span>
+              <p data-i18n="step_6">Open a job form and run autofill from the popup.</p>
+            </li>
+          </ol>
+        </section>
+      </section>
+    </main>
+
+    <script defer src="./script.js?v=20260307g"></script>
+  </body>
+</html>

@@ -1,0 +1,182 @@
+:root {
+  color-scheme: light;
+  --bg: #edf6ff;
+  --bg-soft: #f6fbff;
+  --card: #ffffff;
+  --line: #d8e9f9;
+  --text: #1c3551;
+  --muted: #5d7896;
+  --primary: #5ba8e8;
+  --primary-strong: #3c91d8;
+  font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  width: 336px;
+  padding: 8px;
+  color: var(--text);
+  background: radial-gradient(circle at 10% 0%, #cde8ff 0%, transparent 40%),
+    radial-gradient(circle at 90% 4%, #d8f0ff 0%, transparent 34%),
+    linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%);
+}
+
+main {
+  padding: 14px 14px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: 0 8px 20px rgba(72, 131, 182, 0.08);
+}
+
+h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 7px 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #f8fcff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary-strong);
+}
+
+button {
+  width: 100%;
+  border: 1px solid #c8e2fa;
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  background: linear-gradient(
+    120deg,
+    var(--primary) 0%,
+    var(--primary-strong) 100%
+  );
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 8px 16px rgba(73, 143, 200, 0.24);
+}
+
+button:hover {
+  filter: brightness(0.98);
+}
+
+button.secondary {
+  color: #2d6fa8;
+  background: #edf7ff;
+  border-color: #c8e2fa;
+  box-shadow: none;
+}
+
+button.secondary:hover {
+  background: #e3f2ff;
+}
+
+.auth-section {
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #f8fcff;
+}
+
+.auth-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+}
+
+.auth-email {
+  font-size: 12px;
+  color: var(--muted);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.auth-btn {
+  width: auto;
+  padding: 5px 10px;
+  margin-top: 0;
+  font-size: 11px;
+  border-radius: 8px;
+}
+
+.google-btn {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-top: 0;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(72, 131, 182, 0.1);
+}
+
+.google-btn:hover {
+  background: #f0f7ff;
+}
+
+.google-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.status {
+  min-height: 1.2em;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}

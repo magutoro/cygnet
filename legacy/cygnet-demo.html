@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cygnet — Setup Walkthrough</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: #d0d0d0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 30px 20px 80px;
+}
+
+/* ══════════════════════════════════
+   BROWSER — fixed 900×620, never changes
+══════════════════════════════════ */
+.browser {
+  width: 900px;
+  /* total height = title-bar (~78px) + page (540px) = 618px */
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.1),
+              0 14px 50px rgba(0,0,0,0.3),
+              0 0 0 0.5px rgba(0,0,0,0.15);
+  background: white;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* ── Title bar ── */
+.title-bar {
+  background: #ebebeb;
+  border-bottom: 1px solid #cdcdcd;
+  user-select: none;
+  position: relative; /* for overlay positioning */
+}
+
+.title-bar-top {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px 0;
+}
+
+.dots { display: flex; gap: 7px; align-items: center; }
+.dot  { width: 12px; height: 12px; border-radius: 50%; }
+.dot-r { background: #ff5f57; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.15); }
+.dot-y { background: #febc2e; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.15); }
+.dot-g { background: #28c840; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.15); }
+
+.tabs-row {
+  display: flex; align-items: flex-end; flex: 1;
+  padding-left: 8px; gap: 2px;
+}
+
+.tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 14px 7px;
+  border-radius: 8px 8px 0 0;
+  font-size: 12px;
+  max-width: 200px; min-width: 80px;
+  transition: background 0.3s, color 0.3s;
+}
+.tab-active   { background: white; color: #222; }
+.tab-inactive { background: #d5d5d5; color: #888; }
+
+.tab-fav { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+.tab-fav-blue { background: linear-gradient(135deg,#2d7dd2,#1a55a0); }
+.tab-fav-google {
+  background: conic-gradient(#4285f4 25%,#34a853 25% 50%,#fbbc05 50% 75%,#ea4335 75%);
+  border-radius: 3px;
+}
+.tab-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex:1; }
+.tab-x { color: #aaa; font-size: 10px; flex-shrink: 0; }
+
+/* ── Address bar row ── */
+.addr-row {
+  background: white;
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 10px;
+  border-top: 1px solid #d0d0d0;
+}
+
+.nav-btn { color: #c0c0c0; font-size: 15px; cursor: default; padding: 0 2px; line-height: 1; flex-shrink: 0; }
+.nav-btn.on { color: #555; }
+
+.addr-input {
+  flex: 1;
+  background: #f2f2f2;
+  border: 1px solid #d8d8d8;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 13px; color: #333;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.25s;
+  white-space: nowrap; overflow: hidden;
+}
+.addr-input.typing {
+  background: white;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 2px rgba(66,133,244,0.25);
+}
+
+/* ── Toolbar icons (right of address bar) ── */
+.toolbar-icons {
+  display: flex; align-items: center; gap: 2px; flex-shrink: 0;
+}
+
+.tb-icon {
+  width: 28px; height: 28px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.15s; color: #666;
+  flex-shrink: 0;
+}
+.tb-icon:hover { background: #e0e0e0; }
+.tb-icon.lit   { background: #dce8fd; }
+
+/* Download icon — appears in toolbar after download */
+#dl-toolbar-icon {
+  display: none;
+  position: relative;
+}
+#dl-toolbar-icon.show { display: flex; }
+
+/* Download progress ring */
+.dl-ring {
+  width: 20px; height: 20px; position: relative;
+}
+.dl-ring svg { width: 20px; height: 20px; transform: rotate(-90deg); }
+.dl-ring circle {
+  fill: none; stroke: #e0e0e0; stroke-width: 3;
+}
+.dl-ring .prog {
+  stroke: #1a73e8;
+  stroke-dasharray: 50.3;
+  stroke-dashoffset: 50.3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s ease;
+}
+
+/* Download dropdown (from toolbar icon) */
+#dl-dropdown {
+  position: absolute;
+  top: 78px; right: 42px;
+  width: 320px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.07);
+  z-index: 60;
+  opacity: 0; pointer-events: none;
+  transform: translateY(-6px) scale(0.97);
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+#dl-dropdown.show { opacity:1; pointer-events:all; transform: translateY(0) scale(1); }
+
+.dl-dd-header {
+  padding: 12px 14px 8px;
+  font-size: 13px; font-weight: 600; color: #222;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.dl-dd-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px;
+}
+.dl-dd-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: #f0f4ff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.dl-dd-info { flex:1; }
+.dl-dd-name { font-size: 13px; font-weight: 500; color: #1a2a3a; }
+.dl-dd-meta { font-size: 11px; color: #888; margin-top: 1px; }
+.dl-dd-open {
+  border: 1px solid #ddd; background: none; border-radius: 5px;
+  padding: 5px 12px; font-size: 12px; color: #333;
+  font-family: 'Inter', sans-serif; cursor: pointer;
+  transition: all 0.15s;
+}
+.dl-dd-open:hover { background: #f5f5f5; border-color: #bbb; }
+.dl-dd-open.hl { border-color: #1a73e8; color: #1a73e8; background: #e8f0fd; }
+
+/* ══ Extension dropdown (puzzle icon) ══ */
+#ext-dropdown {
+  position: absolute;
+  top: 78px; right: 10px;
+  width: 230px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.07);
+  z-index: 60;
+  opacity: 0; pointer-events: none;
+  transform: translateY(-6px) scale(0.97);
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+#ext-dropdown.show { opacity:1; pointer-events:all; transform:translateY(0) scale(1); }
+
+.dd-head {
+  padding: 10px 14px 8px;
+  font-size: 11px; color: #555;
+  border-bottom: 1px solid #f0f0f0;
+  line-height: 1.4;
+}
+.dd-head strong { font-size: 12px; color: #222; display: block; margin-bottom: 2px; }
+
+.dd-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px; cursor: pointer;
+  transition: background 0.15s; font-size: 13px; color: #222;
+}
+.dd-row:hover { background: #f5f5f5; }
+
+.dd-ext-icon {
+  width: 22px; height: 22px; border-radius: 5px;
+  background: linear-gradient(135deg,#2d7dd2,#1a55a0);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: white; flex-shrink: 0;
+}
+
+.dd-pin-icon { margin-left: auto; opacity: 0.4; font-size: 13px; }
+
+.dd-foot {
+  border-top: 1px solid #f0f0f0;
+  padding: 8px 14px;
+  font-size: 12px; color: #1a73e8; cursor: pointer;
+}
+.dd-foot:hover { background: #f5f5f5; }
+
+/* ══ Cygnet popup ══ */
+#magu-popup {
+  position: absolute;
+  top: 78px; right: 10px;
+  width: 234px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.07);
+  z-index: 60; padding: 16px;
+  opacity: 0; pointer-events: none;
+  transform: translateY(-6px) scale(0.97);
+  transition: all 0.25s ease;
+}
+#magu-popup.show { opacity:1; pointer-events:all; transform:translateY(0) scale(1); }
+
+.pu-title { font-size: 15px; font-weight: 700; color: #1a2a3a; margin-bottom: 2px; }
+.pu-sub   { font-size: 11px; color: #999; margin-bottom: 12px; }
+.pu-check {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: #333; margin-bottom: 14px;
+}
+.pu-chkbox {
+  width: 16px; height: 16px; border-radius: 3px;
+  background: #1a73e8;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 10px; flex-shrink: 0;
+}
+.pu-btn-main {
+  width: 100%; background: #1a73e8; color: white; border: none;
+  border-radius: 7px; padding: 10px; font-size: 13px; font-weight: 600;
+  font-family: 'Inter', sans-serif; cursor: pointer; margin-bottom: 8px;
+  transition: background 0.2s;
+}
+.pu-btn-main:hover { background: #1259c7; }
+.pu-btn-sec {
+  width: 100%; background: transparent; color: #555;
+  border: 1px solid #ddd; border-radius: 7px; padding: 8px;
+  font-size: 12px; font-family: 'Inter', sans-serif; cursor: pointer;
+}
+.pu-btn-sec:hover { border-color: #1a73e8; color: #1a73e8; }
+
+/* ══════════════════════════════════
+   PAGE AREA — always exactly 540px tall
+══════════════════════════════════ */
+.page-area {
+  height: 540px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* scenes sit absolute, all same size */
+.scene {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+  overflow: hidden;
+}
+.scene.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ══ S1: LANDING ══ */
+#s-landing {
+  background: linear-gradient(165deg, #eaf4ff 0%, #d2e8f8 100%);
+  overflow-y: auto;
+  padding: 26px 32px 30px;
+}
+
+.lang-pills { display: flex; justify-content: center; gap: 6px; margin-bottom: 18px; }
+.pill { padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+.pill-on  { background: white; color: #222; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.pill-off { color: #5577aa; }
+.pill-ext { background: #2d7dd2; color: white; font-size: 10px; letter-spacing: 0.07em; }
+
+.hero-box {
+  background: linear-gradient(135deg,#ddeeff,#c5dcf4);
+  border: 1px solid rgba(255,255,255,0.65);
+  border-radius: 12px; padding: 22px 24px; text-align: center; margin-bottom: 14px;
+}
+.hero-box h2 {
+  font-size: 1.65rem; font-weight: 700; color: #1a2a3a;
+  letter-spacing: -0.02em; margin-bottom: 6px;
+}
+.hero-box p { color: #4a6070; font-size: 13px; }
+
+.card {
+  background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.7);
+  border-radius: 12px; padding: 16px 18px; margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(20,60,100,0.07);
+}
+.card h3 { font-size: 13px; font-weight: 600; color: #1a2a3a; margin-bottom: 4px; }
+.card p  { font-size: 12px; color: #4a6070; margin-bottom: 10px; }
+
+.btn-blue {
+  background: #2d7dd2; color: white; border: none; border-radius: 7px;
+  padding: 7px 18px; font-size: 12.5px; font-weight: 500;
+  font-family: 'Inter', sans-serif; cursor: pointer; transition: background 0.2s;
+}
+.btn-blue:hover { background: #1c65b8; }
+.btn-ghost {
+  background: transparent; color: #445; border: 1px solid #c5d8e8;
+  border-radius: 7px; padding: 5px 13px; font-size: 12px;
+  font-family: 'Inter', sans-serif; cursor: pointer; margin-top: 10px;
+}
+
+.vid-box {
+  background: #111; border-radius: 7px; height: 88px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden; margin-bottom: 8px;
+}
+.play-ring {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,0.13); border: 1.5px solid rgba(255,255,255,0.3);
+  display: flex; align-items: center; justify-content: center;
+}
+.play-tri {
+  width:0; height:0; border:solid transparent;
+  border-width:6px 0 6px 10px; border-left-color:rgba(255,255,255,0.8); margin-left:2px;
+}
+.vid-bar-inner {
+  position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.5);
+  padding:4px 8px; display:flex; gap:6px; align-items:center;
+  font-size:10px; color:rgba(255,255,255,0.65);
+}
+.vid-prog-bar { flex:1; height:2px; background:rgba(255,255,255,0.2); border-radius:2px; }
+.vid-note { font-size:11px; color:#5a7080; margin-top:6px; }
+
+/* ══ S2: FINDER ══ */
+#s-finder {
+  background: linear-gradient(165deg,#eaf4ff 0%,#d2e8f8 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.finder {
+  width: 560px; background: white; border-radius: 10px; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.22), 0 0 0 0.5px rgba(0,0,0,0.1);
+  opacity: 0; transform: scale(0.94) translateY(10px);
+  transition: all 0.45s cubic-bezier(0.22,1,0.36,1);
+}
+.finder.open { opacity:1; transform:scale(1) translateY(0); }
+
+.finder-bar {
+  background:#e8e8e8; border-bottom:1px solid #ccc;
+  padding:9px 14px; display:flex; align-items:center; gap:10px;
+}
+.finder-bar-title { flex:1; text-align:center; font-size:13px; font-weight:600; color:#333; }
+
+.finder-body { display:flex; height:270px; }
+.finder-sidebar {
+  width:148px; background:#f5f5f7; border-right:1px solid #e0e0e0;
+  padding:10px 0; flex-shrink:0;
+}
+.f-grp {
+  font-size:10px; font-weight:600; color:#999; text-transform:uppercase;
+  letter-spacing:0.06em; padding:8px 12px 3px;
+}
+.f-item {
+  display:flex; align-items:center; gap:7px;
+  padding:4px 10px; font-size:12.5px; color:#333;
+  border-radius:5px; margin:1px 5px; cursor:default;
+}
+.f-item.active { background:#2d7dd2; color:white; }
+.finder-main { flex:1; padding:10px 12px; overflow-y:auto; }
+.f-section { font-size:11px; font-weight:600; color:#999; margin:6px 0 4px; }
+.f-file {
+  display:flex; align-items:center; gap:8px;
+  padding:4px 8px; border-radius:5px; font-size:12.5px; color:#222; cursor:default;
+}
+.f-file.sel { background:#2d7dd2; color:white; }
+
+/* ══ S3: EXTENSIONS ══ */
+#s-extensions {
+  background:#f8f9fa; display:flex;
+}
+
+.ext-sidebar {
+  width:216px; background:white; border-right:1px solid #e8e8e8;
+  padding:18px 0; flex-shrink:0;
+}
+.ext-logo-row {
+  display:flex; align-items:center; gap:10px;
+  padding:0 18px 14px; font-size:16px; font-weight:500; color:#202124;
+  border-bottom:1px solid #f0f0f0; margin-bottom:6px;
+}
+.g-sq {
+  width:24px; height:24px; border-radius:5px;
+  background:conic-gradient(#4285f4 25%,#34a853 25% 50%,#fbbc05 50% 75%,#ea4335 75%);
+  flex-shrink:0;
+}
+.ext-nav {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 18px; font-size:13px; color:#555; cursor:default;
+}
+.ext-nav.active {
+  background:#e8f0fe; color:#1a73e8; font-weight:500;
+  border-radius:0 24px 24px 0; margin-right:14px;
+}
+
+.ext-main { flex:1; padding:22px 28px; overflow-y:auto; }
+
+.ext-toprow { display:flex; align-items:center; margin-bottom:20px; }
+.ext-title  { font-size:22px; font-weight:400; color:#202124; flex:1; }
+
+.dev-row {
+  display:flex; align-items:center; gap:9px;
+  font-size:13px; color:#5f6368; cursor:pointer;
+}
+.tgl {
+  width:38px; height:22px; border-radius:11px; position:relative;
+  transition:background 0.3s; flex-shrink:0;
+}
+.tgl.off { background:#bbb; }
+.tgl.on  { background:#1a73e8; }
+.tgl-th {
+  position:absolute; width:16px; height:16px; border-radius:50%;
+  background:white; top:3px; transition:left 0.3s;
+  box-shadow:0 1px 3px rgba(0,0,0,0.3);
+}
+.tgl.off .tgl-th { left:3px; }
+.tgl.on  .tgl-th { left:19px; }
+
+.ext-actions { display:flex; gap:8px; margin-bottom:22px; }
+.ea-btn {
+  display:flex; align-items:center; gap:5px;
+  padding:7px 14px; border:1px solid #dadce0; border-radius:6px;
+  font-size:13px; font-weight:500; font-family:'Inter',sans-serif;
+  color:#3c4043; background:white; cursor:pointer; transition:all 0.2s;
+}
+.ea-btn:hover:not(.off) { background:#f8f9fa; border-color:#bbb; }
+.ea-btn.off { opacity:0.4; pointer-events:none; }
+.ea-btn.glow { border-color:#1a73e8; color:#1a73e8; background:#e8f0fd; }
+
+.ext-section-lbl { font-size:13px; font-weight:500; color:#5f6368; margin-bottom:14px; }
+
+.ext-card {
+  background:white; border:1px solid #e0e0e0; border-radius:10px;
+  padding:16px 18px; max-width:360px;
+  opacity:0; transform:translateY(8px);
+  transition:opacity 0.4s,transform 0.4s,border-color 0.4s,box-shadow 0.4s;
+}
+.ext-card.show   { opacity:1; transform:translateY(0); }
+.ext-card.loaded { border-color:#1a73e8; box-shadow:0 0 0 2px rgba(26,115,232,0.12); }
+
+.ext-card-head { display:flex; align-items:flex-start; gap:12px; margin-bottom:10px; }
+.ext-logo-box {
+  width:40px; height:40px; border-radius:9px;
+  background:linear-gradient(135deg,#2d7dd2,#1a55a0);
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; font-weight:700; color:white; flex-shrink:0;
+}
+.ext-card-name { font-size:14px; font-weight:600; color:#202124; }
+.ext-card-ver  { font-size:12px; font-weight:400; color:#999; }
+.ext-card-desc { font-size:12px; color:#5f6368; margin-top:3px; line-height:1.4; }
+
+.ext-card-foot {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-top:12px; padding-top:10px; border-top:1px solid #f0f0f0;
+}
+.ext-card-btns { display:flex; gap:8px; }
+.ext-lnk {
+  font-size:12px; color:#1a73e8; border:1px solid #dadce0; background:none;
+  border-radius:4px; padding:4px 10px; cursor:pointer; font-family:'Inter',sans-serif;
+}
+.ext-lnk.rm { color:#d93025; }
+
+.sm-tgl {
+  width:30px; height:18px; border-radius:9px; position:relative; cursor:pointer;
+  transition:background 0.3s;
+}
+.sm-tgl.on  { background:#1a73e8; }
+.sm-tgl.off { background:#ccc; }
+.sm-tgl::after {
+  content:''; position:absolute; top:2px;
+  width:14px; height:14px; border-radius:50%; background:white;
+  box-shadow:0 1px 2px rgba(0,0,0,0.2); transition:left 0.3s;
+}
+.sm-tgl.on::after  { left:14px; }
+.sm-tgl.off::after { left:2px; }
+
+/* File picker */
+#file-picker {
+  position:absolute; inset:0; background:rgba(0,0,0,0.35);
+  display:flex; align-items:center; justify-content:center;
+  z-index:20; opacity:0; pointer-events:none; transition:opacity 0.3s;
+}
+#file-picker.show { opacity:1; pointer-events:all; }
+
+.picker-win {
+  width:460px; background:white; border-radius:10px; overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,0.3);
+  transform:scale(0.95); transition:transform 0.3s;
+}
+#file-picker.show .picker-win { transform:scale(1); }
+.picker-bar {
+  background:#e8e8e8; border-bottom:1px solid #ccc;
+  padding:9px 14px; display:flex; align-items:center; gap:10px;
+}
+.picker-title { flex:1; text-align:center; font-size:13px; font-weight:600; color:#333; }
+.picker-body { display:flex; height:200px; }
+.picker-sidebar {
+  width:130px; background:#f5f5f7; border-right:1px solid #e0e0e0; padding:8px 0;
+}
+.picker-main { flex:1; padding:10px 12px; }
+.picker-section {
+  font-size:10px; font-weight:600; color:#999; text-transform:uppercase;
+  letter-spacing:0.05em; margin:6px 0 4px 4px;
+}
+.picker-file {
+  display:flex; align-items:center; gap:8px;
+  padding:5px 8px; border-radius:5px; font-size:12.5px; color:#222;
+}
+.picker-file.sel { background:#2d7dd2; color:white; }
+.picker-foot {
+  background:#f5f5f5; border-top:1px solid #ddd;
+  padding:10px 14px; display:flex; justify-content:flex-end; gap:8px;
+}
+.p-btn { padding:6px 16px; border-radius:6px; font-size:13px; font-family:'Inter',sans-serif; cursor:pointer; border:none; }
+.p-btn.cancel { background:white; border:1px solid #ccc; color:#333; }
+.p-btn.select { background:#2d7dd2; color:white; }
+
+/* ══ S4: SETTINGS ══ */
+#s-settings {
+  background: #eef2fa;
+  overflow-y: auto;
+  /* starts content immediately at top — no blank space */
+  padding: 0;
+}
+
+.settings-body {
+  /* white top area is gone — content starts right away */
+  background: white;
+  /* small top bar to match real Chrome extension page */
+  padding: 28px 32px 40px;
+  max-width: 100%;
+}
+
+.settings-title { font-size: 24px; font-weight: 700; color: #1a2a3a; margin-bottom: 4px; }
+.settings-sub   { font-size: 13px; color: #667; margin-bottom: 22px; }
+
+.settings-section {
+  font-size: 13px; font-weight: 600; color: #444;
+  border-bottom: 1px solid #dde4f0; padding-bottom: 8px; margin-bottom: 16px;
+}
+
+.form-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;
+}
+.form-field { display: flex; flex-direction: column; gap: 4px; }
+.form-label { font-size: 12px; color: #5566aa; font-weight: 500; }
+.form-input {
+  border: 1px solid #d0dae8; border-radius: 6px;
+  padding: 8px 10px; font-size: 13px;
+  font-family: 'Inter', sans-serif; color: #222;
+  background: white; outline: none;
+}
+.form-select {
+  border: 1px solid #d0dae8; border-radius: 6px; padding: 8px 10px;
+  font-size: 13px; font-family: 'Inter', sans-serif; color: #888;
+  background: white;
+}
+
+/* ══════════════════
+   ANIMATED CURSOR
+══════════════════ */
+#cursor {
+  position: fixed; pointer-events: none; z-index: 9999;
+  width: 18px; height: 24px;
+  transition: left 0.75s cubic-bezier(0.25,0.46,0.45,0.94),
+              top  0.75s cubic-bezier(0.25,0.46,0.45,0.94);
+}
+#cursor svg { width:18px; height:24px; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
+
+.c-ring {
+  position:fixed; pointer-events:none; z-index:9998;
+  width:28px; height:28px; border-radius:50%;
+  border:2px solid rgba(45,125,210,0.8);
+  transform:translate(-50%,-50%) scale(0); opacity:0;
+}
+.c-ring.pop { animation: cpop 0.5s ease-out forwards; }
+@keyframes cpop {
+  0%   { transform:translate(-50%,-50%) scale(0); opacity:0.9; }
+  100% { transform:translate(-50%,-50%) scale(2); opacity:0; }
+}
+
+/* ══ STEP DOTS ══ */
+#steps {
+  margin-top: 18px; display: flex; align-items: center; gap: 7px;
+}
+.sdot {
+  width:8px; height:8px; border-radius:4px; background:#bbb;
+  transition:all 0.35s; cursor:pointer;
+}
+.sdot.active { background:#2d7dd2; width:22px; }
+.sdot.done   { background:#888; }
+#step-txt { font-size:12px; color:#666; margin-left:8px; font-weight:500; }
+</style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div id="cursor">
+  <svg viewBox="0 0 18 24" fill="none">
+    <path d="M1 1L1 18L5.5 13.5L8.5 20.5L10.8 19.5L7.8 12.5L14 12.5L1 1Z"
+          fill="white" stroke="#333" stroke-width="1.3" stroke-linejoin="round"/>
+  </svg>
+</div>
+<div class="c-ring" id="c-ring"></div>
+
+<!-- ══ BROWSER ══ -->
+<div class="browser" id="browser">
+
+  <!-- Title bar -->
+  <div class="title-bar" id="title-bar">
+    <div class="title-bar-top">
+      <div class="dots">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+      </div>
+      <div class="tabs-row">
+        <div class="tab tab-active" id="tab1">
+          <div class="tab-fav tab-fav-blue" id="tab1-fav"></div>
+          <span class="tab-label" id="tab1-lbl">Cygnet autofill made easy</span>
+          <span class="tab-x">✕</span>
+        </div>
+        <div class="tab tab-inactive" id="tab2" style="display:none">
+          <div class="tab-fav tab-fav-google"></div>
+          <span class="tab-label">Extensions</span>
+          <span class="tab-x">✕</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Address bar -->
+    <div class="addr-row">
+      <span class="nav-btn">←</span>
+      <span class="nav-btn on">→</span>
+      <span class="nav-btn on">↻</span>
+      <div class="addr-input" id="addr">magutoro.github.io/Cygnet/</div>
+
+      <!-- Toolbar icons -->
+      <div class="toolbar-icons">
+
+        <!-- Download icon (hidden until download starts) -->
+        <div class="tb-icon" id="dl-toolbar-icon">
+          <!-- Arrow-down SVG matching Chrome's download icon -->
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <circle cx="9" cy="9" r="7.5" stroke="#e0e0e0" stroke-width="2.5" fill="none"/>
+            <circle cx="9" cy="9" r="7.5" stroke="#1a73e8" stroke-width="2.5" fill="none"
+              stroke-dasharray="47.1" stroke-dashoffset="47.1" stroke-linecap="round"
+              id="dl-ring-prog" style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 0.8s ease"/>
+            <path d="M9 5.5V11M6.5 9L9 11.5L11.5 9" stroke="#1a73e8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <!-- Puzzle piece — white icon on blue square, matching Chrome's Extensions button -->
+        <div class="tb-icon" id="puzzle-btn" style="background:#1a73e8;border-radius:4px;width:26px;height:26px;">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+            <path d="M8 2C8 1.44772 8.44772 1 9 1H11C11.5523 1 12 1.44772 12 2V3.5H14.5C15.0523 3.5 15.5 3.94772 15.5 4.5V7H17C17.5523 7 18 7.44772 18 8V10C18 10.5523 17.5523 11 17 11H15.5V13.5C15.5 14.0523 15.0523 14.5 14.5 14.5H12V16C12 16.5523 11.5523 17 11 17H9C8.44772 17 8 16.5523 8 16V14.5H5.5C4.94772 14.5 4.5 14.0523 4.5 13.5V11H3C2.44772 11 2 10.5523 2 10V8C2 7.44772 2.44772 7 3 7H4.5V4.5C4.5 3.94772 4.94772 3.5 5.5 3.5H8V2Z"
+              fill="white"/>
+          </svg>
+        </div>
+
+        <div class="tb-icon" style="font-size:17px;color:#888">⋮</div>
+      </div>
+    </div>
+
+    <!-- Overlays positioned relative to title-bar -->
+    <div id="dl-dropdown">
+      <div class="dl-dd-header">Downloads</div>
+      <div class="dl-dd-item">
+        <div class="dl-dd-icon">🗜️</div>
+        <div class="dl-dd-info">
+          <div class="dl-dd-name">Cygnet-ex.zip</div>
+          <div class="dl-dd-meta">39.2 KB · magutoro.github.io</div>
+        </div>
+        <button class="dl-dd-open" id="dl-open-btn">Open</button>
+      </div>
+    </div>
+
+    <div id="ext-dropdown">
+      <div class="dd-head">
+        <strong>Extensions</strong>
+        No access needed
+      </div>
+      <div class="dd-row" id="dd-cygnet-row">
+        <div class="dd-ext-icon">M</div>
+        Cygnet
+        <span class="dd-pin-icon">📌</span>
+      </div>
+      <div class="dd-foot">Manage Extensions</div>
+    </div>
+
+    <div id="magu-popup">
+      <div class="pu-title">Cygnet</div>
+      <div class="pu-sub">日本語求人フォームに自動入力</div>
+      <div class="pu-check">
+        <div class="pu-chkbox">✓</div>
+        Autofill Enabled
+      </div>
+      <button class="pu-btn-main">このページを入力</button>
+      <button class="pu-btn-sec" id="pu-settings-btn">プロフィール設定</button>
+    </div>
+  </div><!-- /title-bar -->
+
+  <!-- Page area — fixed 540px height -->
+  <div class="page-area">
+
+    <!-- S1: Landing -->
+    <div class="scene active" id="s-landing">
+      <div class="lang-pills">
+        <span class="pill pill-on">EN</span>
+        <span class="pill pill-off">日本語</span>
+        <span class="pill pill-ext">CHROME EXTENSION</span>
+      </div>
+      <div class="hero-box">
+        <h2>Cygnet autofill made easy</h2>
+        <p>Autofill Japanese job application forms with your saved profile.</p>
+      </div>
+      <div class="card">
+        <h3>Download Extension</h3>
+        <p>Download the latest package and load it in Chrome extensions.</p>
+        <button class="btn-blue" id="dl-btn">Download .zip</button>
+      </div>
+      <div class="card">
+        <h3>Setup Video</h3>
+        <p>Watch this quick walkthrough for installation and first use.</p>
+        <div class="vid-box">
+          <div class="play-ring"><div class="play-tri"></div></div>
+          <div class="vid-bar-inner">
+            <span>▶</span><span>0:00</span>
+            <div class="vid-prog-bar"></div>
+            <span>🔊</span>
+          </div>
+        </div>
+        <p class="vid-note">Put your video file at setup-guide.mp4 in this folder to display it.</p>
+        <button class="btn-ghost">Show written steps</button>
+      </div>
+    </div>
+
+    <!-- S2: Finder -->
+    <div class="scene" id="s-finder">
+      <div class="finder" id="finder">
+        <div class="finder-bar">
+          <div class="dots">
+            <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          </div>
+          <div class="finder-bar-title">Downloads</div>
+        </div>
+        <div class="finder-body">
+          <div class="finder-sidebar">
+            <div class="f-grp">Favorites</div>
+            <div class="f-item"><span>🪂</span> AirDrop</div>
+            <div class="f-item"><span>🕐</span> Recents</div>
+            <div class="f-item"><span>📱</span> Applications</div>
+            <div class="f-item"><span>🖥</span> Desktop</div>
+            <div class="f-item"><span>📄</span> Documents</div>
+            <div class="f-item active"><span>⬇️</span> Downloads</div>
+          </div>
+          <div class="finder-main">
+            <div class="f-section">Today</div>
+            <div class="f-file sel"><span style="font-size:15px">📂</span> Cygnet-ex</div>
+            <div class="f-file" style="padding-left:26px"><span style="font-size:14px">📄</span> manifest.json</div>
+            <div class="f-file" style="padding-left:26px"><span style="font-size:14px">📁</span> options</div>
+            <div class="f-file" style="padding-left:26px"><span style="font-size:14px">📁</span> popup</div>
+            <div class="f-file" style="padding-left:26px"><span style="font-size:14px">📄</span> README.md</div>
+            <div class="f-file" style="padding-left:26px"><span style="font-size:14px">📁</span> src</div>
+            <div class="f-file" style="margin-top:5px"><span style="font-size:15px">🗜️</span> Cygnet-ex.zip</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S3: Extensions -->
+    <div class="scene" id="s-extensions">
+      <div class="ext-sidebar">
+        <div class="ext-logo-row">
+          <div class="g-sq"></div>
+          Extensions
+        </div>
+        <div class="ext-nav active"><span>🧩</span> My extensions</div>
+        <div class="ext-nav"><span>⌨️</span> Keyboard shortcuts</div>
+      </div>
+      <div class="ext-main">
+        <div class="ext-toprow">
+          <div class="ext-title">Extensions</div>
+          <div class="dev-row" id="dev-row">
+            Developer mode
+            <div class="tgl off" id="dev-tgl"><div class="tgl-th"></div></div>
+          </div>
+        </div>
+        <div class="ext-actions">
+          <button class="ea-btn off" id="btn-load">📂 Load unpacked</button>
+          <button class="ea-btn off" id="btn-pack">Pack extension</button>
+          <button class="ea-btn off" id="btn-upd">↻ Update</button>
+        </div>
+        <div id="ext-lbl" style="display:none" class="ext-section-lbl">All Extensions</div>
+        <div class="ext-card" id="ext-card">
+          <div class="ext-card-head">
+            <div class="ext-logo-box">M</div>
+            <div>
+              <div class="ext-card-name">Cygnet <span class="ext-card-ver">0.1.0</span></div>
+              <div class="ext-card-desc">Japanese-focused job application autofill extension.</div>
+            </div>
+          </div>
+          <div class="ext-card-foot">
+            <div class="ext-card-btns">
+              <button class="ext-lnk">Details</button>
+              <button class="ext-lnk rm">Remove</button>
+            </div>
+            <div class="sm-tgl on"></div>
+          </div>
+        </div>
+
+        <!-- File picker -->
+        <div id="file-picker">
+          <div class="picker-win">
+            <div class="picker-bar">
+              <div class="dots">
+                <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+              </div>
+              <div class="picker-title">Select Extension Folder</div>
+            </div>
+            <div class="picker-body">
+              <div class="picker-sidebar">
+                <div class="f-grp" style="padding:8px 10px 3px">Favorites</div>
+                <div class="f-item"><span>⬇️</span> Downloads</div>
+                <div class="f-item"><span>🖥</span> Desktop</div>
+                <div class="f-item"><span>📄</span> Documents</div>
+              </div>
+              <div class="picker-main">
+                <div class="picker-section">Downloads</div>
+                <div class="picker-file sel"><span style="font-size:16px">📂</span>&nbsp; Cygnet-ex</div>
+              </div>
+            </div>
+            <div class="picker-foot">
+              <button class="p-btn cancel" onclick="closePicker()">Cancel</button>
+              <button class="p-btn select" onclick="selectFolder()">Select</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S4: Settings -->
+    <div class="scene" id="s-settings">
+      <div class="settings-body">
+        <div class="settings-title">Cygnet 設定</div>
+        <div class="settings-sub">応募フォームに入力するプロフィールを登録してください。</div>
+        <div class="settings-section">基本情報</div>
+        <div class="form-grid">
+          <div class="form-field"><label class="form-label">姓（漢字）</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">名（漢字）</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">姓（フリガナ・カタカナ）</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">名（フリガナ・カタカナ）</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">姓（English）</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">名（English）</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">希望名 / Preferred Name</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">性別</label><select class="form-select"><option>未設定</option></select></div>
+          <div class="form-field"><label class="form-label">Email</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">携帯Email（任意）</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">電話番号</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">郵便番号</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">都道府県</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">市区町村</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">住所1</label><input class="form-input" readonly></div>
+          <div class="form-field"><label class="form-label">住所2</label><input class="form-input" readonly></div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">生年月日（YYYY-MM-DD）</label>
+          <input class="form-input" type="date" style="max-width:200px" readonly>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /page-area -->
+</div><!-- /browser -->
+
+<!-- Step dots -->
+<div id="steps">
+  <div class="sdot active" data-s="0"></div>
+  <div class="sdot" data-s="1"></div>
+  <div class="sdot" data-s="2"></div>
+  <div class="sdot" data-s="3"></div>
+  <div class="sdot" data-s="4"></div>
+  <div class="sdot" data-s="5"></div>
+  <div class="sdot" data-s="6"></div>
+  <div class="sdot" data-s="7"></div>
+  <div class="sdot" data-s="8"></div>
+  <span id="step-txt">Cygnet landing page</span>
+</div>
+
+<script>
+// ───────────────────────
+//  CAPTIONS & TIMING
+// ───────────────────────
+const CAPTIONS = [
+  'Cygnet landing page',
+  'Click "Download .zip"',
+  'Open zip in Finder',
+  'Navigate to chrome://extensions',
+  'Enable Developer mode',
+  'Click "Load unpacked" and select folder',
+  'Click the puzzle piece icon',
+  'Open the Cygnet popup',
+  'Open Profile Settings (プロフィール設定)',
+];
+
+const T = {
+  landing:      3500,
+  afterDl:      3500,
+  finder:       4000,
+  typeSpeed:    65,
+  afterType:    1000,
+  extPage:      2500,
+  afterDev:     3500,
+  pickerPause:  2800,
+  afterLoaded:  3500,
+  afterDropdown:2500,
+  afterPopup:   3000,
+  afterSettings:5500,
+  loopPause:    2000,
+};
+
+// ───────────────────────
+//  STATE
+// ───────────────────────
+let devOn   = false;
+let running = true;
+let timer   = null;
+
+// ───────────────────────
+//  CURSOR
+// ───────────────────────
+const cur  = document.getElementById('cursor');
+const ring = document.getElementById('c-ring');
+
+function setCursor(x, y) { cur.style.left = x+'px'; cur.style.top = y+'px'; }
+function animClick(x, y) {
+  ring.style.left = x+'px'; ring.style.top = y+'px';
+  ring.classList.remove('pop'); void ring.offsetWidth; ring.classList.add('pop');
+}
+function wait(ms) { return new Promise(r => { timer = setTimeout(r, ms); }); }
+async function clickAt(x, y) {
+  setCursor(x, y);
+  await wait(800);
+  animClick(x, y);
+  await wait(350);
+}
+
+// ───────────────────────
+//  SCENES & DOTS
+// ───────────────────────
+function showScene(id) {
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setStep(n) {
+  document.querySelectorAll('.sdot').forEach((d,i) => {
+    d.classList.remove('active','done');
+    if (i===n) d.classList.add('active');
+    else if (i<n) d.classList.add('done');
+  });
+  document.getElementById('step-txt').textContent = CAPTIONS[n];
+}
+
+// ───────────────────────
+//  DEV MODE
+// ───────────────────────
+function setDevMode(on) {
+  devOn = on;
+  const tgl = document.getElementById('dev-tgl');
+  tgl.className = 'tgl ' + (on ? 'on' : 'off');
+  ['btn-load','btn-pack','btn-upd'].forEach(id => {
+    const b = document.getElementById(id);
+    b.classList.toggle('off', !on);
+  });
+}
+
+// ───────────────────────
+//  FILE PICKER
+// ───────────────────────
+function closePicker() {
+  document.getElementById('file-picker').classList.remove('show');
+}
+function selectFolder() {
+  closePicker();
+  document.getElementById('ext-lbl').style.display = 'block';
+  const card = document.getElementById('ext-card');
+  card.classList.add('show');
+  setTimeout(() => card.classList.add('loaded'), 60);
+}
+
+// ───────────────────────
+//  DOWNLOAD RING ANIM
+// ───────────────────────
+function animateDownloadRing() {
+  const prog = document.getElementById('dl-ring-prog');
+  const total = 47.1;
+  prog.style.strokeDashoffset = total;
+  document.getElementById('dl-toolbar-icon').classList.add('show');
+  let pct = 0;
+  const iv = setInterval(() => {
+    pct = Math.min(pct + 8, 100);
+    prog.style.strokeDashoffset = total * (1 - pct/100);
+    if (pct >= 100) clearInterval(iv);
+  }, 80);
+}
+
+// ───────────────────────
+//  MAIN SEQUENCE
+// ───────────────────────
+async function run() {
+  // ── Full reset ──
+  setDevMode(false);
+  ['btn-load','btn-pack','btn-upd'].forEach(id => {
+    document.getElementById(id).classList.remove('glow');
+  });
+  document.getElementById('finder').classList.remove('open');
+  document.getElementById('tab2').style.display = 'none';
+  document.getElementById('tab1').className = 'tab tab-active';
+  document.getElementById('tab1-lbl').textContent = 'Cygnet autofill made easy';
+  document.getElementById('tab1-fav').className = 'tab-fav tab-fav-blue';
+  document.getElementById('addr').textContent = 'magutoro.github.io/Cygnet/';
+  document.getElementById('addr').classList.remove('typing');
+  document.getElementById('dl-btn').textContent = 'Download .zip';
+  document.getElementById('dl-btn').style.background = '';
+  document.getElementById('dl-toolbar-icon').classList.remove('show');
+  document.getElementById('dl-dropdown').classList.remove('show');
+  document.getElementById('ext-dropdown').classList.remove('show');
+  document.getElementById('magu-popup').classList.remove('show');
+  document.getElementById('puzzle-btn').classList.remove('lit');
+  document.getElementById('ext-lbl').style.display = 'none';
+  document.getElementById('ext-card').className = 'ext-card';
+  document.getElementById('dl-open-btn').classList.remove('hl');
+  closePicker();
+
+  const B  = document.getElementById('browser').getBoundingClientRect();
+  const bx = x => B.left + x;
+  const by = y => B.top  + y;
+
+  // Helper: click center of an element
+  async function clickEl(id) {
+    const r = document.getElementById(id).getBoundingClientRect();
+    await clickAt(r.left + r.width/2, r.top + r.height/2);
+  }
+
+  // ── 0: Landing ──
+  setStep(0); showScene('s-landing');
+  setCursor(bx(550), by(280));
+  await wait(T.landing);
+
+  // ── 1: Click Download .zip ──
+  setStep(1);
+  await clickEl('dl-btn');
+  document.getElementById('dl-btn').textContent = 'Downloading…';
+  document.getElementById('dl-btn').style.background = '#1c65b8';
+  animateDownloadRing();
+  await wait(900);
+  document.getElementById('dl-btn').textContent = 'Download .zip';
+  document.getElementById('dl-btn').style.background = '';
+  document.getElementById('dl-dropdown').classList.add('show');
+  await wait(T.afterDl);
+
+  // ── 2: Click "Open" in download dropdown ──
+  setStep(2);
+  document.getElementById('dl-open-btn').classList.add('hl');
+  await clickEl('dl-open-btn');
+  document.getElementById('dl-open-btn').classList.remove('hl');
+  document.getElementById('dl-dropdown').classList.remove('show');
+  showScene('s-finder');
+  await wait(150);
+  document.getElementById('finder').classList.add('open');
+  await wait(T.finder);
+
+  // ── 3: Type chrome://extensions ──
+  setStep(3);
+  await clickEl('addr');
+  const addr = document.getElementById('addr');
+  addr.classList.add('typing');
+  addr.textContent = '';
+  for (const c of 'chrome://extensions') {
+    addr.textContent += c;
+    await wait(T.typeSpeed);
+  }
+  await wait(T.afterType);
+  addr.classList.remove('typing');
+  showScene('s-extensions');
+  document.getElementById('tab2').style.display = 'flex';
+  document.getElementById('tab1').className = 'tab tab-inactive';
+  addr.textContent = 'chrome://extensions';
+  await wait(T.extPage);
+
+  // ── 4: Enable Developer mode ──
+  setStep(4);
+  await clickEl('dev-tgl');
+  setDevMode(true);
+  await wait(T.afterDev);
+
+  // ── 5: Load unpacked ──
+  setStep(5);
+  document.getElementById('btn-load').classList.add('glow');
+  await clickEl('btn-load');
+  document.getElementById('btn-load').classList.remove('glow');
+  document.getElementById('file-picker').classList.add('show');
+  await wait(T.pickerPause);
+  // Click the Select button in the picker
+  const pickerBtns = document.querySelectorAll('.p-btn.select');
+  const pb = pickerBtns[0].getBoundingClientRect();
+  await clickAt(pb.left + pb.width/2, pb.top + pb.height/2);
+  selectFolder();
+  await wait(T.afterLoaded);
+
+  // ── 6: Click puzzle icon ──
+  setStep(6);
+  document.getElementById('puzzle-btn').style.background = '#1558c0';
+  await clickEl('puzzle-btn');
+  document.getElementById('puzzle-btn').style.background = '#1a73e8';
+  document.getElementById('ext-dropdown').classList.add('show');
+  await wait(T.afterDropdown);
+
+  // ── 7: Click Cygnet in dropdown ──
+  setStep(7);
+  await clickEl('dd-cygnet-row');
+  document.getElementById('ext-dropdown').classList.remove('show');
+  document.getElementById('magu-popup').classList.add('show');
+  await wait(T.afterPopup);
+
+  // ── 8: Click プロフィール設定 ──
+  setStep(8);
+  await clickEl('pu-settings-btn');
+  document.getElementById('magu-popup').classList.remove('show');
+  showScene('s-settings');
+  addr.textContent = 'chrome-extension://…/options/options.html';
+  document.getElementById('tab1-lbl').textContent = 'Cygnet Settings';
+  document.getElementById('tab1-fav').className = 'tab-fav tab-fav-blue';
+  document.getElementById('tab1').className = 'tab tab-active';
+  const settingsR = document.getElementById('s-settings').getBoundingClientRect();
+  setCursor(settingsR.left + 500, settingsR.top + 200);
+  await wait(T.afterSettings);
+
+  // ── Loop ──
+  await wait(T.loopPause);
+  if (running) run();
+}
+
+// Manual dot clicks
+document.querySelectorAll('.sdot').forEach(d => {
+  d.addEventListener('click', () => {
+    clearTimeout(timer); running = false;
+    setTimeout(() => { running = true; run(); }, 50);
+  });
+});
+
+// Start
+setCursor(-100, -100);
+setTimeout(() => run(), 800);
+</script>
+</body>
+</html>

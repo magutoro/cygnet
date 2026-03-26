@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cygnet Privacy Policy</title>
+    <style>
+      :root {
+        --bg: #edf6ff;
+        --bg-soft: #f6fbff;
+        --card: #ffffff;
+        --line: #d8e9f9;
+        --ink: #1c3551;
+        --muted: #5d7896;
+      }
+
+      * {
+        box-sizing: border-box;
+        font-family: Roboto, "Noto Sans JP", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 10% 0%, #cde8ff 0%, transparent 40%),
+          radial-gradient(circle at 90% 4%, #d8f0ff 0%, transparent 34%),
+          linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%);
+        padding: 28px 14px 44px;
+      }
+
+      .container {
+        width: min(980px, 96vw);
+        margin: 0 auto;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        box-shadow: 0 8px 20px rgba(72, 131, 182, 0.08);
+        padding: 22px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.6rem, 3vw, 2.2rem);
+      }
+
+      .meta {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      h2 {
+        margin: 24px 0 8px;
+        font-size: 1.1rem;
+      }
+
+      p,
+      li {
+        color: #345171;
+        line-height: 1.7;
+      }
+
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+
+      .back-link {
+        display: inline-block;
+        margin: 0 0 12px;
+        color: #2d6fa8;
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      .back-link:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <a class="back-link" href="./index.html">← Back to website</a>
+
+      <section class="card">
+        <h1>Cygnet Privacy Policy</h1>
+        <p class="meta">Last updated: March 9, 2026</p>
+
+        <p>
+          Cygnet ("we", "our", or "us") provides a Chrome extension that helps users autofill job application forms.
+        </p>
+
+        <h2>1) What data Cygnet handles</h2>
+        <p>Cygnet may handle profile data that users choose to enter, including:</p>
+        <ul>
+          <li>Name fields (kanji, furigana, English)</li>
+          <li>Preferred name</li>
+          <li>Email address and mobile email address</li>
+          <li>Phone number</li>
+          <li>Birth date</li>
+          <li>Gender</li>
+          <li>Password (if user stores one)</li>
+          <li>Address information (postal code, prefecture, city, address line 1, address line 2)</li>
+          <li>Education and career profile fields (for example university, faculty, graduation year, company, links, and notes)</li>
+          <li>Extension preferences (for example autofill enabled/disabled and panel state)</li>
+        </ul>
+        <p>
+          Cygnet also reads form field labels/attributes on pages where autofill is used so it can map your saved profile data to the correct form fields.
+        </p>
+
+        <h2>2) How data is collected</h2>
+        <p>Data is collected:</p>
+        <ul>
+          <li>When you manually enter or edit your profile in the extension settings</li>
+          <li>When you use extension features such as Autofill, Refresh, and copy-to-clipboard from the profile panel</li>
+          <li>From form structure metadata on the active page (for example input names, labels, placeholders, autocomplete attributes) to detect where to fill data</li>
+        </ul>
+        <p>Cygnet does not require account creation and does not collect analytics or telemetry in its current version.</p>
+
+        <h2>3) How data is used</h2>
+        <p>Data is used only to provide extension features, including:</p>
+        <ul>
+          <li>Autofilling forms on websites you visit</li>
+          <li>Displaying your saved profile in the in-page panel and popup</li>
+          <li>Copying profile values to your clipboard when you click copy targets</li>
+          <li>Saving your preferences and profile for reuse</li>
+        </ul>
+
+        <h2>4) Data sharing and third parties</h2>
+        <p>
+          Cygnet does not sell your personal data and does not share your profile data with advertising networks or data brokers.
+        </p>
+        <p>Data may be shared only in the following ways:</p>
+        <ul>
+          <li>With websites where you choose to autofill forms (the data is inserted into those forms by your action)</li>
+          <li>With Google Chrome storage infrastructure when Chrome Sync is enabled in your browser account (because extension settings may be stored in <code>chrome.storage.sync</code>)</li>
+        </ul>
+        <p>No other third-party sharing is performed in the current version.</p>
+
+        <h2>5) Data storage and retention</h2>
+        <ul>
+          <li>Data is stored in your browser extension storage (<code>chrome.storage.sync</code> or <code>chrome.storage.local</code>, depending on browser availability/settings)</li>
+          <li>We do not operate a remote Cygnet backend for profile storage in the current version</li>
+          <li>Data remains stored until you edit or delete it, remove browser sync data, or uninstall the extension</li>
+        </ul>
+
+        <h2>6) Permissions and access scope</h2>
+        <p>
+          Cygnet requests extension permissions such as <code>storage</code>, <code>activeTab</code>, <code>scripting</code>, and host access to support autofill across many job sites.
+        </p>
+        <p>These permissions are used only for user-facing autofill and profile features.</p>
+
+        <h2>7) Security</h2>
+        <p>
+          We aim to minimize data handling and keep processing local in the extension.
+          However, no software environment is completely risk-free. Users should avoid storing highly sensitive secrets unless necessary and should keep their browser and operating system updated.
+        </p>
+
+        <h2>8) Your choices and controls</h2>
+        <p>You can:</p>
+        <ul>
+          <li>View, edit, or delete profile fields in the extension settings</li>
+          <li>Toggle autofill behavior in the extension UI</li>
+          <li>Uninstall the extension to stop all data handling by Cygnet</li>
+          <li>Disable Chrome Sync (if desired) to avoid sync-based storage</li>
+        </ul>
+
+        <h2>9) Children</h2>
+        <p>Cygnet is not directed to children under 13, and we do not knowingly collect data from children.</p>
+
+        <h2>10) Changes to this policy</h2>
+        <p>
+          We may update this policy from time to time. Updated versions will be posted at this URL with a new "Last updated" date.
+        </p>
+
+        <h2>11) Contact</h2>
+        <p>For privacy questions, contact:</p>
+        <ul>
+          <li>Name/Company: Cygnet</li>
+          <li>Email: markoguro@gmail.com</li>
+          <li>Website: https://magutoro.github.io/Cygnet/</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
