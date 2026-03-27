@@ -51,7 +51,6 @@ interface OverlayRefs {
   logoutBtn: HTMLButtonElement;
   controlsWrap: HTMLElement;
   enabledToggle: HTMLInputElement;
-  refreshBtn: HTMLElement;
   autofillBtn: HTMLElement;
   tabsWrap: HTMLElement;
   tabMainBtn: HTMLButtonElement;
@@ -3658,7 +3657,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
       .mg-auth-actions { display: flex; gap: 8px; flex: 0 0 auto; }
       .mg-auth-actions .mg-btn { min-height: 32px; padding: 7px 12px; border-radius: 10px; font-size: 11px; }
       .mg-controls { display: grid; gap: 8px; }
-      .mg-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .mg-actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
       .mg-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
       .mg-tab { border: 1px solid #d8e9f9; border-radius: 999px; padding: 8px 10px; background: #ffffff; color: #315a7f; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s ease; text-align: center; min-width: 0; }
       .mg-tab:hover { border-color: #9fcff2; color: #1c3551; }
@@ -3689,21 +3688,20 @@ function ensureInPageOverlay(): OverlayRefs | null {
       .mg-cred-prompt { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
       .mg-cred-input { width: 100%; border: 1px solid #d8e9f9; border-radius: 10px; padding: 10px; font-size: 12px; color: #1c3551; background: #f8fcff; }
       .mg-cred-input:focus { outline: none; border-color: #76b8ea; box-shadow: 0 0 0 2px rgba(118, 184, 234, 0.16); background: #ffffff; }
-      .mg-section { background: #ffffff; border: 1px solid rgba(216, 233, 249, 0.78); border-radius: 14px; padding: 12px; box-shadow: 0 8px 20px rgba(72, 131, 182, 0.08); }
-      .mg-section-title { margin: 2px 2px 10px; font-size: 14px; color: #1c3551; font-weight: 700; }
-      .mg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: stretch; }
-      .mg-copy { text-align: left; border: 1px solid #d8e9f9; border-radius: 12px; background: #f8fcff; padding: 10px 12px; display: grid; gap: 6px; min-height: 82px; height: 100%; }
+      .mg-section { background: #ffffff; border: 1px solid rgba(216, 233, 249, 0.78); border-radius: 14px; padding: 10px; box-shadow: 0 8px 20px rgba(72, 131, 182, 0.08); }
+      .mg-section-title { margin: 2px 2px 8px; font-size: 14px; color: #1c3551; font-weight: 700; }
+      .mg-grid { display: grid; gap: 8px; }
+      .mg-copy { text-align: left; border: 1px solid #d8e9f9; border-radius: 12px; background: #ffffff; padding: 10px 12px; display: grid; gap: 4px; min-height: 64px; }
       .mg-copy:hover { border-color: #d8e9f9; background: #f8fcff; }
       .mg-copy.is-empty { opacity: 0.7; background: #f2f8ff; }
-      .mg-copy-full { text-align: left; border: none; background: transparent; padding: 0; margin: 0; cursor: pointer; display: grid; gap: 4px; height: 100%; align-content: start; }
+      .mg-copy-full { text-align: left; border: none; background: transparent; padding: 0; margin: 0; cursor: pointer; display: grid; gap: 4px; }
       .mg-copy-full:disabled { cursor: default; }
       .mg-copy-full.is-copied .mg-copy-value { background: #dcefff; border-radius: 4px; padding: 1px 4px; }
-      .mg-copy-label { font-size: 12px; color: #5d7896; font-weight: 700; }
-      .mg-copy-value { font-size: 13px; color: #1c3551; white-space: pre-wrap; word-break: break-word; line-height: 1.42; display: inline; width: fit-content; box-decoration-break: clone; -webkit-box-decoration-break: clone; border-radius: 4px; background-color: rgba(199, 236, 255, 0); transition: background-color .72s cubic-bezier(0.22, 1, 0.36, 1); }
+      .mg-copy-label { font-size: 11px; color: #5d7896; font-weight: 700; }
+      .mg-copy-value { font-size: 14px; color: #1c3551; white-space: pre-wrap; word-break: break-word; line-height: 1.38; display: inline; width: fit-content; box-decoration-break: clone; -webkit-box-decoration-break: clone; border-radius: 4px; background-color: rgba(199, 236, 255, 0); transition: background-color .72s cubic-bezier(0.22, 1, 0.36, 1); }
       .mg-copy-full:not(:disabled):hover .mg-copy-value { background-color: rgba(199, 236, 255, 0.95); transition-delay: .12s; }
       .mg-copy-full:not(:disabled):not(:hover) .mg-copy-value { transition-delay: .04s; }
       @media (max-width: 380px) {
-        .mg-grid,
         .mg-cred-info,
         .mg-actions { grid-template-columns: 1fr; }
       }
@@ -3736,7 +3734,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
             </label>
             <div class="mg-actions">
               <button class="mg-btn" type="button" data-role="autofill">Autofill this page</button>
-              <button class="mg-btn secondary" type="button" data-role="refresh">Sync profile</button>
             </div>
           </div>
           <div class="mg-tabs is-hidden" data-role="tabs">
@@ -3762,7 +3759,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
   const logoutBtn = shadow.querySelector("[data-role='logout']") as HTMLButtonElement;
   const controlsWrap = shadow.querySelector("[data-role='controls']") as HTMLElement;
   const enabledToggle = shadow.querySelector("[data-role='enabled-toggle']") as HTMLInputElement;
-  const refreshBtn = shadow.querySelector("[data-role='refresh']") as HTMLElement;
   const autofillBtn = shadow.querySelector("[data-role='autofill']") as HTMLElement;
   const tabsWrap = shadow.querySelector("[data-role='tabs']") as HTMLElement;
   const tabMainBtn = shadow.querySelector("[data-role='tab-main']") as HTMLButtonElement;
@@ -3843,13 +3839,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
       storageArea.set({ [STORAGE_KEY]: next }, () => resolve());
     });
     setOverlayStatus(next.enabled ? "Autofill ON" : "Autofill OFF");
-  });
-
-  refreshBtn.addEventListener("click", async () => {
-    authStateCache = null;
-    const settings = await getSettings();
-    await renderOverlayByActiveTab(settings);
-    setOverlayStatus("同期しました");
   });
 
   tabMainBtn.addEventListener("click", async () => {
@@ -3933,7 +3922,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
     logoutBtn,
     controlsWrap,
     enabledToggle,
-    refreshBtn,
     autofillBtn,
     tabsWrap,
     tabMainBtn,
