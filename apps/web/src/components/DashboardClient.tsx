@@ -95,6 +95,21 @@ export default function DashboardClient({
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+        <div id="profile-editor-section">
+          <ProfileEditor
+            ref={profileRef}
+            initialProfile={initialProfile}
+            userId={userId}
+          />
+        </div>
+        <ResumeManager
+          userId={userId}
+          initialResumes={initialResumes}
+          onProfileParsed={handleParsed}
+        />
+      </div>
+
       <div className="rounded-2xl border border-brand-line bg-white p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -115,21 +130,6 @@ export default function DashboardClient({
           </button>
         </div>
         {bridgeStatus && <p className="mt-2 text-xs text-brand-muted">{bridgeStatus}</p>}
-      </div>
-
-      <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
-        <div id="profile-editor-section">
-          <ProfileEditor
-            ref={profileRef}
-            initialProfile={initialProfile}
-            userId={userId}
-          />
-        </div>
-        <ResumeManager
-          userId={userId}
-          initialResumes={initialResumes}
-          onProfileParsed={handleParsed}
-        />
       </div>
     </div>
   );
