@@ -9,7 +9,9 @@ export type {
   GetDefaultsResponse,
   GetAuthStateResponse,
   CredentialVaultStateResponse,
-  CredentialListResponse
+  CredentialListResponse,
+  CredentialSummaryListResponse,
+  CredentialRevealPasswordResponse
 } from "./types/messages.js";
 
 export {
@@ -31,6 +33,7 @@ export type {
   EncryptedBlob,
   CredentialVaultMeta,
   EncryptedCredentialRecord,
+  CredentialSummary,
   CredentialEntry,
   CredentialCapturePayload,
   CredentialUpsertInput,

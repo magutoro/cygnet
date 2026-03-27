@@ -87,7 +87,7 @@ interface ProfileSection {
 
 type OverlayProfileTab = "main" | "additional" | "credentials";
 
-interface CredentialEntry {
+interface CredentialSummary {
   id: string;
   label: string;
   labelManual: boolean;
@@ -99,7 +99,6 @@ interface CredentialEntry {
   formAction: string;
   formSignature: string;
   username: string;
-  password: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -108,6 +107,13 @@ interface CredentialVaultState {
   unlocked: boolean;
   hasVault: boolean;
   entryCount: number;
+}
+
+interface CredentialDraft {
+  label: string;
+  username: string;
+  password: string;
+  passphrase: string;
 }
 
 interface PositionedCandidate {
@@ -174,8 +180,8 @@ const KANA_SCRIPT_KEYS = new Set(["kana", "hiragana", "katakana"]);
 const AUTO_RUN_OBSERVE_MS = 15000;
 const AUTO_RUN_DEBOUNCE_MS = 600;
 const AUTH_STATE_CACHE_TTL_MS = 3000;
-const CREDENTIAL_SAVE_DEBOUNCE_MS = 450;
 const CREDENTIAL_CAPTURE_DEDUPE_MS = 5000;
+const CREDENTIAL_REVEAL_TTL_MS = 12000;
 const OVERLAY_HOST_ID = "cygnet-inpage-overlay";
 const OVERLAY_DOMAIN_STATE_KEY = "overlayDomainState";
 const WEB_BRIDGE_ORIGINS = new Set([
@@ -185,6 +191,7 @@ const WEB_BRIDGE_ORIGINS = new Set([
 ]);
 const WEB_BRIDGE_REQUEST_TYPE = "CYGNET_REQUEST_EXTENSION_ID";
 const WEB_BRIDGE_RESPONSE_TYPE = "CYGNET_EXTENSION_ID";
+const LAUNCHER_ICON_PATH = "icons/icon32.png";
 
 const GENDER_VALUE_ALIASES: Record<string, string[]> = {
   male: ["male", "man", "m", "男性", "男", "男性（男）", "男性（man）"],
@@ -600,8 +607,12 @@ const copiedTimerIds = new WeakMap<HTMLElement, number>();
 let authStateCache: { authenticated: boolean; email: string; fetchedAt: number } | null = null;
 let overlayActiveTab: OverlayProfileTab = "main";
 let credentialVaultState: CredentialVaultState = { unlocked: false, hasVault: false, entryCount: 0 };
-let credentialEntriesCache: CredentialEntry[] = [];
-const credentialSaveTimerIds = new Map<string, number>();
+let credentialSummariesCache: CredentialSummary[] = [];
+let credentialEditingId: string | "add" | null = null;
+let credentialPromptId: string | "add" | null = null;
+const credentialDrafts = new Map<string, CredentialDraft>();
+const revealedCredentialPasswords = new Map<string, string>();
+const revealedCredentialTimers = new Map<string, number>();
 let credentialsCaptureBound = false;
 let lastCapturedCredentialHash = "";
 let lastCapturedCredentialAt = 0;
@@ -835,9 +846,9 @@ async function getCredentialVaultStateFromRuntime(): Promise<CredentialVaultStat
   return response.state;
 }
 
-async function listCredentialEntriesFromRuntime(): Promise<CredentialEntry[]> {
-  const response = (await sendRuntimeMessage({ type: "CREDENTIAL_LIST" })) as
-    | { ok?: boolean; entries?: CredentialEntry[]; error?: string }
+async function listCredentialSummariesFromRuntime(): Promise<CredentialSummary[]> {
+  const response = (await sendRuntimeMessage({ type: "CREDENTIAL_LIST_SUMMARIES" })) as
+    | { ok?: boolean; entries?: CredentialSummary[]; error?: string }
     | undefined;
   if (!response?.ok) {
     throw new Error(String(response?.error || "failed_to_list_credentials"));
@@ -845,34 +856,32 @@ async function listCredentialEntriesFromRuntime(): Promise<CredentialEntry[]> {
   return Array.isArray(response.entries) ? response.entries : [];
 }
 
-async function unlockCredentialVaultFromRuntime(passphrase: string): Promise<CredentialVaultState> {
+async function revealCredentialPasswordFromRuntime(id: string, passphrase: string): Promise<string> {
   const response = (await sendRuntimeMessage({
-    type: "CREDENTIAL_UNLOCK",
+    type: "CREDENTIAL_REVEAL_PASSWORD",
+    id,
     passphrase
-  })) as { ok?: boolean; state?: CredentialVaultState; error?: string } | undefined;
-  if (!response?.ok || !response.state) {
-    throw new Error(String(response?.error || "unlock_failed"));
+  })) as { ok?: boolean; password?: string; error?: string } | undefined;
+  if (!response?.ok || typeof response.password !== "string") {
+    throw new Error(String(response?.error || "reveal_failed"));
   }
-  return response.state;
-}
-
-async function lockCredentialVaultFromRuntime(): Promise<void> {
-  await sendRuntimeMessage({ type: "CREDENTIAL_LOCK" });
+  return response.password;
 }
 
 async function upsertCredentialEntryFromRuntime(payload: {
   id?: string;
   label: string;
   username: string;
-  password: string;
+  password?: string;
+  passphrase?: string;
   pageUrl: string;
   formAction?: string;
   formSignature?: string;
-}): Promise<CredentialEntry> {
+}): Promise<CredentialSummary> {
   const response = (await sendRuntimeMessage({
     type: "CREDENTIAL_UPSERT",
     entry: payload
-  })) as { ok?: boolean; entry?: CredentialEntry; error?: string } | undefined;
+  })) as { ok?: boolean; entry?: CredentialSummary; error?: string } | undefined;
   if (!response?.ok || !response.entry) {
     throw new Error(String(response?.error || "save_failed"));
   }
@@ -889,11 +898,11 @@ async function deleteCredentialEntryFromRuntime(id: string): Promise<void> {
   }
 }
 
-async function getBestCredentialForCurrentPage(): Promise<CredentialEntry | null> {
+async function getBestCredentialForCurrentPage(): Promise<CredentialSummary | null> {
   const response = (await sendRuntimeMessage({
     type: "CREDENTIAL_MATCH",
     context: buildCredentialMatchContext()
-  })) as { ok?: boolean; entry?: CredentialEntry | null } | undefined;
+  })) as { ok?: boolean; entry?: CredentialSummary | null } | undefined;
   if (!response?.ok) return null;
   return response.entry || null;
 }
@@ -933,7 +942,9 @@ async function captureCredentialFromSubmitForm(form: HTMLFormElement): Promise<v
   if (!response?.ok || !response.captured) return;
   credentialVaultState = await getCredentialVaultStateFromRuntime();
   if (overlayRefs && overlayActiveTab === "credentials") {
-    credentialEntriesCache = await listCredentialEntriesFromRuntime().catch(() => credentialEntriesCache);
+    credentialSummariesCache = await listCredentialSummariesFromRuntime().catch(
+      () => credentialSummariesCache
+    );
     renderCredentialSections();
     setOverlayStatus("ログイン情報を保存しました");
   }
@@ -2790,6 +2801,10 @@ function currentDomainKey(): string {
   return String(location.hostname || "").toLowerCase();
 }
 
+function isCygnetManagedPage(): boolean {
+  return WEB_BRIDGE_ORIGINS.has(window.location.origin);
+}
+
 async function getOverlayDomainStateMap(): Promise<Record<string, OverlayDomainState>> {
   const stored = await storageArea.get([OVERLAY_DOMAIN_STATE_KEY]);
   return (stored[OVERLAY_DOMAIN_STATE_KEY] as Record<string, OverlayDomainState>) || {};
@@ -3045,41 +3060,480 @@ function renderOverlayProfile(profile: Profile = {}): void {
   }
 }
 
-function clearCredentialSaveTimers(): void {
-  for (const timerId of credentialSaveTimerIds.values()) {
+function clearRevealedCredentialPasswords(): void {
+  for (const timerId of revealedCredentialTimers.values()) {
     window.clearTimeout(timerId);
   }
-  credentialSaveTimerIds.clear();
-}
-
-function createCredentialField(
-  labelText: string,
-  value: string,
-  type: "text" | "password" = "text"
-): { wrap: HTMLLabelElement; input: HTMLInputElement } {
-  const wrap = document.createElement("label");
-  wrap.className = "mg-cred-field";
-
-  const label = document.createElement("span");
-  label.className = "mg-cred-label";
-  label.textContent = labelText;
-
-  const input = document.createElement("input");
-  input.className = "mg-cred-input";
-  input.type = type;
-  input.value = value;
-
-  wrap.append(label, input);
-  return { wrap, input };
+  revealedCredentialTimers.clear();
+  revealedCredentialPasswords.clear();
 }
 
 async function refreshCredentialData(): Promise<void> {
   credentialVaultState = await getCredentialVaultStateFromRuntime();
-  if (!credentialVaultState.unlocked) {
-    credentialEntriesCache = [];
+  credentialSummariesCache = await listCredentialSummariesFromRuntime();
+}
+
+function getCredentialDraft(id: string | "add", seed?: Partial<CredentialDraft>): CredentialDraft {
+  const key = String(id);
+  const current = credentialDrafts.get(key);
+  if (current) return current;
+  const draft: CredentialDraft = {
+    label: seed?.label ?? "",
+    username: seed?.username ?? "",
+    password: seed?.password ?? "",
+    passphrase: seed?.passphrase ?? ""
+  };
+  credentialDrafts.set(key, draft);
+  return draft;
+}
+
+function updateCredentialDraft(
+  id: string | "add",
+  patch: Partial<CredentialDraft>
+): CredentialDraft {
+  const key = String(id);
+  const next = { ...getCredentialDraft(id), ...patch };
+  credentialDrafts.set(key, next);
+  return next;
+}
+
+function clearCredentialDraft(id: string | "add"): void {
+  credentialDrafts.delete(String(id));
+}
+
+function setRevealedCredentialPassword(id: string, password: string): void {
+  revealedCredentialPasswords.set(id, password);
+  const previous = revealedCredentialTimers.get(id);
+  if (previous !== undefined) {
+    window.clearTimeout(previous);
+  }
+  const timerId = window.setTimeout(() => {
+    revealedCredentialPasswords.delete(id);
+    revealedCredentialTimers.delete(id);
+    if (overlayRefs && overlayActiveTab === "credentials") {
+      renderCredentialSections();
+    }
+  }, CREDENTIAL_REVEAL_TTL_MS);
+  revealedCredentialTimers.set(id, timerId);
+}
+
+function createCredentialCopyCard(
+  labelText: string,
+  value: string,
+  copiedMessage: string
+): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "mg-copy-full mg-cred-copy";
+
+  const label = document.createElement("span");
+  label.className = "mg-copy-label";
+  label.textContent = labelText;
+
+  const display = document.createElement("span");
+  display.className = "mg-copy-value";
+  display.textContent = value || "未設定";
+
+  button.append(label, display);
+  if (!value) {
+    button.disabled = true;
+    button.classList.add("is-empty");
+    return button;
+  }
+
+  button.addEventListener("click", async () => {
+    const ok = await copyTextToClipboard(value);
+    if (ok) flashCopiedElement(button);
+    setOverlayStatus(ok ? copiedMessage : "コピーに失敗しました");
+  });
+  return button;
+}
+
+async function persistCredentialDraft(
+  targetId: string | "add",
+  current?: CredentialSummary
+): Promise<void> {
+  const draft = getCredentialDraft(targetId);
+  const label = sanitizeCredentialInput(draft.label);
+  const username = sanitizeCredentialInput(draft.username);
+  const password = sanitizeCredentialInput(draft.password);
+  const passphrase = String(draft.passphrase || "");
+
+  if (!username) {
+    setOverlayStatus("ユーザー名を入力してください");
     return;
   }
-  credentialEntriesCache = await listCredentialEntriesFromRuntime();
+  if (!current && !password) {
+    setOverlayStatus("パスワードを入力してください");
+    return;
+  }
+
+  const needsPassphrase = !current || Boolean(password);
+  if (needsPassphrase && passphrase.length < 4) {
+    credentialPromptId = targetId;
+    renderCredentialSections();
+    setOverlayStatus(
+      credentialVaultState.hasVault
+        ? "パスフレーズを入力してください"
+        : "新しいパスフレーズを作成してください"
+    );
+    return;
+  }
+
+  try {
+    await upsertCredentialEntryFromRuntime({
+      id: current?.id,
+      label,
+      username,
+      password: password || undefined,
+      passphrase: needsPassphrase ? passphrase : undefined,
+      pageUrl: current ? `${current.origin}${current.path}` : location.href,
+      formAction: current?.formAction || "",
+      formSignature: current?.formSignature || ""
+    });
+    credentialEditingId = null;
+    credentialPromptId = null;
+    clearCredentialDraft(targetId);
+    await refreshCredentialData();
+    renderCredentialSections();
+    setOverlayStatus(current ? "ログイン情報を更新しました" : "ログイン情報を追加しました");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("invalid_passphrase")) {
+      setOverlayStatus("パスフレーズが違います");
+    } else if (message.includes("passphrase_too_short")) {
+      setOverlayStatus("パスフレーズは4文字以上にしてください");
+    } else {
+      setOverlayStatus(current ? "更新に失敗しました" : "追加に失敗しました");
+    }
+  }
+}
+
+async function revealCredentialForRow(entry: CredentialSummary): Promise<void> {
+  const draft = getCredentialDraft(entry.id, {
+    label: entry.label || entry.host,
+    username: entry.username,
+    passphrase: ""
+  });
+  if (draft.passphrase.length < 4) {
+    credentialPromptId = entry.id;
+    renderCredentialSections();
+    setOverlayStatus(
+      credentialVaultState.hasVault
+        ? "パスフレーズを入力してください"
+        : "新しいパスフレーズを作成してください"
+    );
+    return;
+  }
+
+  try {
+    const password = await revealCredentialPasswordFromRuntime(entry.id, draft.passphrase);
+    credentialPromptId = null;
+    updateCredentialDraft(entry.id, { passphrase: "" });
+    setRevealedCredentialPassword(entry.id, password);
+    renderCredentialSections();
+    const ok = await copyTextToClipboard(password);
+    setOverlayStatus(ok ? "パスワードをコピーしました" : "コピーに失敗しました");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("invalid_passphrase")) {
+      setOverlayStatus("パスフレーズが違います");
+    } else if (message.includes("passphrase_too_short")) {
+      setOverlayStatus("パスフレーズは4文字以上にしてください");
+    } else {
+      setOverlayStatus("パスワードを表示できませんでした");
+    }
+  }
+}
+
+function renderCredentialPrompt(targetId: string | "add", mode: "reveal" | "save"): HTMLDivElement {
+  const draft = getCredentialDraft(targetId);
+  const wrap = document.createElement("div");
+  wrap.className = "mg-cred-prompt";
+
+  const input = document.createElement("input");
+  input.className = "mg-cred-input";
+  input.type = "password";
+  input.placeholder = credentialVaultState.hasVault ? "Passphrase" : "Create passphrase";
+  input.value = draft.passphrase;
+  input.addEventListener("input", () => updateCredentialDraft(targetId, { passphrase: input.value }));
+
+  const confirm = document.createElement("button");
+  confirm.type = "button";
+  confirm.className = "mg-btn secondary mg-cred-mini-btn";
+  confirm.textContent =
+    mode === "reveal"
+      ? credentialVaultState.hasVault
+        ? "Reveal"
+        : "Create"
+      : credentialVaultState.hasVault
+        ? "Save"
+        : "Create";
+
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "mg-btn secondary mg-cred-mini-btn";
+  cancel.textContent = "Cancel";
+
+  cancel.addEventListener("click", () => {
+    credentialPromptId = null;
+    updateCredentialDraft(targetId, { passphrase: "" });
+    renderCredentialSections();
+  });
+
+  wrap.append(input, confirm, cancel);
+
+  if (mode === "reveal") {
+    confirm.addEventListener("click", () => {
+      const summary = credentialSummariesCache.find((item) => item.id === targetId);
+      if (!summary) {
+        setOverlayStatus("ログイン情報が見つかりません");
+        return;
+      }
+      revealCredentialForRow(summary).catch(() => {});
+    });
+  } else {
+    confirm.addEventListener("click", () => {
+      const summary = credentialSummariesCache.find((item) => item.id === targetId);
+      persistCredentialDraft(targetId, summary).catch(() => {});
+    });
+  }
+
+  return wrap;
+}
+
+function renderCredentialSummaryRow(entry: CredentialSummary): HTMLDivElement {
+  const row = document.createElement("div");
+  row.className = "mg-cred-item";
+
+  if (credentialEditingId === entry.id) {
+    const draft = getCredentialDraft(entry.id, {
+      label: entry.label || entry.host,
+      username: entry.username,
+      password: "",
+      passphrase: ""
+    });
+
+    const editor = document.createElement("div");
+    editor.className = "mg-cred-editor";
+
+    const companyInput = document.createElement("input");
+    companyInput.className = "mg-cred-input";
+    companyInput.placeholder = "Company name";
+    companyInput.value = draft.label;
+    companyInput.addEventListener("input", () =>
+      updateCredentialDraft(entry.id, { label: companyInput.value })
+    );
+
+    const usernameInput = document.createElement("input");
+    usernameInput.className = "mg-cred-input";
+    usernameInput.placeholder = "Username";
+    usernameInput.value = draft.username;
+    usernameInput.addEventListener("input", () =>
+      updateCredentialDraft(entry.id, { username: usernameInput.value })
+    );
+
+    const passwordInput = document.createElement("input");
+    passwordInput.className = "mg-cred-input";
+    passwordInput.type = "password";
+    passwordInput.placeholder = "Leave blank to keep password";
+    passwordInput.value = draft.password;
+    passwordInput.addEventListener("input", () =>
+      updateCredentialDraft(entry.id, { password: passwordInput.value })
+    );
+
+    const actions = document.createElement("div");
+    actions.className = "mg-cred-inline-actions";
+    const saveButton = document.createElement("button");
+    saveButton.type = "button";
+    saveButton.className = "mg-btn mg-cred-mini-btn";
+    saveButton.textContent = "Save";
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "mg-btn secondary mg-cred-mini-btn";
+    cancelButton.textContent = "Cancel";
+    actions.append(saveButton, cancelButton);
+
+    saveButton.addEventListener("click", () => {
+      persistCredentialDraft(entry.id, entry).catch(() => {});
+    });
+    cancelButton.addEventListener("click", () => {
+      credentialEditingId = null;
+      credentialPromptId = null;
+      clearCredentialDraft(entry.id);
+      renderCredentialSections();
+    });
+
+    editor.append(companyInput, usernameInput, passwordInput, actions);
+    row.appendChild(editor);
+    if (credentialPromptId === entry.id) {
+      row.appendChild(renderCredentialPrompt(entry.id, "save"));
+    }
+    return row;
+  }
+
+  const info = document.createElement("div");
+  info.className = "mg-cred-info";
+  info.append(
+    createCredentialCopyCard("Company", entry.label || entry.host, "会社名をコピーしました"),
+    createCredentialCopyCard("Username", entry.username, "ユーザー名をコピーしました")
+  );
+
+  const passwordButton = document.createElement("button");
+  passwordButton.type = "button";
+  passwordButton.className = "mg-cred-password";
+  const visiblePassword = revealedCredentialPasswords.get(entry.id);
+  passwordButton.textContent = visiblePassword || "Click to reveal";
+  passwordButton.addEventListener("click", async () => {
+    if (visiblePassword) {
+      const ok = await copyTextToClipboard(visiblePassword);
+      if (ok) flashCopiedElement(passwordButton);
+      setOverlayStatus(ok ? "パスワードをコピーしました" : "コピーに失敗しました");
+      return;
+    }
+    credentialPromptId = credentialPromptId === entry.id ? null : entry.id;
+    getCredentialDraft(entry.id, { label: entry.label || entry.host, username: entry.username });
+    renderCredentialSections();
+  });
+
+  const actions = document.createElement("div");
+  actions.className = "mg-cred-inline-actions";
+  const editButton = document.createElement("button");
+  editButton.type = "button";
+  editButton.className = "mg-btn secondary mg-cred-mini-btn";
+  editButton.textContent = "Edit";
+  editButton.addEventListener("click", () => {
+    credentialEditingId = entry.id;
+    credentialPromptId = null;
+    getCredentialDraft(entry.id, {
+      label: entry.label || entry.host,
+      username: entry.username,
+      password: "",
+      passphrase: ""
+    });
+    renderCredentialSections();
+  });
+
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "mg-btn secondary mg-cred-mini-btn";
+  deleteButton.textContent = "Delete";
+  deleteButton.addEventListener("click", async () => {
+    try {
+      await deleteCredentialEntryFromRuntime(entry.id);
+      revealedCredentialPasswords.delete(entry.id);
+      const revealTimer = revealedCredentialTimers.get(entry.id);
+      if (revealTimer !== undefined) {
+        window.clearTimeout(revealTimer);
+        revealedCredentialTimers.delete(entry.id);
+      }
+      clearCredentialDraft(entry.id);
+      credentialEditingId = credentialEditingId === entry.id ? null : credentialEditingId;
+      credentialPromptId = credentialPromptId === entry.id ? null : credentialPromptId;
+      credentialSummariesCache = credentialSummariesCache.filter((item) => item.id !== entry.id);
+      renderCredentialSections();
+      setOverlayStatus("削除しました");
+    } catch {
+      setOverlayStatus("削除に失敗しました");
+    }
+  });
+
+  actions.append(passwordButton, editButton, deleteButton);
+
+  row.append(info, actions);
+  if (credentialPromptId === entry.id) {
+    row.appendChild(renderCredentialPrompt(entry.id, "reveal"));
+  }
+  return row;
+}
+
+function renderCredentialComposer(): HTMLDivElement {
+  const wrap = document.createElement("div");
+  wrap.className = "mg-cred-composer";
+
+  if (credentialEditingId !== "add") {
+    const addButton = document.createElement("button");
+    addButton.type = "button";
+    addButton.className = "mg-btn secondary";
+    addButton.textContent = "Add login";
+    addButton.addEventListener("click", () => {
+      credentialEditingId = "add";
+      credentialPromptId = null;
+      getCredentialDraft("add", {
+        label: (() => {
+          try {
+            return new URL(location.href).hostname || "";
+          } catch {
+            return location.hostname || "";
+          }
+        })(),
+        username: "",
+        password: "",
+        passphrase: ""
+      });
+      renderCredentialSections();
+    });
+    wrap.appendChild(addButton);
+    return wrap;
+  }
+
+  const draft = getCredentialDraft("add");
+  const editor = document.createElement("div");
+  editor.className = "mg-cred-editor";
+
+  const companyInput = document.createElement("input");
+  companyInput.className = "mg-cred-input";
+  companyInput.placeholder = "Company name";
+  companyInput.value = draft.label;
+  companyInput.addEventListener("input", () => updateCredentialDraft("add", { label: companyInput.value }));
+
+  const usernameInput = document.createElement("input");
+  usernameInput.className = "mg-cred-input";
+  usernameInput.placeholder = "Username";
+  usernameInput.value = draft.username;
+  usernameInput.addEventListener("input", () =>
+    updateCredentialDraft("add", { username: usernameInput.value })
+  );
+
+  const passwordInput = document.createElement("input");
+  passwordInput.className = "mg-cred-input";
+  passwordInput.type = "password";
+  passwordInput.placeholder = "Password";
+  passwordInput.value = draft.password;
+  passwordInput.addEventListener("input", () =>
+    updateCredentialDraft("add", { password: passwordInput.value })
+  );
+
+  const actions = document.createElement("div");
+  actions.className = "mg-cred-inline-actions";
+  const saveButton = document.createElement("button");
+  saveButton.type = "button";
+  saveButton.className = "mg-btn mg-cred-mini-btn";
+  saveButton.textContent = "Save";
+  const cancelButton = document.createElement("button");
+  cancelButton.type = "button";
+  cancelButton.className = "mg-btn secondary mg-cred-mini-btn";
+  cancelButton.textContent = "Cancel";
+  actions.append(saveButton, cancelButton);
+
+  saveButton.addEventListener("click", () => {
+    persistCredentialDraft("add").catch(() => {});
+  });
+  cancelButton.addEventListener("click", () => {
+    credentialEditingId = null;
+    credentialPromptId = null;
+    clearCredentialDraft("add");
+    renderCredentialSections();
+  });
+
+  editor.append(companyInput, usernameInput, passwordInput, actions);
+  wrap.appendChild(editor);
+
+  if (credentialPromptId === "add") {
+    wrap.appendChild(renderCredentialPrompt("add", "save"));
+  }
+
+  return wrap;
 }
 
 function renderCredentialSections(): void {
@@ -3087,60 +3541,6 @@ function renderCredentialSections(): void {
 
   const sections = overlayRefs.sections;
   sections.innerHTML = "";
-
-  const locked = !credentialVaultState.unlocked;
-  if (locked) {
-    const unlockSection = document.createElement("section");
-    unlockSection.className = "mg-section";
-
-    const title = document.createElement("h3");
-    title.className = "mg-section-title";
-    title.textContent = credentialVaultState.hasVault ? "ログイン情報を解除" : "ログイン情報を作成";
-
-    const desc = document.createElement("p");
-    desc.className = "mg-help-inline";
-    desc.textContent = "マスターパスフレーズで暗号化ローカル保存を有効化します。";
-
-    const row = document.createElement("div");
-    row.className = "mg-cred-toolbar";
-    const passphraseInput = document.createElement("input");
-    passphraseInput.className = "mg-cred-input";
-    passphraseInput.type = "password";
-    passphraseInput.placeholder = credentialVaultState.hasVault ? "パスフレーズを入力" : "新しいパスフレーズを作成";
-    const unlockButton = document.createElement("button");
-    unlockButton.className = "mg-btn";
-    unlockButton.type = "button";
-    unlockButton.textContent = credentialVaultState.hasVault ? "Unlock" : "Create";
-
-    row.append(passphraseInput, unlockButton);
-    unlockSection.append(title, desc, row);
-    sections.appendChild(unlockSection);
-
-    unlockButton.addEventListener("click", async () => {
-      const passphrase = String(passphraseInput.value || "");
-      if (passphrase.length < 4) {
-        setOverlayStatus("パスフレーズは4文字以上にしてください");
-        return;
-      }
-      unlockButton.disabled = true;
-      try {
-        credentialVaultState = await unlockCredentialVaultFromRuntime(passphrase);
-        credentialEntriesCache = await listCredentialEntriesFromRuntime();
-        renderCredentialSections();
-        setOverlayStatus("ログイン情報を有効化しました");
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message.includes("invalid_passphrase")) {
-          setOverlayStatus("パスフレーズが違います");
-        } else {
-          setOverlayStatus("解除に失敗しました");
-        }
-      } finally {
-        unlockButton.disabled = false;
-      }
-    });
-    return;
-  }
 
   const credentialsSection = document.createElement("section");
   credentialsSection.className = "mg-section";
@@ -3152,249 +3552,41 @@ function renderCredentialSections(): void {
   title.textContent = "Saved logins";
   const headerActions = document.createElement("div");
   headerActions.className = "mg-cred-header-actions";
-  const lockButton = document.createElement("button");
-  lockButton.className = "mg-btn secondary";
-  lockButton.type = "button";
-  lockButton.textContent = "Lock";
   const refreshButton = document.createElement("button");
   refreshButton.className = "mg-btn secondary";
   refreshButton.type = "button";
   refreshButton.textContent = "Refresh";
-  headerActions.append(lockButton, refreshButton);
-  header.append(title, headerActions);
-
-  const list = document.createElement("div");
-  list.className = "mg-cred-list";
-
-  const listHeader = document.createElement("div");
-  listHeader.className = "mg-cred-row mg-cred-row-header";
-  const headerCompany = document.createElement("span");
-  headerCompany.textContent = "Company name";
-  const headerUsername = document.createElement("span");
-  headerUsername.textContent = "Username";
-  const headerPassword = document.createElement("span");
-  headerPassword.textContent = "Password";
-  const headerActionsLabel = document.createElement("span");
-  headerActionsLabel.textContent = "Actions";
-  listHeader.append(headerCompany, headerUsername, headerPassword, headerActionsLabel);
-  list.appendChild(listHeader);
-
-  const createPasswordCell = (
-    value: string,
-    placeholder: string
-  ): { wrap: HTMLDivElement; input: HTMLInputElement; toggle: HTMLButtonElement } => {
-    const wrap = document.createElement("div");
-    wrap.className = "mg-cred-pass";
-
-    const input = document.createElement("input");
-    input.className = "mg-cred-input";
-    input.type = "password";
-    input.value = value;
-    input.placeholder = placeholder;
-
-    const toggle = document.createElement("button");
-    toggle.className = "mg-btn secondary mg-cred-mini-btn";
-    toggle.type = "button";
-    toggle.textContent = "Show";
-    toggle.addEventListener("click", () => {
-      const showing = input.type === "text";
-      input.type = showing ? "password" : "text";
-      toggle.textContent = showing ? "Show" : "Hide";
-    });
-
-    wrap.append(input, toggle);
-    return { wrap, input, toggle };
-  };
-
-  const defaultCompanyName = (() => {
-    try {
-      return new URL(location.href).hostname || "";
-    } catch {
-      return location.hostname || "";
-    }
-  })();
-
-  const addRow = document.createElement("div");
-  addRow.className = "mg-cred-row mg-cred-row-add";
-
-  const addCompanyInput = document.createElement("input");
-  addCompanyInput.className = "mg-cred-input";
-  addCompanyInput.placeholder = "Company name";
-  addCompanyInput.value = defaultCompanyName;
-
-  const addUsernameInput = document.createElement("input");
-  addUsernameInput.className = "mg-cred-input";
-  addUsernameInput.placeholder = "Username";
-
-  const addPasswordCell = createPasswordCell("", "Password");
-
-  const addButton = document.createElement("button");
-  addButton.className = "mg-btn mg-cred-mini-btn";
-  addButton.type = "button";
-  addButton.textContent = "Add";
-  const addActions = document.createElement("div");
-  addActions.className = "mg-cred-actions";
-  addActions.appendChild(addButton);
-
-  addRow.append(addCompanyInput, addUsernameInput, addPasswordCell.wrap, addActions);
-  list.appendChild(addRow);
-
-  lockButton.addEventListener("click", async () => {
-    await lockCredentialVaultFromRuntime().catch(() => {});
-    credentialVaultState = await getCredentialVaultStateFromRuntime();
-    credentialEntriesCache = [];
-    clearCredentialSaveTimers();
-    renderCredentialSections();
-    setOverlayStatus("ロックしました");
-  });
-
   refreshButton.addEventListener("click", async () => {
     await refreshCredentialData();
     renderCredentialSections();
     setOverlayStatus("ログイン情報を更新しました");
   });
+  headerActions.append(refreshButton);
+  header.append(title, headerActions);
+  credentialsSection.appendChild(header);
 
-  addButton.addEventListener("click", async () => {
-    const username = sanitizeCredentialInput(addUsernameInput.value);
-    const password = sanitizeCredentialInput(addPasswordCell.input.value);
-    if (!username || !password) {
-      setOverlayStatus("ユーザー名とパスワードを入力してください");
-      return;
-    }
-    addButton.disabled = true;
-    try {
-      await upsertCredentialEntryFromRuntime({
-        label: addCompanyInput.value,
-        username,
-        password,
-        pageUrl: location.href,
-        formAction: "",
-        formSignature: ""
-      });
-      await refreshCredentialData();
-      renderCredentialSections();
-      setOverlayStatus("ログイン情報を追加しました");
-    } catch {
-      setOverlayStatus("追加に失敗しました");
-    } finally {
-      addButton.disabled = false;
-    }
-  });
+  const desc = document.createElement("p");
+  desc.className = "mg-help-inline";
+  desc.textContent = credentialVaultState.hasVault
+    ? "会社名とユーザー名は表示されます。パスワードはクリック時にパスフレーズで表示します。"
+    : "最初に保存または表示するときに、ローカル暗号化用のパスフレーズを作成します。";
+  credentialsSection.appendChild(desc);
 
-  for (const entry of credentialEntriesCache) {
-    const row = document.createElement("div");
-    row.className = "mg-cred-row";
+  const list = document.createElement("div");
+  list.className = "mg-cred-list";
 
-    const companyInput = document.createElement("input");
-    companyInput.className = "mg-cred-input";
-    companyInput.value = entry.label || entry.host || "";
-    companyInput.placeholder = entry.host || "Company name";
-
-    const usernameInput = document.createElement("input");
-    usernameInput.className = "mg-cred-input";
-    usernameInput.value = entry.username || "";
-    usernameInput.placeholder = "Username";
-
-    const passwordCell = createPasswordCell(entry.password || "", "Password");
-
-    const actions = document.createElement("div");
-    actions.className = "mg-cred-actions";
-    const copyUserBtn = document.createElement("button");
-    copyUserBtn.className = "mg-btn secondary mg-cred-mini-btn";
-    copyUserBtn.type = "button";
-    copyUserBtn.textContent = "Copy ID";
-    const copyPassBtn = document.createElement("button");
-    copyPassBtn.className = "mg-btn secondary mg-cred-mini-btn";
-    copyPassBtn.type = "button";
-    copyPassBtn.textContent = "Copy Pass";
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "mg-btn secondary mg-cred-mini-btn";
-    deleteBtn.type = "button";
-    deleteBtn.textContent = "Delete";
-    actions.append(copyUserBtn, copyPassBtn);
-    actions.appendChild(deleteBtn);
-
-    const saveEntryNow = async (): Promise<void> => {
-      const username = sanitizeCredentialInput(usernameInput.value);
-      const password = sanitizeCredentialInput(passwordCell.input.value);
-      if (!username || !password) return;
-      const saved = await upsertCredentialEntryFromRuntime({
-        id: entry.id,
-        label: companyInput.value,
-        username,
-        password,
-        pageUrl: `${entry.origin}${entry.path}` || location.href,
-        formAction: entry.formAction || "",
-        formSignature: entry.formSignature || ""
-      });
-      const index = credentialEntriesCache.findIndex((row) => row.id === entry.id);
-      if (index >= 0) credentialEntriesCache[index] = saved;
-    };
-
-    const scheduleSave = (): void => {
-      const prev = credentialSaveTimerIds.get(entry.id);
-      if (prev !== undefined) window.clearTimeout(prev);
-      const next = window.setTimeout(() => {
-        saveEntryNow()
-          .then(() => setOverlayStatus("自動保存しました"))
-          .catch(() => setOverlayStatus("保存に失敗しました"));
-      }, CREDENTIAL_SAVE_DEBOUNCE_MS);
-      credentialSaveTimerIds.set(entry.id, next);
-    };
-
-    companyInput.addEventListener("input", scheduleSave);
-    usernameInput.addEventListener("input", scheduleSave);
-    passwordCell.input.addEventListener("input", scheduleSave);
-
-    for (const input of [companyInput, usernameInput, passwordCell.input]) {
-      input.addEventListener("blur", () => {
-        const pending = credentialSaveTimerIds.get(entry.id);
-        if (pending !== undefined) {
-          window.clearTimeout(pending);
-          credentialSaveTimerIds.delete(entry.id);
-        }
-        saveEntryNow()
-          .then(() => setOverlayStatus("自動保存しました"))
-          .catch(() => setOverlayStatus("保存に失敗しました"));
-      });
-    }
-
-    deleteBtn.addEventListener("click", async () => {
-      try {
-        await deleteCredentialEntryFromRuntime(entry.id);
-        credentialEntriesCache = credentialEntriesCache.filter((row) => row.id !== entry.id);
-        clearCredentialSaveTimers();
-        renderCredentialSections();
-        setOverlayStatus("削除しました");
-      } catch {
-        setOverlayStatus("削除に失敗しました");
-      }
-    });
-
-    copyUserBtn.addEventListener("click", async () => {
-      const ok = await copyTextToClipboard(usernameInput.value);
-      if (ok) flashCopiedElement(copyUserBtn);
-      setOverlayStatus(ok ? "ユーザー名をコピーしました" : "コピーに失敗しました");
-    });
-
-    copyPassBtn.addEventListener("click", async () => {
-      const ok = await copyTextToClipboard(passwordCell.input.value);
-      if (ok) flashCopiedElement(copyPassBtn);
-      setOverlayStatus(ok ? "パスワードをコピーしました" : "コピーに失敗しました");
-    });
-
-    row.append(companyInput, usernameInput, passwordCell.wrap, actions);
-    list.appendChild(row);
-  }
-
-  if (!credentialEntriesCache.length) {
+  if (!credentialSummariesCache.length) {
     const empty = document.createElement("p");
     empty.className = "mg-help-inline mg-cred-empty";
     empty.textContent = "保存済みログイン情報はありません。";
     list.appendChild(empty);
+  } else {
+    for (const entry of credentialSummariesCache) {
+      list.appendChild(renderCredentialSummaryRow(entry));
+    }
   }
 
-  credentialsSection.append(header, list);
+  credentialsSection.append(list, renderCredentialComposer());
   sections.appendChild(credentialsSection);
 }
 
@@ -3442,7 +3634,7 @@ function applyOverlayAuthUi(state: { authenticated: boolean; email: string }, se
 
   overlayRefs.help.textContent =
     overlayActiveTab === "credentials"
-      ? "会社ごとのログイン情報はローカルで暗号化保存されます。"
+      ? "会社名とユーザー名は一覧表示され、パスワードはクリック時に表示・コピーされます。"
       : "Click any saved value below to copy.";
   updateOverlayTabUi();
 }
@@ -3467,7 +3659,8 @@ function ensureInPageOverlay(): OverlayRefs | null {
       .mg-launcher-wrap { display: none; pointer-events: auto; position: fixed; right: 12px; width: 56px; height: 56px; }
       .mg-root.launcher-visible .mg-launcher-wrap { display: block; }
       .mg-root.is-open .mg-launcher-wrap { opacity: 0; transform: translateX(8px); pointer-events: none; transition: opacity .15s ease, transform .15s ease; }
-      .mg-launcher { width: 56px; height: 56px; border: 1px solid #c8e2fa; border-radius: 14px; background: linear-gradient(120deg, #5ba8e8 0%, #3c91d8 100%); color: #fff; font-size: 30px; font-weight: 800; line-height: 1; cursor: grab; box-shadow: 0 10px 22px rgba(73, 143, 200, 0.34); }
+      .mg-launcher { width: 56px; height: 56px; border: 1px solid #c8e2fa; border-radius: 14px; background: linear-gradient(120deg, #5ba8e8 0%, #3c91d8 100%); color: #fff; font-size: 30px; font-weight: 800; line-height: 1; cursor: grab; box-shadow: 0 10px 22px rgba(73, 143, 200, 0.34); display: flex; align-items: center; justify-content: center; padding: 0; }
+      .mg-launcher img { width: 28px; height: 28px; object-fit: contain; pointer-events: none; user-select: none; filter: drop-shadow(0 0 6px rgba(183, 231, 255, 0.4)); }
       .mg-launcher:active { cursor: grabbing; }
       .mg-launcher-hide { position: absolute; top: -8px; left: -8px; width: 22px; height: 22px; border: none; border-radius: 999px; background: #315a7f; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; opacity: 0; transform: scale(.9); transition: opacity .12s ease, transform .12s ease; }
       .mg-launcher-wrap:hover .mg-launcher-hide { opacity: 1; transform: scale(1); }
@@ -3494,23 +3687,23 @@ function ensureInPageOverlay(): OverlayRefs | null {
       .mg-status { min-height: 1.4em; margin: 6px 18px 0; color: #3f6387; font-size: 12px; font-weight: 700; }
       .mg-sections { overflow: auto; padding: 14px 18px 18px; display: grid; gap: 14px; }
       .mg-help-inline { margin: 0 0 10px; color: #5d7896; font-size: 12px; line-height: 1.5; }
-      .mg-cred-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
-      .mg-cred-toolbar .mg-btn { min-width: 92px; }
       .mg-cred-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
       .mg-cred-header .mg-section-title { margin: 0; }
       .mg-cred-header-actions { display: flex; gap: 8px; }
-      .mg-cred-list { border: 1px solid #d8e9f9; border-radius: 12px; overflow: hidden; background: #fbfdff; }
-      .mg-cred-row { display: grid; grid-template-columns: 1.15fr 1fr 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-top: 1px solid #e6f1fb; }
-      .mg-cred-row:first-child { border-top: none; }
-      .mg-cred-row-header { background: #eef7ff; color: #4f6f8f; font-size: 11px; font-weight: 700; }
-      .mg-cred-row-add { background: #ffffff; }
-      .mg-cred-pass { display: flex; align-items: center; gap: 6px; min-width: 0; }
-      .mg-cred-pass .mg-cred-input { min-width: 0; margin: 0; }
-      .mg-cred-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
-      .mg-cred-mini-btn { min-width: 64px !important; min-height: 34px; padding: 8px 10px; font-size: 11px; border-radius: 10px; box-shadow: none; flex: 0 0 auto; }
+      .mg-cred-list { display: grid; gap: 10px; }
+      .mg-cred-item { border: 1px solid #d8e9f9; border-radius: 14px; background: #fbfdff; padding: 10px; display: grid; gap: 10px; }
+      .mg-cred-info { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+      .mg-cred-copy { border: 1px solid #d8e9f9; border-radius: 12px; background: #f8fcff; padding: 9px 10px; min-width: 0; }
+      .mg-cred-copy.is-empty { opacity: 0.7; }
+      .mg-cred-copy .mg-copy-value { display: block; width: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mg-cred-inline-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+      .mg-cred-password { flex: 1 1 120px; text-align: left; border: 1px solid #c8e2fa; border-radius: 12px; background: #edf7ff; color: #2d6fa8; min-height: 36px; padding: 8px 12px; font-size: 12px; font-weight: 700; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mg-cred-password.is-copied { background: #dcefff; }
+      .mg-cred-mini-btn { min-width: 62px !important; min-height: 34px; padding: 8px 10px; font-size: 11px; border-radius: 10px; box-shadow: none; flex: 0 0 auto; }
       .mg-cred-empty { margin: 0; padding: 12px 10px; }
-      .mg-cred-field { display: grid; gap: 6px; margin-bottom: 10px; }
-      .mg-cred-label { font-size: 12px; color: #5d7896; font-weight: 700; }
+      .mg-cred-composer { margin-top: 12px; }
+      .mg-cred-editor { display: grid; gap: 8px; }
+      .mg-cred-prompt { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
       .mg-cred-input { width: 100%; border: 1px solid #d8e9f9; border-radius: 10px; padding: 10px; font-size: 12px; color: #1c3551; background: #f8fcff; }
       .mg-cred-input:focus { outline: none; border-color: #76b8ea; box-shadow: 0 0 0 2px rgba(118, 184, 234, 0.16); background: #ffffff; }
       .mg-section { background: #ffffff; border: 1px solid rgba(216, 233, 249, 0.78); border-radius: 14px; padding: 12px; box-shadow: 0 8px 20px rgba(72, 131, 182, 0.08); }
@@ -3530,7 +3723,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
     </style>
     <div class="mg-root">
       <div class="mg-launcher-wrap" data-role="launcher-wrap">
-        <button class="mg-launcher" type="button" title="Open Cygnet">M</button>
+        <button class="mg-launcher" type="button" title="Open Cygnet"><img data-role="launcher-icon" alt="Cygnet" /></button>
         <button class="mg-launcher-hide" type="button" data-role="hide-launcher" title="Hide">×</button>
       </div>
       <aside class="mg-panel" aria-label="Cygnet Profile Panel">
@@ -3573,6 +3766,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
   const root = shadow.querySelector(".mg-root") as HTMLElement;
   const launcherWrap = shadow.querySelector("[data-role='launcher-wrap']") as HTMLElement;
   const launcher = shadow.querySelector(".mg-launcher") as HTMLElement;
+  const launcherIcon = shadow.querySelector("[data-role='launcher-icon']") as HTMLImageElement;
   const hideLauncherBtn = shadow.querySelector("[data-role='hide-launcher']") as HTMLElement;
   const closeBtn = shadow.querySelector("[data-role='close']") as HTMLElement;
   const authTitle = shadow.querySelector("[data-role='auth-title']") as HTMLElement;
@@ -3590,6 +3784,9 @@ function ensureInPageOverlay(): OverlayRefs | null {
   const status = shadow.querySelector("[data-role='status']") as HTMLElement;
   const help = shadow.querySelector("[data-role='help']") as HTMLElement;
   const sections = shadow.querySelector("[data-role='sections']") as HTMLElement;
+
+  launcherIcon.src = chrome.runtime.getURL(LAUNCHER_ICON_PATH);
+  launcherIcon.draggable = false;
 
   let suppressLauncherClick = false;
   launcher.addEventListener("click", (event) => {
@@ -3631,9 +3828,12 @@ function ensureInPageOverlay(): OverlayRefs | null {
         return;
       }
       authStateCache = null;
-      credentialEntriesCache = [];
+      credentialSummariesCache = [];
       credentialVaultState = { unlocked: false, hasVault: credentialVaultState.hasVault, entryCount: 0 };
-      clearCredentialSaveTimers();
+      credentialEditingId = null;
+      credentialPromptId = null;
+      credentialDrafts.clear();
+      clearRevealedCredentialPasswords();
       overlayActiveTab = "main";
       const settings = await getSettings();
       renderOverlayProfile(settings.profile || {});
@@ -3691,6 +3891,14 @@ function ensureInPageOverlay(): OverlayRefs | null {
     const result = await autofill({ overwrite: true });
     if (result.reason === "auth_required") {
       setOverlayStatus("Create account to use");
+      return;
+    }
+    if (result.reason === "dashboard_excluded") {
+      setOverlayStatus("Cygnet のダッシュボード上では自動入力しません");
+      return;
+    }
+    if (result.reason === "password_locked") {
+      setOverlayStatus("ユーザー名のみ入力しました。パスワードは一覧で表示してから入力できます");
       return;
     }
     setOverlayStatus(`${result.filled || 0} 項目を入力しました`);
@@ -3801,7 +4009,8 @@ async function initInPageOverlay(options: { showLauncher?: boolean; persist?: bo
 }
 
 function applyStoredCredentialToAuthForms(
-  credential: CredentialEntry | null,
+  credential: CredentialSummary | null,
+  password: string,
   overwrite: boolean
 ): number {
   if (!credential) return 0;
@@ -3818,8 +4027,8 @@ function applyStoredCredentialToAuthForms(
       if (ok) filled += 1;
     }
 
-    if (passwordField) {
-      const ok = setFieldValue(passwordField, "password", credential.password, { overwrite });
+    if (passwordField && password) {
+      const ok = setFieldValue(passwordField, "password", password, { overwrite });
       if (ok) filled += 1;
     }
   }
@@ -3828,6 +4037,10 @@ function applyStoredCredentialToAuthForms(
 
 async function autofill(options: { overwrite?: boolean } = {}): Promise<{ filled: number; reason?: string }> {
   const { overwrite = true } = options;
+  if (isCygnetManagedPage()) {
+    return { filled: 0, reason: "dashboard_excluded" };
+  }
+
   const authenticated = await isUserAuthenticated();
   if (!authenticated) {
     return { filled: 0, reason: "auth_required" };
@@ -3896,7 +4109,10 @@ async function autofill(options: { overwrite?: boolean } = {}): Promise<{ filled
   }
 
   const matchedCredential = await getBestCredentialForCurrentPage().catch(() => null);
-  let filled = applyStoredCredentialToAuthForms(matchedCredential, overwrite);
+  const revealedPassword = matchedCredential
+    ? revealedCredentialPasswords.get(matchedCredential.id) || ""
+    : "";
+  let filled = applyStoredCredentialToAuthForms(matchedCredential, revealedPassword, overwrite);
   const handledElements = new Set<HTMLElement>();
   fillGroupedFields(candidates, profile, overwrite, handledElements);
   await retrySplitBirthDateFields(profile, overwrite, handledElements);
@@ -3911,7 +4127,10 @@ async function autofill(options: { overwrite?: boolean } = {}): Promise<{ filled
 
   await retryUniversitySelectionFlow(profile, overwrite, handledElements);
 
-  return { filled };
+  return {
+    filled,
+    reason: matchedCredential && !revealedPassword ? "password_locked" : undefined
+  };
 }
 
 function debounce<T extends (...args: unknown[]) => void>(fn: T, waitMs: number): (...args: Parameters<T>) => void {
@@ -3923,6 +4142,8 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, waitMs: number)
 }
 
 function startAutoRun(): void {
+  if (isCygnetManagedPage()) return;
+
   const trigger = debounce(() => {
     autofill({ overwrite: false }).catch(() => {});
   }, AUTO_RUN_DEBOUNCE_MS);

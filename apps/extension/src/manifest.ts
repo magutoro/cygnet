@@ -5,6 +5,12 @@ export default defineManifest({
   name: "Cygnet",
   version: "0.1.0",
   description: "Japanese-focused job application autofill extension.",
+  icons: {
+    16: "icons/icon16.png",
+    32: "icons/icon32.png",
+    48: "icons/icon48.png",
+    128: "icons/icon128.png",
+  },
   permissions: ["storage", "activeTab", "scripting", "identity"],
   host_permissions: ["<all_urls>"],
   background: {
@@ -18,7 +24,20 @@ export default defineManifest({
       run_at: "document_idle",
     },
   ],
-  action: {},
+  action: {
+    default_icon: {
+      16: "icons/icon16.png",
+      32: "icons/icon32.png",
+      48: "icons/icon48.png",
+      128: "icons/icon128.png",
+    },
+  },
+  web_accessible_resources: [
+    {
+      resources: ["icons/icon16.png", "icons/icon32.png", "icons/icon48.png", "icons/icon128.png"],
+      matches: ["<all_urls>"],
+    },
+  ],
   options_page: "src/options/index.html",
   externally_connectable: {
     matches: [

@@ -4,7 +4,7 @@ import type {
   CredentialMatchContext,
   CredentialUpsertInput,
   CredentialVaultState,
-  CredentialEntry
+  CredentialSummary
 } from "./credentials.js";
 
 export type ExtensionMessage =
@@ -20,7 +20,9 @@ export type ExtensionMessage =
   | { type: "CREDENTIAL_VAULT_STATE" }
   | { type: "CREDENTIAL_UNLOCK"; passphrase: string }
   | { type: "CREDENTIAL_LOCK" }
+  | { type: "CREDENTIAL_LIST_SUMMARIES" }
   | { type: "CREDENTIAL_LIST" }
+  | { type: "CREDENTIAL_REVEAL_PASSWORD"; id: string; passphrase: string }
   | { type: "CREDENTIAL_UPSERT"; entry: CredentialUpsertInput }
   | { type: "CREDENTIAL_DELETE"; id: string }
   | { type: "CREDENTIAL_MATCH"; context: CredentialMatchContext }
@@ -49,6 +51,18 @@ export interface CredentialVaultStateResponse {
 
 export interface CredentialListResponse {
   ok: boolean;
-  entries?: CredentialEntry[];
+  entries?: CredentialSummary[];
+  error?: string;
+}
+
+export interface CredentialSummaryListResponse {
+  ok: boolean;
+  entries?: CredentialSummary[];
+  error?: string;
+}
+
+export interface CredentialRevealPasswordResponse {
+  ok: boolean;
+  password?: string;
   error?: string;
 }

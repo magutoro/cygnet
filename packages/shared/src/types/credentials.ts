@@ -21,13 +21,14 @@ export interface EncryptedCredentialRecord {
   queryKey: string;
   formAction: string;
   formSignature: string;
-  usernameEnc: EncryptedBlob;
+  username?: string;
+  usernameEnc?: EncryptedBlob;
   passwordEnc: EncryptedBlob;
   createdAt: number;
   updatedAt: number;
 }
 
-export interface CredentialEntry {
+export interface CredentialSummary {
   id: string;
   label: string;
   labelManual: boolean;
@@ -39,9 +40,12 @@ export interface CredentialEntry {
   formAction: string;
   formSignature: string;
   username: string;
-  password: string;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface CredentialEntry extends CredentialSummary {
+  password: string;
 }
 
 export interface CredentialCapturePayload {
@@ -61,7 +65,8 @@ export interface CredentialUpsertInput {
   formSignature?: string;
   label?: string;
   username: string;
-  password: string;
+  password?: string;
+  passphrase?: string;
 }
 
 export interface CredentialMatchContext {

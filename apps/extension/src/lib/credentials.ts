@@ -2,6 +2,7 @@ import type {
   CredentialCapturePayload,
   CredentialEntry,
   CredentialMatchContext,
+  CredentialSummary,
   CredentialUpsertInput,
   CredentialVaultMeta,
   CredentialVaultState,
@@ -341,11 +342,10 @@ async function setUnlockedVaultKey(key: CryptoKey): Promise<void> {
   await storageSessionSet({ [VAULT_SESSION_RAW_KEY]: uint8ToBase64(raw) });
 }
 
-async function decryptRecord(record: EncryptedCredentialRecord, key: CryptoKey): Promise<CredentialEntry> {
-  const [username, password] = await Promise.all([
-    decryptText(record.usernameEnc, key),
-    decryptText(record.passwordEnc, key)
-  ]);
+function recordToSummary(
+  record: EncryptedCredentialRecord,
+  username: string
+): CredentialSummary {
   return {
     id: record.id,
     label: record.label,
@@ -358,40 +358,16 @@ async function decryptRecord(record: EncryptedCredentialRecord, key: CryptoKey):
     formAction: record.formAction,
     formSignature: record.formSignature,
     username,
-    password,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt
   };
 }
 
-async function encryptRecord(
-  current: EncryptedCredentialRecord | null,
-  value: CredentialEntry,
-  key: CryptoKey
-): Promise<EncryptedCredentialRecord> {
-  const [usernameEnc, passwordEnc] = await Promise.all([
-    encryptText(value.username, key),
-    encryptText(value.password, key)
-  ]);
-  return {
-    id: value.id,
-    label: value.label,
-    labelManual: value.labelManual,
-    siteKey: value.siteKey,
-    origin: value.origin,
-    host: value.host,
-    path: value.path,
-    queryKey: value.queryKey,
-    formAction: value.formAction,
-    formSignature: value.formSignature,
-    usernameEnc,
-    passwordEnc,
-    createdAt: current?.createdAt ?? value.createdAt,
-    updatedAt: value.updatedAt
-  };
-}
-
-export async function unlockCredentialVault(passphrase: string): Promise<CredentialVaultState> {
+async function getVerifiedVaultKey(
+  passphrase: string,
+  options: { persist?: boolean; createIfMissing?: boolean } = {}
+): Promise<CryptoKey> {
+  const { persist = false, createIfMissing = true } = options;
   const trimmed = String(passphrase || "");
   if (trimmed.length < 4) {
     throw new Error("passphrase_too_short");
@@ -399,6 +375,9 @@ export async function unlockCredentialVault(passphrase: string): Promise<Credent
 
   let meta = await getVaultMeta();
   if (!meta) {
+    if (!createIfMissing) {
+      throw new Error("vault_not_initialized");
+    }
     const salt = crypto.getRandomValues(new Uint8Array(16));
     meta = {
       version: VAULT_VERSION,
@@ -425,8 +404,96 @@ export async function unlockCredentialVault(passphrase: string): Promise<Credent
     await saveVaultMeta(meta);
   }
 
-  await setUnlockedVaultKey(key);
-  const records = await getEncryptedRecords();
+  if (persist) {
+    await setUnlockedVaultKey(key);
+  }
+
+  return key;
+}
+
+async function resolveRecordUsername(
+  record: EncryptedCredentialRecord,
+  key?: CryptoKey | null
+): Promise<string> {
+  const visibleUsername = sanitizeCredentialValue(record.username);
+  if (visibleUsername) return visibleUsername;
+  if (!record.usernameEnc || !key) return "";
+  return sanitizeCredentialValue(await decryptText(record.usernameEnc, key));
+}
+
+async function migrateLegacyRecordsForKey(
+  key: CryptoKey,
+  recordsInput?: EncryptedCredentialRecord[]
+): Promise<EncryptedCredentialRecord[]> {
+  const records = recordsInput ?? (await getEncryptedRecords());
+  let changed = false;
+  const next: EncryptedCredentialRecord[] = [];
+
+  for (const record of records) {
+    if (!sanitizeCredentialValue(record.username) && record.usernameEnc) {
+      try {
+        const username = sanitizeCredentialValue(await decryptText(record.usernameEnc, key));
+        next.push({
+          ...record,
+          username,
+          usernameEnc: undefined
+        });
+        changed = true;
+        continue;
+      } catch {
+        next.push(record);
+        continue;
+      }
+    }
+    next.push(record);
+  }
+
+  if (changed) {
+    await saveEncryptedRecords(next);
+  }
+
+  return next;
+}
+
+async function decryptRecord(record: EncryptedCredentialRecord, key: CryptoKey): Promise<CredentialEntry> {
+  const [username, password] = await Promise.all([
+    resolveRecordUsername(record, key),
+    decryptText(record.passwordEnc, key)
+  ]);
+  return {
+    ...recordToSummary(record, username),
+    password,
+  };
+}
+
+async function encryptRecord(
+  current: EncryptedCredentialRecord | null,
+  value: CredentialEntry,
+  key: CryptoKey
+): Promise<EncryptedCredentialRecord> {
+  const passwordEnc = await encryptText(value.password, key);
+  return {
+    id: value.id,
+    label: value.label,
+    labelManual: value.labelManual,
+    siteKey: value.siteKey,
+    origin: value.origin,
+    host: value.host,
+    path: value.path,
+    queryKey: value.queryKey,
+    formAction: value.formAction,
+    formSignature: value.formSignature,
+    username: sanitizeCredentialValue(value.username),
+    usernameEnc: undefined,
+    passwordEnc,
+    createdAt: current?.createdAt ?? value.createdAt,
+    updatedAt: value.updatedAt
+  };
+}
+
+export async function unlockCredentialVault(passphrase: string): Promise<CredentialVaultState> {
+  const key = await getVerifiedVaultKey(passphrase, { persist: true });
+  const records = await migrateLegacyRecordsForKey(key);
 
   return {
     unlocked: true,
@@ -453,12 +520,19 @@ export async function getCredentialVaultState(): Promise<CredentialVaultState> {
   };
 }
 
+export async function listCredentialSummaries(): Promise<CredentialSummary[]> {
+  const records = await getEncryptedRecords();
+  return records
+    .map((record) => recordToSummary(record, sanitizeCredentialValue(record.username)))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
 export async function listCredentialEntries(): Promise<CredentialEntry[]> {
   const key = await getUnlockedVaultKey();
   if (!key) {
     throw new Error("vault_locked");
   }
-  const records = await getEncryptedRecords();
+  const records = await migrateLegacyRecordsForKey(key);
   const entries: CredentialEntry[] = [];
   for (const record of records) {
     try {
@@ -474,11 +548,7 @@ export async function listCredentialEntries(): Promise<CredentialEntry[]> {
 
 async function upsertCredentialInternal(
   input: CredentialUpsertInput & { pageTitle?: string; labelHint?: string; labelManual?: boolean }
-): Promise<CredentialEntry> {
-  const key = await getUnlockedVaultKey();
-  if (!key) {
-    throw new Error("vault_locked");
-  }
+): Promise<CredentialSummary> {
 
   const context = buildCredentialContext(input);
   if (!context) {
@@ -486,9 +556,8 @@ async function upsertCredentialInternal(
   }
 
   const username = sanitizeCredentialValue(input.username);
-  const password = sanitizeCredentialValue(input.password);
-  if (!username || !password) {
-    throw new Error("missing_credentials");
+  if (!username) {
+    throw new Error("missing_username");
   }
 
   const pageUrl = safeParseUrl(input.pageUrl);
@@ -505,17 +574,8 @@ async function upsertCredentialInternal(
   const existing = existingIndex >= 0 ? records[existingIndex] : null;
   const id = existing?.id || input.id || crypto.randomUUID();
 
-  let previousLabel = "";
-  let previousManual = false;
-  if (existing) {
-    try {
-      const prev = await decryptRecord(existing, key);
-      previousLabel = prev.label;
-      previousManual = prev.labelManual;
-    } catch {
-      // noop
-    }
-  }
+  const previousLabel = existing?.label || "";
+  const previousManual = Boolean(existing?.labelManual);
 
   const inferredLabel = inferLabelFromPayload(input, pageUrl);
   const requestedLabel = normalizeText(input.label);
@@ -525,7 +585,7 @@ async function upsertCredentialInternal(
     (previousLabel && previousLabel.slice(0, 120)) ||
     inferredLabel;
 
-  const plainEntry: CredentialEntry = {
+  const summary: CredentialSummary = {
     id,
     label,
     labelManual,
@@ -537,22 +597,51 @@ async function upsertCredentialInternal(
     formAction: context.formAction,
     formSignature: context.formSignature,
     username,
-    password,
     createdAt: existing?.createdAt || now,
     updatedAt: now
   };
 
-  const encrypted = await encryptRecord(existing, plainEntry, key);
+  const nextPassword = sanitizeCredentialValue(input.password);
+  if (!existing && !nextPassword) {
+    throw new Error("missing_credentials");
+  }
+
+  let encrypted: EncryptedCredentialRecord;
+  if (!nextPassword && existing) {
+    encrypted = {
+      ...existing,
+      ...summary,
+      username,
+      usernameEnc: undefined,
+      updatedAt: now
+    };
+  } else {
+    const existingKey =
+      (input.passphrase && (await getVerifiedVaultKey(input.passphrase))) ||
+      (await getUnlockedVaultKey());
+    if (!existingKey) {
+      throw new Error("vault_locked");
+    }
+    encrypted = await encryptRecord(
+      existing,
+      {
+        ...summary,
+        password: nextPassword
+      },
+      existingKey
+    );
+  }
+
   if (existingIndex >= 0) {
     records[existingIndex] = encrypted;
   } else {
     records.push(encrypted);
   }
   await saveEncryptedRecords(records);
-  return plainEntry;
+  return summary;
 }
 
-export async function captureCredentialFromForm(payload: CredentialCapturePayload): Promise<CredentialEntry | null> {
+export async function captureCredentialFromForm(payload: CredentialCapturePayload): Promise<CredentialSummary | null> {
   const username = sanitizeCredentialValue(payload.username);
   const password = sanitizeCredentialValue(payload.password);
   if (!username || !password) return null;
@@ -572,7 +661,7 @@ export async function captureCredentialFromForm(payload: CredentialCapturePayloa
   }
 }
 
-export async function upsertCredentialEntry(input: CredentialUpsertInput): Promise<CredentialEntry> {
+export async function upsertCredentialEntry(input: CredentialUpsertInput): Promise<CredentialSummary> {
   return upsertCredentialInternal({
     ...input,
     labelManual: true
@@ -586,7 +675,7 @@ export async function deleteCredentialEntry(id: string): Promise<void> {
   await saveEncryptedRecords(next);
 }
 
-function scoreCredentialMatch(entry: CredentialEntry, context: CredentialContext): number {
+function scoreCredentialMatch(entry: CredentialSummary, context: CredentialContext): number {
   let score = 0;
   if (entry.siteKey === context.siteKey) score += 120;
   if (entry.origin === context.origin) score += 26;
@@ -599,18 +688,13 @@ function scoreCredentialMatch(entry: CredentialEntry, context: CredentialContext
   return score;
 }
 
-export async function findBestCredentialEntry(
+export async function findBestCredentialSummary(
   contextInput: CredentialMatchContext
-): Promise<CredentialEntry | null> {
+): Promise<CredentialSummary | null> {
   const context = buildCredentialContext(contextInput);
   if (!context) return null;
 
-  let entries: CredentialEntry[] = [];
-  try {
-    entries = await listCredentialEntries();
-  } catch {
-    return null;
-  }
+  const entries = await listCredentialSummaries();
   if (!entries.length) return null;
 
   const ranked = entries
@@ -619,4 +703,13 @@ export async function findBestCredentialEntry(
     .sort((a, b) => b.score - a.score || b.entry.updatedAt - a.entry.updatedAt);
 
   return ranked[0]?.entry || null;
+}
+
+export async function revealCredentialPassword(id: string, passphrase: string): Promise<string> {
+  if (!id) throw new Error("missing_id");
+  const key = await getVerifiedVaultKey(passphrase, { createIfMissing: false });
+  const records = await migrateLegacyRecordsForKey(key);
+  const record = records.find((item) => item.id === id);
+  if (!record) throw new Error("not_found");
+  return decryptText(record.passwordEnc, key);
 }

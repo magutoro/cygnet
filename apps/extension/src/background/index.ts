@@ -3,10 +3,11 @@ import { getSession } from "../lib/auth.js";
 import {
   captureCredentialFromForm,
   deleteCredentialEntry,
-  findBestCredentialEntry,
+  findBestCredentialSummary,
   getCredentialVaultState,
-  listCredentialEntries,
+  listCredentialSummaries,
   lockCredentialVault,
+  revealCredentialPassword,
   unlockCredentialVault,
   upsertCredentialEntry
 } from "../lib/credentials.js";
@@ -231,8 +232,28 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   if (msg?.type === "CREDENTIAL_LIST") {
-    listCredentialEntries()
+    listCredentialSummaries()
       .then((entries) => sendResponse({ ok: true, entries }))
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : String(err);
+        sendResponse({ ok: false, error: message });
+      });
+    return true;
+  }
+
+  if (msg?.type === "CREDENTIAL_LIST_SUMMARIES") {
+    listCredentialSummaries()
+      .then((entries) => sendResponse({ ok: true, entries }))
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : String(err);
+        sendResponse({ ok: false, error: message });
+      });
+    return true;
+  }
+
+  if (msg?.type === "CREDENTIAL_REVEAL_PASSWORD") {
+    revealCredentialPassword(String(msg.id || ""), String(msg.passphrase || ""))
+      .then((password) => sendResponse({ ok: true, password }))
       .catch((err) => {
         const message = err instanceof Error ? err.message : String(err);
         sendResponse({ ok: false, error: message });
@@ -264,7 +285,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   if (msg?.type === "CREDENTIAL_MATCH") {
-    findBestCredentialEntry(msg.context || {})
+    findBestCredentialSummary(msg.context || {})
       .then((entry) => sendResponse({ ok: true, entry }))
       .catch((err) => sendResponse({ ok: false, error: String(err) }));
     return true;
