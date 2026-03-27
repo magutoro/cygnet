@@ -119,17 +119,6 @@ export function App() {
     setStatus("ログアウトしました");
   }, []);
 
-  const handleSync = useCallback(async () => {
-    try {
-      await syncProfile();
-      const refreshed = await getSettings();
-      setSettings(refreshed);
-      setStatus("同期しました");
-    } catch {
-      setStatus("同期に失敗しました");
-    }
-  }, []);
-
   const handleToggle = useCallback(async () => {
     if (!settings) return;
     if (!user) {
@@ -197,9 +186,6 @@ export function App() {
             )}
             <span className="auth-email">{user.email}</span>
             <div className="auth-actions">
-              <button type="button" className="auth-btn" onClick={handleSync}>
-                同期
-              </button>
               <button type="button" className="auth-btn secondary" onClick={handleSignOut}>
                 ログアウト
               </button>
