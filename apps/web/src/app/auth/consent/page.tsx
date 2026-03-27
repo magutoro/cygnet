@@ -22,11 +22,11 @@ const COPY = {
     cardTitle: "What you are acknowledging",
     bullets: [
       "Your synced profile and uploaded resumes may be stored in Cygnet's secured backend so they can appear in the web dashboard and sync across devices.",
-      "Authorized Cygnet operators may be able to access synced profile or resume data when needed for support, security, abuse prevention, or legal compliance.",
+      "Cygnet staff may access synced profile or resume data only when needed for user-requested support, security or abuse investigation, or legal compliance.",
       "Saved login passwords are different: they stay local in the extension, are protected with your local passphrase, and are not uploaded to Cygnet.",
     ],
     checkbox:
-      "I understand that synced profile and resume data may be stored by Cygnet and may be accessible to authorized operators, and that saved login passwords stay local-only in the extension.",
+      "I understand that synced profile and resume data may be stored by Cygnet and accessed only for user-requested support, security or abuse investigation, or legal compliance, and that saved login passwords stay local-only in the extension.",
     continue: "Continue with Google",
   },
   ja: {
@@ -37,11 +37,11 @@ const COPY = {
     cardTitle: "確認していただく内容",
     bullets: [
       "同期したプロフィール情報やアップロードした履歴書は、Web ダッシュボード表示や端末間同期のために、Cygnet の保護されたバックエンドへ保存されることがあります。",
-      "サポート、セキュリティ、悪用防止、法令対応のために必要な場合、権限を持つ Cygnet 担当者が同期済みプロフィールまたは履歴書データへアクセスできることがあります。",
+      "Cygnet 担当者が同期済みプロフィールまたは履歴書データへアクセスできるのは、ユーザーからのサポート依頼、セキュリティまたは不正利用の調査、法令対応が必要な場合に限られます。",
       "保存済みログインのパスワードは別扱いです。これらは拡張機能内だけに保存され、ローカルのパスフレーズで保護され、Cygnet へアップロードされません。",
     ],
     checkbox:
-      "同期したプロフィール情報や履歴書は Cygnet に保存され、権限を持つ担当者が必要に応じて閲覧できる場合があること、また保存済みログインパスワードは拡張機能内のローカル保存のみであることを理解しました。",
+      "同期したプロフィール情報や履歴書は Cygnet に保存され、閲覧はユーザーからのサポート依頼、セキュリティまたは不正利用の調査、法令対応に限られること、また保存済みログインパスワードは拡張機能内のローカル保存のみであることを理解しました。",
     continue: "Google で続行",
   },
 } as const;

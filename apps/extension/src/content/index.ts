@@ -46,7 +46,6 @@ interface OverlayRefs {
   launcher: HTMLElement;
   hideLauncherBtn: HTMLElement;
   closeBtn: HTMLElement;
-  authTitle: HTMLElement;
   authEmail: HTMLElement;
   signInBtn: HTMLButtonElement;
   logoutBtn: HTMLButtonElement;
@@ -59,7 +58,6 @@ interface OverlayRefs {
   tabAdditionalBtn: HTMLButtonElement;
   tabCredentialsBtn: HTMLButtonElement;
   status: HTMLElement;
-  help: HTMLElement;
   sections: HTMLElement;
   statusTimer: number | null;
   resizeHandler: () => void;
@@ -3565,13 +3563,6 @@ function renderCredentialSections(): void {
   header.append(title, headerActions);
   credentialsSection.appendChild(header);
 
-  const desc = document.createElement("p");
-  desc.className = "mg-help-inline";
-  desc.textContent = credentialVaultState.hasVault
-    ? "会社名とユーザー名は表示されます。パスワードはクリック時にパスフレーズで表示します。"
-    : "最初に保存または表示するときに、ローカル暗号化用のパスフレーズを作成します。";
-  credentialsSection.appendChild(desc);
-
   const list = document.createElement("div");
   list.className = "mg-cred-list";
 
@@ -3618,7 +3609,6 @@ function applyOverlayAuthUi(state: { authenticated: boolean; email: string }, se
 
   const { authenticated, email } = state;
 
-  overlayRefs.authTitle.textContent = authenticated ? "Signed in" : "Log in";
   overlayRefs.authEmail.textContent = email || "";
 
   overlayRefs.signInBtn.classList.toggle("is-hidden", authenticated);
@@ -3627,15 +3617,9 @@ function applyOverlayAuthUi(state: { authenticated: boolean; email: string }, se
   overlayRefs.controlsWrap.classList.toggle("is-hidden", !authenticated);
   overlayRefs.tabsWrap.classList.toggle("is-hidden", !authenticated);
   overlayRefs.sections.classList.toggle("is-hidden", !authenticated);
-  overlayRefs.help.classList.toggle("is-hidden", !authenticated);
 
   overlayRefs.enabledToggle.checked = Boolean(settings.enabled);
   overlayRefs.enabledToggle.disabled = !authenticated;
-
-  overlayRefs.help.textContent =
-    overlayActiveTab === "credentials"
-      ? "会社名とユーザー名は一覧表示され、パスワードはクリック時に表示・コピーされます。"
-      : "Click any saved value below to copy.";
   updateOverlayTabUi();
 }
 
@@ -3668,35 +3652,34 @@ function ensureInPageOverlay(): OverlayRefs | null {
       .mg-title { margin: 0; font-size: 24px; font-weight: 800; color: #1c3551; letter-spacing: -0.01em; }
       .mg-header-actions { display: flex; gap: 8px; }
       .mg-icon-btn { border: 1px solid #c8e2fa; background: #edf7ff; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; color: #2d6fa8; font-weight: 700; }
-      .mg-auth-card { margin: 14px 18px 0; border: 1px solid rgba(216, 233, 249, 0.78); background: rgba(255, 255, 255, 0.95); border-radius: 14px; padding: 12px; box-shadow: 0 8px 20px rgba(72, 131, 182, 0.08); }
-      .mg-auth-title { margin: 0; font-size: 13px; font-weight: 700; color: #1c3551; }
-      .mg-auth-email { margin: 2px 0 0; font-size: 11px; color: #5d7896; line-height: 1.35; }
-      .mg-auth-actions { margin-top: 8px; display: flex; gap: 8px; }
-      .mg-auth-actions .mg-btn { min-height: 34px; padding: 8px 10px; border-radius: 10px; font-size: 11px; }
-      .mg-controls { margin: 14px 18px 0; display: grid; gap: 10px; }
-      .mg-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-      .mg-tabs { margin: 10px 18px 0; display: flex; gap: 8px; }
-      .mg-tab { border: 1px solid #d8e9f9; border-radius: 999px; padding: 8px 12px; background: #ffffff; color: #315a7f; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s ease; }
+      .mg-body { flex: 1; overflow: auto; padding: 12px 18px 18px; display: grid; align-content: start; gap: 10px; }
+      .mg-auth-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid rgba(216, 233, 249, 0.78); background: rgba(255, 255, 255, 0.95); border-radius: 14px; padding: 10px 12px; box-shadow: 0 8px 20px rgba(72, 131, 182, 0.08); }
+      .mg-auth-email { margin: 0; min-width: 0; font-size: 12px; color: #3f6387; line-height: 1.35; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .mg-auth-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+      .mg-auth-actions .mg-btn { min-height: 32px; padding: 7px 12px; border-radius: 10px; font-size: 11px; }
+      .mg-controls { display: grid; gap: 8px; }
+      .mg-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .mg-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+      .mg-tab { border: 1px solid #d8e9f9; border-radius: 999px; padding: 8px 10px; background: #ffffff; color: #315a7f; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s ease; text-align: center; min-width: 0; }
       .mg-tab:hover { border-color: #9fcff2; color: #1c3551; }
       .mg-tab.is-active { border-color: #3c91d8; background: #3c91d8; color: #ffffff; }
-      .mg-btn { flex: 1; border: 1px solid #c8e2fa; border-radius: 13px; padding: 11px 13px; cursor: pointer; font-weight: 700; color: #fff; background: linear-gradient(120deg, #5ba8e8 0%, #3c91d8 100%); box-shadow: 0 8px 16px rgba(73, 143, 200, 0.24); font-size: 12px; }
+      .mg-btn { flex: 1; border: 1px solid #c8e2fa; border-radius: 13px; padding: 10px 13px; cursor: pointer; font-weight: 700; color: #fff; background: linear-gradient(120deg, #5ba8e8 0%, #3c91d8 100%); box-shadow: 0 8px 16px rgba(73, 143, 200, 0.24); font-size: 12px; min-height: 40px; }
       .mg-btn.secondary { background: #edf7ff; color: #2d6fa8; border: 1px solid #c8e2fa; box-shadow: none; }
-      .mg-toggle { display: flex; align-items: center; justify-content: space-between; border: 1px solid #d8e9f9; background: #ffffff; border-radius: 13px; padding: 10px 12px; font-size: 12px; color: #1c3551; font-weight: 700; }
+      .mg-toggle { display: flex; align-items: center; justify-content: space-between; border: 1px solid #d8e9f9; background: #ffffff; border-radius: 13px; padding: 8px 12px; font-size: 12px; color: #1c3551; font-weight: 700; min-height: 40px; }
       .mg-toggle input { width: 16px; height: 16px; accent-color: #3c91d8; }
-      .mg-help { margin: 12px 18px 0; color: #5d7896; font-size: 12px; }
-      .mg-status { min-height: 1.4em; margin: 6px 18px 0; color: #3f6387; font-size: 12px; font-weight: 700; }
-      .mg-sections { overflow: auto; padding: 14px 18px 18px; display: grid; gap: 14px; }
+      .mg-status { min-height: 1.25em; margin: 0; color: #3f6387; font-size: 12px; font-weight: 700; }
+      .mg-sections { display: grid; gap: 12px; }
       .mg-help-inline { margin: 0 0 10px; color: #5d7896; font-size: 12px; line-height: 1.5; }
       .mg-cred-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
       .mg-cred-header .mg-section-title { margin: 0; }
       .mg-cred-header-actions { display: flex; gap: 8px; }
       .mg-cred-list { display: grid; gap: 10px; }
-      .mg-cred-item { border: 1px solid #d8e9f9; border-radius: 14px; background: #fbfdff; padding: 10px; display: grid; gap: 10px; }
+      .mg-cred-item { border: 1px solid #d8e9f9; border-radius: 14px; background: #fbfdff; padding: 10px; display: grid; gap: 8px; }
       .mg-cred-info { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
-      .mg-cred-copy { border: 1px solid #d8e9f9; border-radius: 12px; background: #f8fcff; padding: 9px 10px; min-width: 0; }
+      .mg-cred-copy { border: 1px solid #d8e9f9; border-radius: 12px; background: #f8fcff; padding: 9px 10px; min-width: 0; min-height: 72px; height: 100%; display: grid; align-content: start; }
       .mg-cred-copy.is-empty { opacity: 0.7; }
       .mg-cred-copy .mg-copy-value { display: block; width: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .mg-cred-inline-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+      .mg-cred-inline-actions { display: flex; align-items: stretch; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
       .mg-cred-password { flex: 1 1 120px; text-align: left; border: 1px solid #c8e2fa; border-radius: 12px; background: #edf7ff; color: #2d6fa8; min-height: 36px; padding: 8px 12px; font-size: 12px; font-weight: 700; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .mg-cred-password.is-copied { background: #dcefff; }
       .mg-cred-mini-btn { min-width: 62px !important; min-height: 34px; padding: 8px 10px; font-size: 11px; border-radius: 10px; box-shadow: none; flex: 0 0 auto; }
@@ -3708,17 +3691,22 @@ function ensureInPageOverlay(): OverlayRefs | null {
       .mg-cred-input:focus { outline: none; border-color: #76b8ea; box-shadow: 0 0 0 2px rgba(118, 184, 234, 0.16); background: #ffffff; }
       .mg-section { background: #ffffff; border: 1px solid rgba(216, 233, 249, 0.78); border-radius: 14px; padding: 12px; box-shadow: 0 8px 20px rgba(72, 131, 182, 0.08); }
       .mg-section-title { margin: 2px 2px 10px; font-size: 14px; color: #1c3551; font-weight: 700; }
-      .mg-grid { display: grid; gap: 10px; }
-      .mg-copy { text-align: left; border: 1px solid #d8e9f9; border-radius: 12px; background: #f8fcff; padding: 10px 12px; display: grid; gap: 6px; }
+      .mg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: stretch; }
+      .mg-copy { text-align: left; border: 1px solid #d8e9f9; border-radius: 12px; background: #f8fcff; padding: 10px 12px; display: grid; gap: 6px; min-height: 82px; height: 100%; }
       .mg-copy:hover { border-color: #d8e9f9; background: #f8fcff; }
       .mg-copy.is-empty { opacity: 0.7; background: #f2f8ff; }
-      .mg-copy-full { text-align: left; border: none; background: transparent; padding: 0; margin: 0; cursor: pointer; display: grid; gap: 4px; }
+      .mg-copy-full { text-align: left; border: none; background: transparent; padding: 0; margin: 0; cursor: pointer; display: grid; gap: 4px; height: 100%; align-content: start; }
       .mg-copy-full:disabled { cursor: default; }
       .mg-copy-full.is-copied .mg-copy-value { background: #dcefff; border-radius: 4px; padding: 1px 4px; }
       .mg-copy-label { font-size: 12px; color: #5d7896; font-weight: 700; }
       .mg-copy-value { font-size: 13px; color: #1c3551; white-space: pre-wrap; word-break: break-word; line-height: 1.42; display: inline; width: fit-content; box-decoration-break: clone; -webkit-box-decoration-break: clone; border-radius: 4px; background-color: rgba(199, 236, 255, 0); transition: background-color .72s cubic-bezier(0.22, 1, 0.36, 1); }
       .mg-copy-full:not(:disabled):hover .mg-copy-value { background-color: rgba(199, 236, 255, 0.95); transition-delay: .12s; }
       .mg-copy-full:not(:disabled):not(:hover) .mg-copy-value { transition-delay: .04s; }
+      @media (max-width: 380px) {
+        .mg-grid,
+        .mg-cred-info,
+        .mg-actions { grid-template-columns: 1fr; }
+      }
       .is-hidden { display: none !important; }
     </style>
     <div class="mg-root">
@@ -3733,32 +3721,32 @@ function ensureInPageOverlay(): OverlayRefs | null {
             <button class="mg-icon-btn" type="button" data-role="close" title="Close">×</button>
           </div>
         </header>
-        <section class="mg-auth-card">
-          <p class="mg-auth-title" data-role="auth-title">Log in</p>
-          <p class="mg-auth-email is-hidden" data-role="auth-email"></p>
-          <div class="mg-auth-actions">
-            <button class="mg-btn" type="button" data-role="sign-in">Log in</button>
-            <button class="mg-btn secondary is-hidden" type="button" data-role="logout">Log out</button>
+        <div class="mg-body" data-role="body">
+          <section class="mg-auth-row">
+            <p class="mg-auth-email is-hidden" data-role="auth-email"></p>
+            <div class="mg-auth-actions">
+              <button class="mg-btn" type="button" data-role="sign-in">Log in</button>
+              <button class="mg-btn secondary is-hidden" type="button" data-role="logout">Log out</button>
+            </div>
+          </section>
+          <div class="mg-controls is-hidden" data-role="controls">
+            <label class="mg-toggle">
+              <span>Autofill enabled</span>
+              <input type="checkbox" data-role="enabled-toggle" />
+            </label>
+            <div class="mg-actions">
+              <button class="mg-btn" type="button" data-role="autofill">Autofill this page</button>
+              <button class="mg-btn secondary" type="button" data-role="refresh">Sync profile</button>
+            </div>
           </div>
-        </section>
-        <div class="mg-controls is-hidden" data-role="controls">
-          <label class="mg-toggle">
-            <span>Autofill enabled</span>
-            <input type="checkbox" data-role="enabled-toggle" />
-          </label>
-          <div class="mg-actions">
-            <button class="mg-btn" type="button" data-role="autofill">Autofill this page</button>
-            <button class="mg-btn secondary" type="button" data-role="refresh">Sync profile</button>
+          <div class="mg-tabs is-hidden" data-role="tabs">
+            <button class="mg-tab is-active" type="button" data-role="tab-main" aria-pressed="true">メイン</button>
+            <button class="mg-tab" type="button" data-role="tab-additional" aria-pressed="false">追加情報</button>
+            <button class="mg-tab" type="button" data-role="tab-credentials" aria-pressed="false">ログイン情報</button>
           </div>
+          <p class="mg-status" data-role="status"></p>
+          <div class="mg-sections is-hidden" data-role="sections"></div>
         </div>
-        <div class="mg-tabs is-hidden" data-role="tabs">
-          <button class="mg-tab is-active" type="button" data-role="tab-main" aria-pressed="true">メイン</button>
-          <button class="mg-tab" type="button" data-role="tab-additional" aria-pressed="false">追加情報</button>
-          <button class="mg-tab" type="button" data-role="tab-credentials" aria-pressed="false">ログイン情報</button>
-        </div>
-        <p class="mg-help is-hidden" data-role="help"></p>
-        <p class="mg-status" data-role="status"></p>
-        <div class="mg-sections is-hidden" data-role="sections"></div>
       </aside>
     </div>
   `;
@@ -3769,7 +3757,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
   const launcherIcon = shadow.querySelector("[data-role='launcher-icon']") as HTMLImageElement;
   const hideLauncherBtn = shadow.querySelector("[data-role='hide-launcher']") as HTMLElement;
   const closeBtn = shadow.querySelector("[data-role='close']") as HTMLElement;
-  const authTitle = shadow.querySelector("[data-role='auth-title']") as HTMLElement;
   const authEmail = shadow.querySelector("[data-role='auth-email']") as HTMLElement;
   const signInBtn = shadow.querySelector("[data-role='sign-in']") as HTMLButtonElement;
   const logoutBtn = shadow.querySelector("[data-role='logout']") as HTMLButtonElement;
@@ -3782,7 +3769,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
   const tabAdditionalBtn = shadow.querySelector("[data-role='tab-additional']") as HTMLButtonElement;
   const tabCredentialsBtn = shadow.querySelector("[data-role='tab-credentials']") as HTMLButtonElement;
   const status = shadow.querySelector("[data-role='status']") as HTMLElement;
-  const help = shadow.querySelector("[data-role='help']") as HTMLElement;
   const sections = shadow.querySelector("[data-role='sections']") as HTMLElement;
 
   launcherIcon.src = chrome.runtime.getURL(LAUNCHER_ICON_PATH);
@@ -3942,7 +3928,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
     launcher,
     hideLauncherBtn,
     closeBtn,
-    authTitle,
     authEmail,
     signInBtn,
     logoutBtn,
@@ -3955,7 +3940,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
     tabAdditionalBtn,
     tabCredentialsBtn,
     status,
-    help,
     sections,
     statusTimer: null,
     resizeHandler: applyLauncherTop

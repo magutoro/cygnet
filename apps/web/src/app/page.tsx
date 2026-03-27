@@ -336,14 +336,6 @@ export default function HomePage() {
             <Link href="/contact" className="transition-colors hover:text-brand-ink">
               {t.contact}
             </Link>
-            <a
-              href="https://github.com/magutoro/Cygnet"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-colors hover:text-brand-ink"
-            >
-              GitHub
-            </a>
           </div>
           <p className="text-xs text-brand-muted">
             &copy; {new Date().getFullYear()} Cygnet. {t.rightsReserved}

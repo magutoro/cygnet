@@ -50,7 +50,7 @@ const COPY = {
         title: "3) What Cygnet can access",
         paragraphs: [
           "If you only use local extension storage and do not use Cygnet account sync, Cygnet as a company does not receive your extension-only profile data or your saved login passwords.",
-          "If you sign in and sync your profile or resumes through Cygnet, that synced data is stored in our backend. Authorized Cygnet operators may be able to access synced profile or resume data when necessary for service operations, troubleshooting, security, abuse prevention, or legal compliance.",
+          "If you sign in and sync your profile or resumes through Cygnet, that synced data is stored in our backend. Cygnet staff may access synced profile or resume data only when needed for user-requested support, security or abuse investigation, or legal compliance.",
           "Cygnet cannot access your saved login passwords because those passwords are kept locally in the extension and are not sent to our backend.",
         ],
       },
@@ -81,14 +81,21 @@ const COPY = {
         ],
       },
       {
-        title: "6) Security",
+        title: "6) Chrome Web Store limited use",
+        paragraphs: [
+          "Cygnet uses synced profile and resume data only to provide the product features you choose, to maintain account sync and support, and to comply with legal obligations or protect against security and abuse issues. We do not use this data for advertising or sell it to data brokers.",
+          "Human access to synced data is restricted to user-requested support, security or abuse investigation, and legal compliance. Local-only saved login passwords are not available to Cygnet staff because they remain encrypted inside the extension on your device.",
+        ],
+      },
+      {
+        title: "7) Security",
         paragraphs: [
           "We use reasonable security measures for synced account data, including authenticated access controls and backend security features such as Row-Level Security where applicable.",
           "Even so, no system is completely risk-free. We recommend not storing highly sensitive secrets unless you truly need them, and we especially recommend against putting government IDs, financial account information, or other unnecessary sensitive data into profile notes.",
         ],
       },
       {
-        title: "7) Contact",
+        title: "8) Contact",
         paragraphs: ["For privacy questions, contact:"],
       },
     ],
@@ -135,7 +142,7 @@ const COPY = {
         title: "3) Cygnet がアクセスできる情報",
         paragraphs: [
           "ローカル拡張機能ストレージのみを利用し、Cygnet のアカウント同期を使わない場合、会社としての Cygnet は、そのローカル専用プロフィール情報や保存済みログインパスワードを受け取りません。",
-          "一方で、Cygnet にログインしてプロフィールや履歴書を同期した場合、その同期データは当社バックエンドに保存されます。サービス運用、トラブル対応、セキュリティ、悪用防止、法令対応のために必要な範囲で、権限を持つ Cygnet 担当者が同期済みプロフィールまたは履歴書データにアクセスできる場合があります。",
+          "一方で、Cygnet にログインしてプロフィールや履歴書を同期した場合、その同期データは当社バックエンドに保存されます。Cygnet 担当者が同期済みプロフィールまたは履歴書データへアクセスできるのは、ユーザーからのサポート依頼、セキュリティまたは不正利用の調査、法令対応が必要な場合に限られます。",
           "ただし、保存済みログインのパスワードは拡張機能内にのみ保持され、当社バックエンドへ送信されないため、Cygnet はそれらのパスワードへアクセスできません。",
         ],
       },
@@ -166,14 +173,21 @@ const COPY = {
         ],
       },
       {
-        title: "6) セキュリティ",
+        title: "6) Chrome Web Store の限定利用",
+        paragraphs: [
+          "Cygnet は、選択された機能を提供し、アカウント同期とサポートを維持し、法令に対応し、セキュリティや不正利用の問題を防ぐためにのみ、同期済みプロフィール情報や履歴書データを利用します。これらのデータを広告目的で使用したり、データブローカーへ販売したりすることはありません。",
+          "同期データへの人によるアクセスは、ユーザーからのサポート依頼、セキュリティまたは不正利用の調査、法令対応に限定されます。保存済みログインパスワードは拡張機能内で暗号化されたまま保持されるため、Cygnet 担当者はアクセスできません。",
+        ],
+      },
+      {
+        title: "7) セキュリティ",
         paragraphs: [
           "同期されたアカウントデータについては、認証済みアクセス制御や、必要に応じた Row-Level Security など、合理的なセキュリティ対策を講じます。",
           "それでも、完全にリスクのないシステムは存在しません。特に、政府発行 ID、金融口座情報、その他不要に機微な情報は、プロフィールのメモ等に保存しないことを推奨します。",
         ],
       },
       {
-        title: "7) お問い合わせ",
+        title: "8) お問い合わせ",
         paragraphs: ["プライバシーに関するお問い合わせ先:"],
       },
     ],
