@@ -187,6 +187,7 @@ const MAIN_SECTIONS: SectionDef[] = [
       { key: "email", label: { en: "Email", ja: "メールアドレス" }, type: "email" },
       { key: "mobileEmail", label: { en: "Mobile email", ja: "携帯メール" }, type: "email" },
       { key: "phone", label: { en: "Phone", ja: "電話番号" }, placeholder: "090-1234-5678" },
+      { key: "mobilePhone", label: { en: "Mobile phone", ja: "携帯電話番号" }, placeholder: "090-1234-5678" },
       { key: "postalCode", label: { en: "Postal code", ja: "郵便番号" }, placeholder: "100-0001" },
       { key: "prefecture", label: { en: "Prefecture", ja: "都道府県" }, placeholder: "東京都" },
       { key: "city", label: { en: "City", ja: "市区町村" }, placeholder: "千代田区" },

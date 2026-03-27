@@ -97,6 +97,7 @@ export function dbToProfile(row: DbProfile): Profile {
     email: row.email,
     mobileEmail: row.mobile_email,
     phone: row.phone,
+    mobilePhone: typeof additional.mobilePhone === "string" ? additional.mobilePhone : "",
     gender: row.gender,
     // Never hydrate password from cloud.
     password: "",

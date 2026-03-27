@@ -153,6 +153,8 @@ const NON_NAME_FIELD_PATTERNS: Record<string, RegExp[]> = {
   humanitiesScienceType: [/文理区分/, /文系理系/, /arts.?science/, /humanities/, /science/],
   graduationYear: [/graduation/, /graduation.?month/, /卒業/, /卒業年月/, /year/, /year.?month/],
   company: [/company/, /current.?employer/, /勤務先/, /会社/],
+  highSchool: [/出身.*(?:高等学校|高校)/, /卒業された.*(?:高等学校|高校)/, /(?:高等学校|高校).*(?:名|学校)/, /high.?school/],
+  highSchoolGraduationDate: [/(?:高等学校|高校).*卒業/, /high.?school.*graduation/],
   linkedIn: [/linkedin/],
   github: [/github/],
   portfolio: [/portfolio/, /website/, /url/, /ブログ/],
@@ -169,7 +171,8 @@ const NON_NAME_FIELD_PATTERNS: Record<string, RegExp[]> = {
 
 const FIELD_NEGATIVE_PATTERNS: Record<string, RegExp[]> = {
   addressLine1: [/ゼミ/, /研究室/, /サークル/, /クラブ/, /趣味/, /資格/, /免許/, /志望/, /自己pr/],
-  addressLine2: [/ゼミ/, /研究室/, /サークル/, /クラブ/, /趣味/, /資格/, /免許/, /志望/, /自己pr/]
+  addressLine2: [/ゼミ/, /研究室/, /サークル/, /クラブ/, /趣味/, /資格/, /免許/, /志望/, /自己pr/],
+  highSchool: [/卒業年月/, /卒業後/, /理由/, /gap/]
 };
 
 const KANA_FIELD_KEYS = new Set(["lastNameKana", "firstNameKana"]);
@@ -989,8 +992,11 @@ function resolveEmailValueForSubtype(subtype: string, profile: Profile): string 
 
 function resolvePhoneValueForSubtype(subtype: string, profile: Profile): string {
   const primary = cleanProfileValue(profile.phone);
-  if (!primary) return "";
-  return primary;
+  const mobile = cleanProfileValue(profile.mobilePhone);
+
+  if (subtype === "phone_mobile") return mobile;
+  if (subtype === "phone_landline") return primary || mobile;
+  return primary || mobile;
 }
 
 function isVisible(el: Element): boolean {
@@ -1365,11 +1371,22 @@ function matchVacationField(meta: string, type: string): string | null {
 }
 
 function matchNonNameField(meta: string, type: string, el: HTMLElement | null, rawHint: string = ""): string | null {
+  const combinedMeta = `${meta} ${normalize(toHalfWidth(rawHint))}`;
   const name = normalize(toHalfWidth(el?.getAttribute?.("name") || (el as HTMLInputElement)?.name || ""));
   const id = normalize(toHalfWidth(el?.id || ""));
   const autocomplete = normalize(toHalfWidth(el?.getAttribute?.("autocomplete") || ""));
   const keyed = `${name} ${id} ${autocomplete}`;
   const keyId = `${name} ${id}`;
+
+  if (/(?:高等学校|高校).*(卒業年月|卒業年|graduation)/i.test(combinedMeta)) return "highSchoolGraduationDate";
+  if (
+    /(出身.*(?:高等学校|高校)|卒業された.*(?:高等学校|高校)|(?:高等学校|高校).*(?:名|学校)|high.?school)/i.test(
+      combinedMeta
+    ) &&
+    !/(卒業年月|卒業年|卒業後|理由|gap)/i.test(combinedMeta)
+  ) {
+    return "highSchool";
+  }
 
   if (hasVacationContext(el, meta, rawHint)) {
     const vacationField = matchVacationField(`${meta} ${keyed}`, type);
@@ -2205,6 +2222,149 @@ function selectFromCustomCombobox(el: HTMLElement, field: string, value: string 
   return true;
 }
 
+function selectElementByCandidates(
+  el: HTMLElement,
+  candidates: string[],
+  options: { overwrite?: boolean } = {}
+): boolean {
+  const { overwrite = true } = options;
+  const normalizedCandidates = candidates.map((x) => toHalfWidth(String(x || "")).trim()).filter(Boolean);
+  if (!normalizedCandidates.length) return false;
+  if (!overwrite && hasExistingValue(el)) return false;
+
+  if (el.tagName === "SELECT") {
+    const selectEl = el as HTMLSelectElement;
+    const option = chooseMatchingOption(
+      Array.from(selectEl.options) as (HTMLOptionElement & OptionLike)[],
+      normalizedCandidates
+    );
+    if (!option) return false;
+    selectEl.value = option.value!;
+    const optionIndex = Array.from(selectEl.options).indexOf(option as HTMLOptionElement);
+    if (optionIndex >= 0) selectEl.selectedIndex = optionIndex;
+    if (option instanceof HTMLOptionElement) {
+      option.selected = true;
+      option.scrollIntoView({ block: "nearest" });
+    }
+    clickLikeUser(selectEl);
+
+    if (isJqTransformHiddenSelect(el)) {
+      const wrapper = getJqTransformWrapper(el);
+      const label = wrapper?.querySelector("div > span, span");
+      if (label) label.textContent = (option.textContent || (option as HTMLOptionElement).label || "").trim();
+    }
+
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    return true;
+  }
+
+  if (isCustomCombobox(el)) {
+    clickLikeUser(el);
+
+    const ariaControls = el.getAttribute("aria-controls");
+    const scoped = ariaControls ? document.getElementById(ariaControls) : null;
+    const optionSelector = "[role='option'], [data-value], li";
+    const nodes = Array.from((scoped || document).querySelectorAll(optionSelector)).filter(
+      (node): node is HTMLElement => node instanceof HTMLElement && isVisible(node) && normalize(node.textContent).length > 0
+    ) as (HTMLElement & OptionLike)[];
+
+    const matched = chooseMatchingOption(nodes, normalizedCandidates);
+    if (!matched) return false;
+
+    clickLikeUser(matched);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    return true;
+  }
+
+  return false;
+}
+
+function clearFieldValue(el: HTMLElement): boolean {
+  if (el.tagName === "SELECT") {
+    const selectEl = el as HTMLSelectElement;
+    const placeholderIndex = Array.from(selectEl.options).findIndex(
+      (option, index) =>
+        option.value === "" ||
+        option.disabled ||
+        index === 0 ||
+        /選択|未設定|choose|select/i.test(toHalfWidth(option.textContent || option.label || ""))
+    );
+    selectEl.selectedIndex = placeholderIndex >= 0 ? placeholderIndex : 0;
+    selectEl.value = selectEl.options[selectEl.selectedIndex]?.value || "";
+    clickLikeUser(selectEl);
+
+    if (isJqTransformHiddenSelect(el)) {
+      const wrapper = getJqTransformWrapper(el);
+      const label = wrapper?.querySelector("div > span, span");
+      if (label) {
+        const selected = selectEl.options[selectEl.selectedIndex];
+        label.textContent = (selected?.textContent || selected?.label || "").trim();
+      }
+    }
+  } else if (isCustomCombobox(el)) {
+    const inputLike = el as HTMLElement & { value?: string };
+    if (typeof inputLike.value === "string") {
+      inputLike.value = "";
+    }
+    if ("textContent" in el) {
+      const text = normalize(el.textContent);
+      if (text && /選択|choose|select|未設定/.test(text)) {
+        el.textContent = "";
+      }
+    }
+  } else if ((el as HTMLInputElement).type === "checkbox" || (el as HTMLInputElement).type === "radio") {
+    const input = el as HTMLInputElement;
+    if (!input.checked) return false;
+    if (isJqTransformHiddenChoice(input)) {
+      const proxy = input.parentElement?.querySelector("a.jqTransformRadio, a.jqTransformCheckbox");
+      if (proxy instanceof HTMLElement) clickLikeUser(proxy);
+    }
+    clickLikeUser(input);
+    input.checked = false;
+  } else if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    if (!el.value) return false;
+    el.focus();
+    el.value = "";
+  } else {
+    return false;
+  }
+
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+  return true;
+}
+
+function detectGraduationSelectPart(candidate: Candidate): "year" | "month" | "status" | "" {
+  const hints = [
+    candidate.meta,
+    candidate.rawHint,
+    candidate.el.getAttribute("name"),
+    candidate.el.id,
+    (candidate.el as HTMLInputElement).placeholder,
+    candidate.el.getAttribute("aria-label"),
+    candidate.el.getAttribute("title")
+  ]
+    .map((x) => toHalfWidth(String(x || "")))
+    .join(" ");
+
+  const hasYear = /(年|year)/i.test(hints);
+  const hasMonth = /(月|month)/i.test(hints);
+  if (hasYear && !hasMonth) return "year";
+  if (hasMonth && !hasYear) return "month";
+
+  if (candidate.el.tagName === "SELECT") {
+    const optionText = Array.from((candidate.el as HTMLSelectElement).options)
+      .map((option) => toHalfWidth(option.textContent || option.label || ""))
+      .join(" ");
+    if (/(卒業|修了|見込|status)/i.test(optionText) && !hasYear && !hasMonth) return "status";
+  }
+
+  if (/(卒業|修了|見込|status)/i.test(hints) && !hasYear && !hasMonth) return "status";
+  return "";
+}
+
 function isCustomCombobox(el: HTMLElement): boolean {
   if (el.getAttribute("role") !== "combobox") return false;
   const tag = el.tagName;
@@ -2440,10 +2600,16 @@ function fillSplitPhoneFields(
   overwrite: boolean,
   handledElements: Set<HTMLElement>
 ): void {
+  const primaryPhone = cleanProfileValue(profile.phone);
+  const mobilePhone = cleanProfileValue(profile.mobilePhone);
   const targets: Array<{
     field: "phone" | "vacationPhone";
     sourceValue: string;
-  }> = [{ field: "phone", sourceValue: resolvePhoneValueForSubtype("phone_unknown", profile) }];
+  }> = [];
+
+  if (primaryPhone || mobilePhone) {
+    targets.push({ field: "phone", sourceValue: primaryPhone || mobilePhone });
+  }
 
   if (!shouldUseVacationSameAsCurrent(profile)) {
     targets.push({ field: "vacationPhone", sourceValue: cleanProfileValue(profile.vacationPhone) });
@@ -2456,27 +2622,76 @@ function fillSplitPhoneFields(
       target.field === "phone" ? detectRowContactSubtype(row, "phone") : "phone_unknown"
     );
 
-    for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
-      const row = rows[rowIndex];
-      if (row.length < 2) continue;
+    const rowInfos = rows
+      .map((row, rowIndex) => {
+        if (row.length < 2) return null;
 
-      const items = row.filter((x) => x.candidate.el.tagName !== "SELECT");
-      if (items.length < 2) continue;
+        const items = row.filter((x) => x.candidate.el.tagName !== "SELECT");
+        if (items.length < 2) return null;
 
-      const fields = items.map((x) => x.candidate.el);
-      const explicitLengths = fields.map((el) => getExplicitSegmentLength(el));
-      const common = findCommonAncestor(fields[0], fields[fields.length - 1]);
-      const rowHint = common?.textContent || "";
-      const hasSplitHint =
-        fields.length >= 3 ||
-        explicitLengths.some((len) => len > 0) ||
-        /[-－ー]/.test(rowHint) ||
-        /(市外局番|下4桁|上4桁|前半|後半|3桁|4桁|電話番号1|電話番号2|電話番号3)/.test(rowHint);
-      if (!hasSplitHint) continue;
+        const fields = items.map((x) => x.candidate.el);
+        const explicitLengths = fields.map((el) => getExplicitSegmentLength(el));
+        const common = findCommonAncestor(fields[0], fields[fields.length - 1]);
+        const rowHint = common?.textContent || "";
+        const hasSplitHint =
+          fields.length >= 3 ||
+          explicitLengths.some((len) => len > 0) ||
+          /[-－ー]/.test(rowHint) ||
+          /(市外局番|下4桁|上4桁|前半|後半|3桁|4桁|電話番号1|電話番号2|電話番号3)/.test(rowHint);
+        if (!hasSplitHint) return null;
 
-      const subtype = rowSubtypes[rowIndex] || "phone_unknown";
-      const rowPhone =
-        target.field === "phone" ? resolvePhoneValueForSubtype(subtype, profile) : cleanProfileValue(target.sourceValue);
+        return {
+          rowIndex,
+          fields,
+          explicitLengths,
+          subtype: rowSubtypes[rowIndex] || "phone_unknown"
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => Boolean(row));
+
+    if (!rowInfos.length) continue;
+
+    let primaryRowIndex = -1;
+    let mobileRowIndex = -1;
+
+    if (target.field === "phone") {
+      primaryRowIndex = primaryPhone
+        ? rowInfos.find((row) => row.subtype === "phone_landline")?.rowIndex ??
+          rowInfos.find((row) => row.subtype === "phone_unknown")?.rowIndex ??
+          rowInfos[0]?.rowIndex ??
+          -1
+        : rowInfos.find((row) => row.subtype === "phone_mobile")?.rowIndex ??
+          rowInfos.find((row) => row.subtype === "phone_unknown")?.rowIndex ??
+          rowInfos[0]?.rowIndex ??
+          -1;
+
+      if (primaryPhone && mobilePhone) {
+        mobileRowIndex =
+          rowInfos.find((row) => row.subtype === "phone_mobile" && row.rowIndex !== primaryRowIndex)?.rowIndex ??
+          rowInfos.find((row) => row.subtype === "phone_unknown" && row.rowIndex !== primaryRowIndex)?.rowIndex ??
+          rowInfos.find((row) => row.rowIndex !== primaryRowIndex)?.rowIndex ??
+          -1;
+      }
+    }
+
+    for (const rowInfo of rowInfos) {
+      const { rowIndex, fields, explicitLengths, subtype } = rowInfo;
+      if (target.field === "phone") {
+        fields.forEach((el) => handledElements.add(el));
+      }
+
+      let rowPhone = target.field === "phone" ? "" : cleanProfileValue(target.sourceValue);
+
+      if (target.field === "phone") {
+        if (rowIndex === primaryRowIndex) {
+          rowPhone = primaryPhone || mobilePhone;
+        } else if (mobilePhone && rowIndex === mobileRowIndex) {
+          rowPhone = mobilePhone;
+        } else if (subtype === "phone_mobile" && !mobilePhone) {
+          rowPhone = "";
+        }
+      }
+
       if (!rowPhone) continue;
 
       const segments = splitPhoneDigits(rowPhone, fields.length, explicitLengths);
@@ -2671,6 +2886,31 @@ function fillCandidatesForField(
   }
 }
 
+function clearVacationSectionFields(
+  container: HTMLElement,
+  toggle: HTMLElement,
+  handledElements: Set<HTMLElement>
+): void {
+  const scoped = Array.from(container.querySelectorAll("input, textarea, select, [role='combobox']")).filter(
+    (el): el is HTMLElement => el instanceof HTMLElement && isFillable(el)
+  );
+
+  for (const el of scoped) {
+    if (el === toggle) continue;
+    const meta = getTextMeta(el);
+    const rawHint = getRawHintText(el);
+    const vacationField = matchVacationField(
+      `${normalize(meta)} ${normalize(toHalfWidth(rawHint))} ${normalize(toHalfWidth(el.getAttribute("name") || ""))} ${normalize(
+        toHalfWidth(el.id || "")
+      )}`,
+      ((el as HTMLInputElement).type || "").toLowerCase()
+    );
+    if (!vacationField || vacationField === "vacationAddressSameAsCurrent") continue;
+    clearFieldValue(el);
+    handledElements.add(el);
+  }
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
@@ -2756,20 +2996,84 @@ function fillVacationSameAsCurrentFallback(
       toggle.closest("fieldset") ||
       toggle.closest("section");
     if (!(container instanceof HTMLElement)) continue;
+    clearVacationSectionFields(container, toggle, handledElements);
+  }
+}
 
-    const scoped = Array.from(container.querySelectorAll("input, textarea, select")).filter(
-      (el): el is HTMLElement => el instanceof HTMLElement && isFillable(el)
-    );
+function fillGroupedGraduationFields(
+  candidates: Candidate[],
+  profile: Profile,
+  overwrite: boolean,
+  handledElements: Set<HTMLElement>
+): void {
+  const parsed = parseYearMonth(profile.graduationYear);
+  if (!parsed) return;
 
-    for (const el of scoped) {
-      if (el === toggle) continue;
-      const hint = normalize(`${getTextMeta(el)} ${getRawHintText(el)}`);
-      if (
-        /(郵便|postal|zip|都道府県|prefecture|市区|地名|番地|住所|マンション|アパート|建物|号室|電話|phone|tel)/.test(
-          hint
-        )
-      ) {
-        handledElements.add(el);
+  const graduationCandidates = candidates.filter((x) => x.field === "graduationYear" && !handledElements.has(x.el));
+  const rows = buildLineGroups(graduationCandidates);
+
+  for (const row of rows) {
+    if (row.length < 2) continue;
+
+    const rowCandidates = row.map((item) => item.candidate);
+    const rowText = rowCandidates.map((candidate) => `${candidate.meta || ""} ${candidate.rawHint || ""}`).join(" ");
+    if (!/(卒業|修了|graduation|completion|year|month|年月)/i.test(toHalfWidth(rowText))) continue;
+
+    const byPart: Record<"year" | "month" | "status", Candidate[]> = { year: [], month: [], status: [] };
+    const unknown: Candidate[] = [];
+
+    for (const candidate of rowCandidates) {
+      const part = detectGraduationSelectPart(candidate);
+      if (part) {
+        byPart[part].push(candidate);
+      } else {
+        unknown.push(candidate);
+      }
+    }
+
+    const canAssumeGrouped = rowCandidates.length >= 3 || byPart.year.length > 0 || byPart.month.length > 0 || byPart.status.length > 0;
+    if (!canAssumeGrouped) continue;
+
+    const unknownQueue = [...unknown];
+    if (!byPart.year.length && unknownQueue.length) byPart.year.push(unknownQueue.shift()!);
+    if (!byPart.month.length && unknownQueue.length) byPart.month.push(unknownQueue.shift()!);
+    if (!byPart.status.length && unknownQueue.length) byPart.status.push(unknownQueue.shift()!);
+
+    let changed = false;
+
+    for (const candidate of byPart.year) {
+      if (setFieldValue(candidate.el, "graduationYear", parsed.year, { overwrite })) {
+        handledElements.add(candidate.el);
+        changed = true;
+      }
+    }
+
+    for (const candidate of byPart.month) {
+      const ok = [parsed.month, parsed.monthRaw].some((value) =>
+        value ? setFieldValue(candidate.el, "graduationYear", value, { overwrite }) : false
+      );
+      if (ok) {
+        handledElements.add(candidate.el);
+        changed = true;
+      }
+    }
+
+    for (const candidate of byPart.status) {
+      const ok =
+        selectElementByCandidates(
+          candidate.el,
+          ["卒業（修了）", "卒業(修了)", "卒業", "修了", "卒業見込", "修了見込", "卒業予定", "修了予定"],
+          { overwrite }
+        ) || setFieldValue(candidate.el, "graduationYear", "卒業", { overwrite });
+      if (ok) {
+        handledElements.add(candidate.el);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      for (const candidate of rowCandidates) {
+        if (hasExistingValue(candidate.el)) handledElements.add(candidate.el);
       }
     }
   }
@@ -2786,6 +3090,7 @@ function fillGroupedFields(
   fillSplitEmailFields(candidates, profile, overwrite, handledElements);
   fillSplitPostalFields(candidates, profile, overwrite, handledElements);
   fillSplitPhoneFields(candidates, profile, overwrite, handledElements);
+  fillGroupedGraduationFields(candidates, profile, overwrite, handledElements);
   fillUniversityChoiceGroups(profile, overwrite, handledElements);
 }
 
@@ -2862,6 +3167,7 @@ function buildMainProfileSections(profile: Profile = {}): ProfileSection[] {
         { label: "メール(PC)", value: profile.email },
         { label: "メール(携帯)", value: profile.mobileEmail },
         { label: "電話番号", value: profile.phone },
+        { label: "携帯電話番号", value: profile.mobilePhone },
         { label: "生年月日", value: profile.birthDate },
         { label: "性別", value: profile.gender }
       ]
@@ -4097,7 +4403,9 @@ async function autofill(options: { overwrite?: boolean } = {}): Promise<{ filled
     if (setFieldValue(el, field, value, { overwrite })) filled += 1;
   }
 
+  fillVacationSameAsCurrentFallback(profile, overwrite, handledElements);
   await retryUniversitySelectionFlow(profile, overwrite, handledElements);
+  fillVacationSameAsCurrentFallback(profile, overwrite, handledElements);
 
   return {
     filled,

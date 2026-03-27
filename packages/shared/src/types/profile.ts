@@ -10,6 +10,7 @@ export interface Profile {
   email: string;
   mobileEmail: string;
   phone: string;
+  mobilePhone: string;
   gender: string;
   password: string;
   postalCode: string;
@@ -46,6 +47,7 @@ export const DEFAULT_PROFILE: Profile = {
   email: "",
   mobileEmail: "",
   phone: "",
+  mobilePhone: "",
   gender: "",
   password: "",
   postalCode: "",
