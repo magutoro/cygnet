@@ -17,22 +17,22 @@ interface Props {
 
 const DASHBOARD_COPY = {
   ja: {
-    bridgeTitle: "拡張機能ログイン同期",
-    bridgeDesc: "Webでログイン中のセッションを拡張機能へ同期します。",
-    syncing: "同期中...",
-    syncNow: "拡張機能に同期",
+    bridgeTitle: "拡張機能との接続",
+    bridgeDesc: "拡張機能が接続されていれば、プロフィール保存後に自動同期されます。うまくいかないときだけ再接続してください。",
+    syncing: "接続中...",
+    syncNow: "再接続する",
     noSession: "Webログインセッションを取得できませんでした",
-    syncFailed: "拡張機能への同期に失敗",
-    synced: "拡張機能をログイン済みにしました",
+    syncFailed: "拡張機能の接続に失敗",
+    synced: "拡張機能を接続しました",
   },
   en: {
-    bridgeTitle: "Extension session sync",
-    bridgeDesc: "Sync your web login session to the extension.",
-    syncing: "Syncing...",
-    syncNow: "Sync to extension",
+    bridgeTitle: "Extension connection",
+    bridgeDesc: "When the extension is connected, profile saves sync automatically. Use this only if you need to reconnect or repair sync.",
+    syncing: "Connecting...",
+    syncNow: "Reconnect extension",
     noSession: "Could not get web login session",
-    syncFailed: "Failed to sync session to extension",
-    synced: "Extension session synced",
+    syncFailed: "Failed to connect extension",
+    synced: "Extension connected",
   },
 } as const;
 

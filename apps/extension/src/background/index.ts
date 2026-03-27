@@ -314,12 +314,38 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 });
 
 chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
-  if (msg?.type !== "CYGNET_IMPORT_SUPABASE_SESSION") return;
+  if (
+    msg?.type !== "CYGNET_IMPORT_SUPABASE_SESSION" &&
+    msg?.type !== "CYGNET_PULL_PROFILE_FROM_WEB"
+  ) {
+    return;
+  }
 
   const senderOrigin = getSenderOrigin(sender.url);
   if (!senderOrigin || !TRUSTED_EXTERNAL_ORIGINS.has(senderOrigin)) {
     sendResponse({ ok: false, error: "untrusted_sender" });
     return;
+  }
+
+  if (msg?.type === "CYGNET_PULL_PROFILE_FROM_WEB") {
+    getSession()
+      .then(async (session) => {
+        if (!session?.user) {
+          sendResponse({ ok: false, error: "not_authenticated" });
+          return;
+        }
+        await syncProfile();
+        await notifyStateChanged().catch(() => {});
+        sendResponse({ ok: true, email: session.user.email ?? null });
+      })
+      .catch((error: unknown) => {
+        sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+
+    return true;
   }
 
   const accessToken =

@@ -5,6 +5,12 @@ const WEB_BRIDGE_REQUEST_TYPE = "CYGNET_REQUEST_EXTENSION_ID";
 const WEB_BRIDGE_RESPONSE_TYPE = "CYGNET_EXTENSION_ID";
 let discoveredExtensionId = "";
 
+type ExtensionBridgeResponse = {
+  ok?: boolean;
+  error?: string;
+  email?: string | null;
+};
+
 type RuntimeLike = {
   sendMessage: (
     extensionId: string,
@@ -69,10 +75,11 @@ export type ExtensionSessionSyncResult =
   | { ok: true; email?: string | null }
   | { ok: false; error: string };
 
-export async function syncExtensionSessionFromWeb(params: {
-  accessToken: string;
-  refreshToken: string;
-}): Promise<ExtensionSessionSyncResult> {
+export type ExtensionProfileRefreshResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+async function sendExtensionRuntimeMessage(message: unknown): Promise<ExtensionBridgeResponse> {
   const extensionId = await resolveExtensionId();
 
   if (!extensionId) {
@@ -91,33 +98,40 @@ export async function syncExtensionSessionFromWeb(params: {
   }
 
   return new Promise((resolve) => {
-    runtime.sendMessage(
-      extensionId,
-      {
-        type: "CYGNET_IMPORT_SUPABASE_SESSION",
-        accessToken: params.accessToken,
-        refreshToken: params.refreshToken,
-      },
-      (rawResponse) => {
-        const runtimeError = runtime.lastError?.message;
-        if (runtimeError) {
-          resolve({ ok: false, error: runtimeError });
-          return;
-        }
+    runtime.sendMessage(extensionId, message, (rawResponse) => {
+      const runtimeError = runtime.lastError?.message;
+      if (runtimeError) {
+        resolve({ ok: false, error: runtimeError });
+        return;
+      }
 
-        const response = (rawResponse || {}) as {
-          ok?: boolean;
-          error?: string;
-          email?: string | null;
-        };
-
-        if (!response.ok) {
-          resolve({ ok: false, error: response.error || "Unknown extension response" });
-          return;
-        }
-
-        resolve({ ok: true, email: response.email ?? null });
-      },
-    );
+      const response = (rawResponse || {}) as ExtensionBridgeResponse;
+      resolve(response.ok ? { ok: true, email: response.email ?? null } : { ok: false, error: response.error || "Unknown extension response" });
+    });
   });
+}
+
+export async function syncExtensionSessionFromWeb(params: {
+  accessToken: string;
+  refreshToken: string;
+}): Promise<ExtensionSessionSyncResult> {
+  const response = await sendExtensionRuntimeMessage({
+    type: "CYGNET_IMPORT_SUPABASE_SESSION",
+    accessToken: params.accessToken,
+    refreshToken: params.refreshToken,
+  });
+
+  return response.ok
+    ? { ok: true, email: response.email ?? null }
+    : { ok: false, error: response.error || "Unknown extension response" };
+}
+
+export async function refreshExtensionProfileFromWeb(): Promise<ExtensionProfileRefreshResult> {
+  const response = await sendExtensionRuntimeMessage({
+    type: "CYGNET_PULL_PROFILE_FROM_WEB",
+  });
+
+  return response.ok
+    ? { ok: true }
+    : { ok: false, error: response.error || "Unknown extension response" };
 }

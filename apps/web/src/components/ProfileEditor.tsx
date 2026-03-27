@@ -3,6 +3,7 @@
 import { useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/components/LanguageProvider";
+import { refreshExtensionProfileFromWeb } from "@/lib/extension-bridge";
 import {
   type Profile,
   type ProfileKey,
@@ -390,6 +391,8 @@ const EDITOR_COPY = {
     additionalTab: "Additional",
     saved: "Profile saved successfully.",
     error: "Failed to save. Please try again.",
+    syncUnavailable: "Profile saved. Connect the extension to keep it synced automatically.",
+    syncRetry: "Profile saved. Extension auto-sync failed. Try reconnecting the extension.",
     year: "Year",
     month: "Month",
     unset: "Unset",
@@ -402,6 +405,8 @@ const EDITOR_COPY = {
     additionalTab: "追加情報",
     saved: "プロフィールを保存しました。",
     error: "保存に失敗しました。もう一度お試しください。",
+    syncUnavailable: "プロフィールは保存されました。拡張機能を接続すると自動同期されます。",
+    syncRetry: "プロフィールは保存されましたが、拡張機能の自動同期に失敗しました。拡張機能を再接続してください。",
     year: "年",
     month: "月",
     unset: "未設定",
@@ -422,11 +427,13 @@ const ProfileEditor = forwardRef<ProfileEditorHandle, Props>(
     const t = EDITOR_COPY[lang];
     const [profile, setProfile] = useState<Profile>(initialProfile);
     const [status, setStatus] = useState<SaveStatus>("idle");
+    const [syncNotice, setSyncNotice] = useState("");
     const [activeTab, setActiveTab] = useState<TabKey>("main");
 
     const update = useCallback((key: ProfileKey, value: string) => {
       setProfile((prev) => ({ ...prev, [key]: value }));
       setStatus("idle");
+      setSyncNotice("");
     }, []);
 
     const applyPartial = useCallback((partial: Partial<Profile>) => {
@@ -436,12 +443,14 @@ const ProfileEditor = forwardRef<ProfileEditorHandle, Props>(
       }
       setProfile((prev) => ({ ...prev, ...safePatch }));
       setStatus("idle");
+      setSyncNotice("");
     }, []);
 
     useImperativeHandle(ref, () => ({ applyPartial }), [applyPartial]);
 
     const save = async () => {
       setStatus("saving");
+      setSyncNotice("");
       try {
         const supabase = createClient();
         const normalizedProfile = normalizeProfileLinks(profile);
@@ -450,7 +459,19 @@ const ProfileEditor = forwardRef<ProfileEditorHandle, Props>(
           .from("profiles")
           .upsert({ id: userId, ...dbData, updated_at: new Date().toISOString() }, { onConflict: "id" });
         setProfile(normalizedProfile);
-        setStatus(error ? "error" : "saved");
+        if (error) {
+          setStatus("error");
+          return;
+        }
+        setStatus("saved");
+
+        const syncResult = await refreshExtensionProfileFromWeb();
+        if (!syncResult.ok) {
+          const isUnavailable =
+            syncResult.error.includes("Extension ID is missing") ||
+            syncResult.error.includes("chrome.runtime is unavailable");
+          setSyncNotice(isUnavailable ? t.syncUnavailable : t.syncRetry);
+        }
       } catch {
         setStatus("error");
       }
@@ -505,6 +526,11 @@ const ProfileEditor = forwardRef<ProfileEditorHandle, Props>(
         {status === "error" && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
             {t.error}
+          </div>
+        )}
+        {syncNotice && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
+            {syncNotice}
           </div>
         )}
 

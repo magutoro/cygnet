@@ -8,6 +8,7 @@ export type {
   AutofillResult,
   GetDefaultsResponse,
   GetAuthStateResponse,
+  ExtensionBridgeResponse,
   CredentialVaultStateResponse,
   CredentialListResponse,
   CredentialSummaryListResponse,

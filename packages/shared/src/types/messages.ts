@@ -11,6 +11,7 @@ export type ExtensionMessage =
   | { type: "AUTOFILL_NOW" }
   | { type: "CYGNET_SHOW_LAUNCHER" }
   | { type: "CYGNET_IMPORT_SUPABASE_SESSION"; accessToken: string; refreshToken: string }
+  | { type: "CYGNET_PULL_PROFILE_FROM_WEB" }
   | { type: "GET_DEFAULTS" }
   | { type: "GET_AUTH_STATE" }
   | { type: "OPEN_WEB_LOGIN" }
@@ -65,4 +66,10 @@ export interface CredentialRevealPasswordResponse {
   ok: boolean;
   password?: string;
   error?: string;
+}
+
+export interface ExtensionBridgeResponse {
+  ok: boolean;
+  error?: string;
+  email?: string | null;
 }
