@@ -765,36 +765,32 @@ function MonthSelectField({
     <div className={`block ${full ? "sm:col-span-2" : ""}`}>
       <span className="mb-1 block text-xs font-medium text-brand-muted">{label}</span>
       <div className="grid grid-cols-2 gap-3">
-        <label className="block">
-          <span className="mb-1 block text-[11px] font-medium text-brand-muted/90">{t.year}</span>
-          <select
-            value={selectedYear}
-            onChange={(e) => updateValue(e.target.value, selectedMonth)}
-            className="w-full rounded-lg border border-brand-line bg-brand-bg/40 px-3 py-2 text-sm text-brand-ink transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
-          >
-            <option value="">{t.unset}</option>
-            {yearOptions.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-[11px] font-medium text-brand-muted/90">{t.month}</span>
-          <select
-            value={selectedMonth}
-            onChange={(e) => updateValue(selectedYear, e.target.value)}
-            className="w-full rounded-lg border border-brand-line bg-brand-bg/40 px-3 py-2 text-sm text-brand-ink transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
-          >
-            <option value="">{t.unset}</option>
-            {monthOptions.map((month) => (
-              <option key={month} value={month}>
-                {month}
-              </option>
-            ))}
-          </select>
-        </label>
+        <select
+          aria-label={`${label} ${t.year}`}
+          value={selectedYear}
+          onChange={(e) => updateValue(e.target.value, selectedMonth)}
+          className="w-full rounded-lg border border-brand-line bg-brand-bg/40 px-3 py-2 text-sm text-brand-ink transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+        >
+          <option value="">{t.unset}</option>
+          {yearOptions.map((year) => (
+            <option key={year} value={year}>
+              {year}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label={`${label} ${t.month}`}
+          value={selectedMonth}
+          onChange={(e) => updateValue(selectedYear, e.target.value)}
+          className="w-full rounded-lg border border-brand-line bg-brand-bg/40 px-3 py-2 text-sm text-brand-ink transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+        >
+          <option value="">{t.unset}</option>
+          {monthOptions.map((month) => (
+            <option key={month} value={month}>
+              {month}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   );

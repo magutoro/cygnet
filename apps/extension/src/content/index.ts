@@ -1345,6 +1345,12 @@ function hasVacationContext(el: HTMLElement | null, meta: string, rawHint: strin
   const combined = `${meta} ${normalize(toHalfWidth(rawHint))}`;
   if (/(休暇中|vacation|temporary)/i.test(combined)) return true;
 
+  const scopedContainer = el?.closest?.("tbody") || el?.closest?.("fieldset") || el?.closest?.("section");
+  if (scopedContainer) {
+    const scopedText = toHalfWidth(String(scopedContainer.textContent || ""));
+    if (/休暇中の連絡先|休暇中住所|現住所と同じ場合/.test(scopedText)) return true;
+  }
+
   const tr = el?.closest?.("tr");
   if (tr) {
     let cursor: Element | null = tr;
@@ -1372,20 +1378,33 @@ function matchVacationField(meta: string, type: string): string | null {
 
 function matchNonNameField(meta: string, type: string, el: HTMLElement | null, rawHint: string = ""): string | null {
   const combinedMeta = `${meta} ${normalize(toHalfWidth(rawHint))}`;
+  const rowContext = normalize(
+    toHalfWidth(String(el?.closest?.("tr")?.textContent || el?.closest?.("fieldset, section")?.textContent || ""))
+  );
+  const contextualMeta = `${combinedMeta} ${rowContext}`;
   const name = normalize(toHalfWidth(el?.getAttribute?.("name") || (el as HTMLInputElement)?.name || ""));
   const id = normalize(toHalfWidth(el?.id || ""));
   const autocomplete = normalize(toHalfWidth(el?.getAttribute?.("autocomplete") || ""));
   const keyed = `${name} ${id} ${autocomplete}`;
   const keyId = `${name} ${id}`;
 
-  if (/(?:高等学校|高校).*(卒業年月|卒業年|graduation)/i.test(combinedMeta)) return "highSchoolGraduationDate";
+  if (/(?:高等学校|高校).*(卒業年月|卒業年|graduation)/i.test(contextualMeta)) return "highSchoolGraduationDate";
   if (
     /(出身.*(?:高等学校|高校)|卒業された.*(?:高等学校|高校)|(?:高等学校|高校).*(?:名|学校)|high.?school)/i.test(
-      combinedMeta
+      contextualMeta
     ) &&
-    !/(卒業年月|卒業年|卒業後|理由|gap)/i.test(combinedMeta)
+    !/(卒業年月|卒業年|卒業後|理由|gap)/i.test(contextualMeta)
   ) {
     return "highSchool";
+  }
+
+  if (
+    el &&
+    (el.tagName === "SELECT" || isCustomCombobox(el)) &&
+    /(卒業年月|graduation.?month|year.?month)/i.test(contextualMeta) &&
+    !/(高等学校|高校)/i.test(contextualMeta)
+  ) {
+    return "graduationYear";
   }
 
   if (hasVacationContext(el, meta, rawHint)) {
@@ -2899,6 +2918,7 @@ function clearVacationSectionFields(
     if (el === toggle) continue;
     const meta = getTextMeta(el);
     const rawHint = getRawHintText(el);
+    if (!hasVacationContext(el, meta, rawHint)) continue;
     const vacationField = matchVacationField(
       `${normalize(meta)} ${normalize(toHalfWidth(rawHint))} ${normalize(toHalfWidth(el.getAttribute("name") || ""))} ${normalize(
         toHalfWidth(el.id || "")
@@ -2991,8 +3011,8 @@ function fillVacationSameAsCurrentFallback(
     }
 
     const container =
-      toggle.closest("tbody") ||
       toggle.closest("table") ||
+      toggle.closest("tbody") ||
       toggle.closest("fieldset") ||
       toggle.closest("section");
     if (!(container instanceof HTMLElement)) continue;
@@ -3009,7 +3029,13 @@ function fillGroupedGraduationFields(
   const parsed = parseYearMonth(profile.graduationYear);
   if (!parsed) return;
 
-  const graduationCandidates = candidates.filter((x) => x.field === "graduationYear" && !handledElements.has(x.el));
+  const graduationCandidates = candidates.filter((x) => {
+    if (handledElements.has(x.el)) return false;
+    if (x.field === "graduationYear") return true;
+    if (!(x.el.tagName === "SELECT" || isCustomCombobox(x.el))) return false;
+    const rowText = toHalfWidth(String(x.el.closest("tr")?.textContent || x.meta || ""));
+    return /(卒業年月|graduation.?month|year.?month)/i.test(rowText) && !/(高等学校|高校)/i.test(rowText);
+  });
   const rows = buildLineGroups(graduationCandidates);
 
   for (const row of rows) {
@@ -4002,11 +4028,10 @@ function ensureInPageOverlay(): OverlayRefs | null {
       .mg-copy.is-empty { opacity: 0.7; background: #f2f8ff; }
       .mg-copy-full { text-align: left; border: none; background: transparent; padding: 0; margin: 0; cursor: pointer; display: grid; gap: 4px; }
       .mg-copy-full:disabled { cursor: default; }
-      .mg-copy-full.is-copied .mg-copy-value { background: #dcefff; border-radius: 4px; padding: 1px 4px; }
+      .mg-copy-full.is-copied .mg-copy-value { background: transparent; box-shadow: inset 0 -0.58em 0 #dcefff; }
       .mg-copy-label { font-size: 11px; color: #5d7896; font-weight: 700; }
-      .mg-copy-value { font-size: 14px; color: #1c3551; white-space: pre-wrap; word-break: break-word; line-height: 1.38; display: inline; width: fit-content; box-decoration-break: clone; -webkit-box-decoration-break: clone; border-radius: 4px; background-color: rgba(199, 236, 255, 0); transition: background-color .72s cubic-bezier(0.22, 1, 0.36, 1); }
-      .mg-copy-full:not(:disabled):hover .mg-copy-value { background-color: rgba(199, 236, 255, 0.95); transition-delay: .12s; }
-      .mg-copy-full:not(:disabled):not(:hover) .mg-copy-value { transition-delay: .04s; }
+      .mg-copy-value { font-size: 14px; color: #1c3551; white-space: pre-wrap; word-break: break-word; line-height: 1.38; display: inline; width: fit-content; box-decoration-break: clone; -webkit-box-decoration-break: clone; text-decoration: none; transition: color .18s ease, box-shadow .18s ease; }
+      .mg-copy-full:not(:disabled):hover .mg-copy-value { color: #14507d; text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1.5px; }
       @media (max-width: 380px) {
         .mg-cred-info,
         .mg-actions { grid-template-columns: 1fr; }
