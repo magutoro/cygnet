@@ -1345,10 +1345,25 @@ function hasVacationContext(el: HTMLElement | null, meta: string, rawHint: strin
   const combined = `${meta} ${normalize(toHalfWidth(rawHint))}`;
   if (/(休暇中|vacation|temporary)/i.test(combined)) return true;
 
+  const keyed = normalize(
+    toHalfWidth(`${el?.getAttribute?.("name") || (el as HTMLInputElement | null)?.name || ""} ${el?.id || ""}`)
+  );
+  if (/\badch\b|\bkyubin\d*\b|\bkken\b|\bkadrs\d*\b|\bktel\d*\b/.test(keyed)) return true;
+
   const scopedContainer = el?.closest?.("tbody") || el?.closest?.("fieldset") || el?.closest?.("section");
   if (scopedContainer) {
     const scopedText = toHalfWidth(String(scopedContainer.textContent || ""));
     if (/休暇中の連絡先|休暇中住所|現住所と同じ場合/.test(scopedText)) return true;
+  }
+
+  const formBox = el?.closest?.(".formbox");
+  if (formBox) {
+    let cursor: Element | null = formBox;
+    for (let i = 0; i < 6 && cursor; i += 1) {
+      const text = toHalfWidth(String((cursor as HTMLElement).textContent || ""));
+      if (/休暇中の連絡先|休暇中住所|現住所と同じ場合/.test(text)) return true;
+      cursor = cursor.previousElementSibling;
+    }
   }
 
   const tr = el?.closest?.("tr");
@@ -1365,6 +1380,12 @@ function hasVacationContext(el: HTMLElement | null, meta: string, rawHint: strin
 }
 
 function matchVacationField(meta: string, type: string): string | null {
+  if (/\badch\b/.test(meta)) return "vacationAddressSameAsCurrent";
+  if (/\bkyubin\d*\b/.test(meta)) return "vacationPostalCode";
+  if (/\bkken\b/.test(meta)) return "vacationPrefecture";
+  if (/\bkadrs1\b/.test(meta)) return "vacationAddressLine1";
+  if (/\bkadrs2\b/.test(meta)) return "vacationAddressLine2";
+  if (/\bktel\d*\b/.test(meta)) return "vacationPhone";
   if (/(現住所.*同じ|same.*current|same.*address|休暇中住所.*同じ)/.test(meta)) {
     return "vacationAddressSameAsCurrent";
   }
@@ -1424,6 +1445,12 @@ function matchNonNameField(meta: string, type: string, el: HTMLElement | null, r
   if (/\bgakka\b|\bdepartment\b/.test(keyed)) return "department";
   if (/\bbunri\b|\bhumanities.?science\b|\barts.?science\b/.test(keyed)) return "humanitiesScienceType";
   if (/\bybirth\b|\bmbirth\b|\bdbirth\b/.test(keyed)) return "birthDate";
+  if (/\bsyear\b|\bsmonth\b|\bshikbn\b/.test(keyed)) return "graduationYear";
+  if (/\bgyubin\d*\b/.test(keyed)) return "postalCode";
+  if (/\bgken\b/.test(keyed)) return "prefecture";
+  if (/\bgadrs1\b/.test(keyed)) return "addressLine1";
+  if (/\bgadrs2\b/.test(keyed)) return "addressLine2";
+  if (/\bgtel\d*\b/.test(keyed)) return "phone";
   if (/\bpostal\b|\bpost.?code\b|\bzip\b|郵便/.test(keyId)) return "postalCode";
   if (/\bcity\b|\bmunicipality\b|市区町村|市区郡/.test(keyId)) return "city";
   if (/\baddress.?line.?2\b|\baddress.?2\b|\bline.?2\b|\baddr.?2\b/.test(keyId)) return "addressLine2";
@@ -2218,6 +2245,130 @@ function chooseMatchingOption<T extends OptionLike>(options: T[], candidates: st
   return null;
 }
 
+function applyNativeSelectOption(selectEl: HTMLSelectElement, option: HTMLOptionElement): void {
+  selectEl.value = option.value!;
+  const optionIndex = Array.from(selectEl.options).indexOf(option);
+  if (optionIndex >= 0) selectEl.selectedIndex = optionIndex;
+  option.selected = true;
+  option.scrollIntoView({ block: "nearest" });
+}
+
+function syncJqTransformWrapper(selectEl: HTMLSelectElement, option: HTMLOptionElement): void {
+  const wrapper = getJqTransformWrapper(selectEl);
+  if (!wrapper) return;
+
+  const label = wrapper.querySelector("div > span, span");
+  if (label) {
+    label.textContent = (option.textContent || option.label || "").trim();
+  }
+
+  const optionIndex = Array.from(selectEl.options).indexOf(option);
+  const anchors = Array.from(wrapper.querySelectorAll("ul li a")).filter(
+    (node): node is HTMLElement => node instanceof HTMLElement
+  );
+  for (const anchor of anchors) {
+    const index = Number(anchor.getAttribute("index"));
+    if (Number.isFinite(index) && index === optionIndex) {
+      anchor.classList.add("selected");
+    } else {
+      anchor.classList.remove("selected");
+    }
+  }
+}
+
+function isSelectOptionApplied(selectEl: HTMLSelectElement, option: HTMLOptionElement): boolean {
+  const optionIndex = Array.from(selectEl.options).indexOf(option);
+  const currentIndex = selectEl.selectedIndex;
+  const currentValue = normalize(toHalfWidth(selectEl.value || ""));
+  const targetValue = normalize(toHalfWidth(option.value || ""));
+  const currentText = normalize(toHalfWidth(selectEl.options[currentIndex]?.textContent || ""));
+  const targetText = normalize(toHalfWidth(option.textContent || option.label || ""));
+  const matchesNative =
+    currentValue === targetValue || currentText === targetText || (optionIndex >= 0 && currentIndex === optionIndex);
+  if (!matchesNative) return false;
+
+  const wrapper = getJqTransformWrapper(selectEl);
+  if (!wrapper) return true;
+
+  const label = wrapper.querySelector("div > span, span");
+  const wrapperText = normalize(toHalfWidth(label?.textContent || ""));
+  return wrapperText === targetText || wrapperText === targetValue;
+}
+
+function findSelectOption(
+  selectEl: HTMLSelectElement,
+  values: Array<string | null | undefined>
+): HTMLOptionElement | null {
+  const normalizedTargets = values
+    .map((value) => normalize(toHalfWidth(String(value || ""))))
+    .filter(Boolean);
+  if (!normalizedTargets.length) return null;
+
+  const options = Array.from(selectEl.options) as HTMLOptionElement[];
+  for (const option of options) {
+    const text = normalize(toHalfWidth(option.textContent || option.label || ""));
+    const value = normalize(toHalfWidth(option.value || ""));
+    if (normalizedTargets.some((target) => target === text || target === value)) {
+      return option;
+    }
+  }
+
+  return chooseMatchingOption(options as (HTMLOptionElement & OptionLike)[], normalizedTargets) || null;
+}
+
+function selectJqTransformOption(selectEl: HTMLSelectElement, option: HTMLOptionElement): void {
+  const wrapper = getJqTransformWrapper(selectEl);
+  if (!wrapper) {
+    applyNativeSelectOption(selectEl, option);
+    return;
+  }
+
+  const optionIndex = Array.from(selectEl.options).indexOf(option);
+  const openButton = wrapper.querySelector("a.jqTransformSelectOpen") as HTMLElement | null;
+  if (openButton) clickLikeUser(openButton);
+
+  const targetAnchor =
+    wrapper.querySelector(`ul li a[index="${optionIndex}"]`) ||
+    Array.from(wrapper.querySelectorAll("ul li a")).find((node) => {
+      const text = normalize(node.textContent || "");
+      const value = normalize(node.getAttribute("value") || "");
+      const targetText = normalize(option.textContent || option.label || "");
+      const targetValue = normalize(option.value || "");
+      return text === targetText || value === targetValue;
+    });
+
+  if (targetAnchor instanceof HTMLElement) {
+    clickLikeUser(targetAnchor);
+  }
+
+  applyNativeSelectOption(selectEl, option);
+  syncJqTransformWrapper(selectEl, option);
+}
+
+function forceSelectOption(
+  selectEl: HTMLSelectElement,
+  values: Array<string | null | undefined>,
+  options: { preferProxy?: boolean; silent?: boolean } = {}
+): boolean {
+  const option = findSelectOption(selectEl, values);
+  if (!option) return false;
+  if (isSelectOptionApplied(selectEl, option)) return false;
+
+  if (options.silent) {
+    applyNativeSelectOption(selectEl, option);
+    syncJqTransformWrapper(selectEl, option);
+  } else if (isJqTransformHiddenSelect(selectEl) || options.preferProxy) {
+    selectJqTransformOption(selectEl, option);
+  } else {
+    applyNativeSelectOption(selectEl, option);
+    clickLikeUser(selectEl);
+  }
+
+  selectEl.dispatchEvent(new Event("input", { bubbles: true }));
+  selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+  return true;
+}
+
 function selectFromCustomCombobox(el: HTMLElement, field: string, value: string | null | undefined): boolean {
   const candidates = expandCandidateValues(field, String(value ?? ""));
   if (!candidates.length) return false;
@@ -2258,19 +2409,13 @@ function selectElementByCandidates(
       normalizedCandidates
     );
     if (!option) return false;
-    selectEl.value = option.value!;
-    const optionIndex = Array.from(selectEl.options).indexOf(option as HTMLOptionElement);
-    if (optionIndex >= 0) selectEl.selectedIndex = optionIndex;
     if (option instanceof HTMLOptionElement) {
-      option.selected = true;
-      option.scrollIntoView({ block: "nearest" });
-    }
-    clickLikeUser(selectEl);
-
-    if (isJqTransformHiddenSelect(el)) {
-      const wrapper = getJqTransformWrapper(el);
-      const label = wrapper?.querySelector("div > span, span");
-      if (label) label.textContent = (option.textContent || (option as HTMLOptionElement).label || "").trim();
+      if (isJqTransformHiddenSelect(el)) {
+        selectJqTransformOption(selectEl, option);
+      } else {
+        applyNativeSelectOption(selectEl, option);
+        clickLikeUser(selectEl);
+      }
     }
 
     el.dispatchEvent(new Event("input", { bubbles: true }));
@@ -2311,15 +2456,13 @@ function clearFieldValue(el: HTMLElement): boolean {
         /選択|未設定|choose|select/i.test(toHalfWidth(option.textContent || option.label || ""))
     );
     selectEl.selectedIndex = placeholderIndex >= 0 ? placeholderIndex : 0;
-    selectEl.value = selectEl.options[selectEl.selectedIndex]?.value || "";
-    clickLikeUser(selectEl);
-
-    if (isJqTransformHiddenSelect(el)) {
-      const wrapper = getJqTransformWrapper(el);
-      const label = wrapper?.querySelector("div > span, span");
-      if (label) {
-        const selected = selectEl.options[selectEl.selectedIndex];
-        label.textContent = (selected?.textContent || selected?.label || "").trim();
+    const selected = selectEl.options[selectEl.selectedIndex];
+    if (selected) {
+      if (isJqTransformHiddenSelect(el)) {
+        selectJqTransformOption(selectEl, selected);
+      } else {
+        applyNativeSelectOption(selectEl, selected);
+        clickLikeUser(selectEl);
       }
     }
   } else if (isCustomCombobox(el)) {
@@ -2356,6 +2499,11 @@ function clearFieldValue(el: HTMLElement): boolean {
 }
 
 function detectGraduationSelectPart(candidate: Candidate): "year" | "month" | "status" | "" {
+  const idName = normalize(`${candidate.el?.id || ""} ${(candidate.el as HTMLInputElement)?.name || ""}`);
+  if (/\bsyear\b/.test(idName)) return "year";
+  if (/\bsmonth\b/.test(idName)) return "month";
+  if (/\bshikbn\b/.test(idName)) return "status";
+
   const hints = [
     candidate.meta,
     candidate.rawHint,
@@ -2463,19 +2611,13 @@ function setFieldValue(
       expandCandidateValues(field, value)
     );
     if (!option) return false;
-    selectEl.value = option.value!;
-    const optionIndex = Array.from(selectEl.options).indexOf(option as HTMLOptionElement);
-    if (optionIndex >= 0) selectEl.selectedIndex = optionIndex;
     if (option instanceof HTMLOptionElement) {
-      option.selected = true;
-      option.scrollIntoView({ block: "nearest" });
-    }
-    clickLikeUser(selectEl);
-
-    if (isJqTransformHiddenSelect(el)) {
-      const wrapper = getJqTransformWrapper(el);
-      const label = wrapper?.querySelector("div > span, span");
-      if (label) label.textContent = (option.textContent || (option as HTMLOptionElement).label || "").trim();
+      if (isJqTransformHiddenSelect(el)) {
+        selectJqTransformOption(selectEl, option);
+      } else {
+        applyNativeSelectOption(selectEl, option);
+        clickLikeUser(selectEl);
+      }
     }
   } else if (isCustomCombobox(el)) {
     return selectFromCustomCombobox(el, field, value);
@@ -2990,6 +3132,157 @@ async function retryUniversitySelectionFlow(
   }
 }
 
+function isIwebsPage(): boolean {
+  return /\.i-webs\.jp$/i.test(String(location.hostname || ""));
+}
+
+function getTokyoCurrentYearMonth(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit"
+  })
+    .formatToParts(new Date())
+    .reduce<Record<string, string>>((acc, part) => {
+      if (part.type !== "literal") acc[part.type] = part.value;
+      return acc;
+    }, {});
+  return `${parts.year || "0000"}-${parts.month || "01"}`;
+}
+
+function inferIwebsGraduationStatusLabel(value: string): string {
+  const parsed = parseYearMonth(value);
+  if (!parsed) return "卒業（修了）見込み";
+  const target = `${parsed.year}-${parsed.month}`;
+  return target >= getTokyoCurrentYearMonth() ? "卒業（修了）見込み" : "卒業（修了）";
+}
+
+function getCandidateByNameOrId(candidates: Candidate[], key: string): Candidate | null {
+  const normalizedKey = normalize(toHalfWidth(key));
+  return (
+    candidates.find((candidate) => {
+      const name = normalize(toHalfWidth((candidate.el as HTMLInputElement).name || ""));
+      const id = normalize(toHalfWidth(candidate.el.id || ""));
+      return name === normalizedKey || id === normalizedKey;
+    }) || null
+  );
+}
+
+function markCandidatesHandled(handledElements: Set<HTMLElement>, candidates: Array<Candidate | null | undefined>): void {
+  for (const candidate of candidates) {
+    if (candidate?.el) handledElements.add(candidate.el);
+  }
+}
+
+function fillIwebsGraduationFields(
+  candidates: Candidate[],
+  profile: Profile,
+  overwrite: boolean,
+  handledElements: Set<HTMLElement>
+): void {
+  const parsed = parseYearMonth(profile.graduationYear);
+  if (!parsed) return;
+
+  const yearField = getCandidateByNameOrId(candidates, "syear");
+  const monthField = getCandidateByNameOrId(candidates, "smonth");
+  const statusField = getCandidateByNameOrId(candidates, "shikbn");
+
+  if (!yearField && !monthField && !statusField) return;
+
+  const statusLabel = inferIwebsGraduationStatusLabel(profile.graduationYear);
+  const forceOverwrite = true;
+  const applyGraduationValues = (options: { silent?: boolean } = {}): void => {
+    if (yearField?.el instanceof HTMLSelectElement) {
+      forceSelectOption(yearField.el, [parsed.year], { preferProxy: true, silent: options.silent });
+    } else if (yearField) {
+      setFieldValue(yearField.el, "graduationYear", parsed.year, { overwrite: forceOverwrite });
+    }
+
+    if (monthField?.el instanceof HTMLSelectElement) {
+      forceSelectOption(monthField.el, [parsed.month, parsed.monthRaw], {
+        preferProxy: true,
+        silent: options.silent
+      });
+    } else if (monthField) {
+      [parsed.month, parsed.monthRaw].some((value) =>
+        value ? setFieldValue(monthField.el, "graduationYear", value, { overwrite: forceOverwrite }) : false
+      );
+    }
+
+    if (statusField?.el instanceof HTMLSelectElement) {
+      forceSelectOption(statusField.el, [statusLabel], { preferProxy: true, silent: options.silent });
+    } else if (statusField) {
+      selectElementByCandidates(statusField.el, [statusLabel], { overwrite: forceOverwrite });
+    }
+  };
+
+  applyGraduationValues({ silent: !overwrite });
+  window.setTimeout(() => applyGraduationValues({ silent: true }), overwrite ? 150 : 250);
+  window.setTimeout(() => applyGraduationValues({ silent: true }), overwrite ? 500 : 700);
+
+  markCandidatesHandled(handledElements, [yearField, monthField, statusField]);
+}
+
+function fillIwebsVacationFields(
+  candidates: Candidate[],
+  profile: Profile,
+  overwrite: boolean,
+  handledElements: Set<HTMLElement>
+): void {
+  const toggle = getCandidateByNameOrId(candidates, "adch");
+  const postal1 = getCandidateByNameOrId(candidates, "kyubin1");
+  const postal2 = getCandidateByNameOrId(candidates, "kyubin2");
+  const prefecture = getCandidateByNameOrId(candidates, "kken");
+  const address1 = getCandidateByNameOrId(candidates, "kadrs1");
+  const address2 = getCandidateByNameOrId(candidates, "kadrs2");
+  const tel1 = getCandidateByNameOrId(candidates, "ktel1");
+  const tel2 = getCandidateByNameOrId(candidates, "ktel2");
+  const tel3 = getCandidateByNameOrId(candidates, "ktel3");
+
+  const vacationCandidates = [toggle, postal1, postal2, prefecture, address1, address2, tel1, tel2, tel3];
+  if (!vacationCandidates.some(Boolean)) return;
+
+  const useSameAsCurrent = shouldUseVacationSameAsCurrent(profile);
+
+  if (toggle) {
+    setFieldValue(toggle.el, "vacationAddressSameAsCurrent", useSameAsCurrent ? "yes" : "no", { overwrite });
+  }
+
+  if (useSameAsCurrent) {
+    for (const candidate of [postal1, postal2, prefecture, address1, address2, tel1, tel2, tel3]) {
+      if (!candidate) continue;
+      clearFieldValue(candidate.el);
+    }
+    markCandidatesHandled(handledElements, vacationCandidates);
+    return;
+  }
+
+  const [postalA, postalB] = splitPostalDigits(profile.vacationPostalCode);
+  if (postal1 && postalA) setFieldValue(postal1.el, "vacationPostalCode", postalA, { overwrite });
+  if (postal2 && postalB) setFieldValue(postal2.el, "vacationPostalCode", postalB, { overwrite });
+  if (prefecture) setFieldValue(prefecture.el, "vacationPrefecture", cleanProfileValue(profile.vacationPrefecture), { overwrite });
+  if (address1) setFieldValue(address1.el, "vacationAddressLine1", cleanProfileValue(profile.vacationAddressLine1), { overwrite });
+  if (address2) setFieldValue(address2.el, "vacationAddressLine2", cleanProfileValue(profile.vacationAddressLine2), { overwrite });
+
+  const phoneSegments = splitPhoneDigits(profile.vacationPhone, 3);
+  if (tel1 && phoneSegments[0]) setFieldValue(tel1.el, "vacationPhone", phoneSegments[0], { overwrite });
+  if (tel2 && phoneSegments[1]) setFieldValue(tel2.el, "vacationPhone", phoneSegments[1], { overwrite });
+  if (tel3 && phoneSegments[2]) setFieldValue(tel3.el, "vacationPhone", phoneSegments[2], { overwrite });
+
+  markCandidatesHandled(handledElements, vacationCandidates);
+}
+
+function fillIwebsProviderFields(
+  candidates: Candidate[],
+  profile: Profile,
+  overwrite: boolean,
+  handledElements: Set<HTMLElement>
+): void {
+  if (!isIwebsPage()) return;
+  fillIwebsGraduationFields(candidates, profile, overwrite, handledElements);
+  fillIwebsVacationFields(candidates, profile, overwrite, handledElements);
+}
+
 function fillVacationSameAsCurrentFallback(
   profile: Profile,
   overwrite: boolean,
@@ -3111,6 +3404,7 @@ function fillGroupedFields(
   overwrite: boolean,
   handledElements: Set<HTMLElement>
 ): void {
+  fillIwebsProviderFields(candidates, profile, overwrite, handledElements);
   fillVacationSameAsCurrentFallback(profile, overwrite, handledElements);
   fillSplitBirthDateFields(candidates, profile, overwrite, handledElements);
   fillSplitEmailFields(candidates, profile, overwrite, handledElements);
