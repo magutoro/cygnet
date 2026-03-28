@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { DbResume } from "@cygnet/shared";
 import type { Profile } from "@cygnet/shared";
+import { useLanguage } from "@/components/LanguageProvider";
 
 interface Props {
   userId: string;
@@ -12,6 +13,47 @@ interface Props {
 }
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+
+const COPY = {
+  en: {
+    title: "Resume / 履歴書",
+    upload: "Upload PDF resume / 履歴書",
+    uploading: "Uploading…",
+    max: "Max 10 MB",
+    replaceHint: "Uploading a new file replaces your current resume.",
+    empty: "No resume uploaded yet.",
+    delete: "Delete",
+    parse: "Extract info",
+    parsing: "Extracting…",
+    extracted: "Extracted text",
+    close: "Close",
+    tooLarge: "File must be smaller than 10 MB.",
+    onlyPdf: "Only PDF files are supported.",
+    uploadFailed: "Upload failed.",
+    deleteFailed: "Delete failed.",
+    parseFailed: "Parse failed.",
+    replaceCleanupFailed: "Uploaded, but failed to remove older resumes.",
+  },
+  ja: {
+    title: "履歴書",
+    upload: "PDF履歴書をアップロード",
+    uploading: "アップロード中…",
+    max: "最大 10 MB",
+    replaceHint: "新しいファイルをアップロードすると前の履歴書は置き換わります。",
+    empty: "まだ履歴書がありません。",
+    delete: "削除",
+    parse: "情報を抽出",
+    parsing: "抽出中…",
+    extracted: "抽出テキスト",
+    close: "閉じる",
+    tooLarge: "ファイルは 10 MB 未満にしてください。",
+    onlyPdf: "PDFファイルのみ対応しています。",
+    uploadFailed: "アップロードに失敗しました。",
+    deleteFailed: "削除に失敗しました。",
+    parseFailed: "抽出に失敗しました。",
+    replaceCleanupFailed: "アップロードは完了しましたが、古い履歴書の削除に失敗しました。",
+  },
+} as const;
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -24,7 +66,9 @@ export default function ResumeManager({
   initialResumes,
   onProfileParsed,
 }: Props) {
-  const [resumes, setResumes] = useState<DbResume[]>(initialResumes);
+  const { lang } = useLanguage();
+  const t = COPY[lang];
+  const [resumes, setResumes] = useState<DbResume[]>(initialResumes.slice(0, 1));
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,11 +77,11 @@ export default function ResumeManager({
   const upload = useCallback(
     async (file: File) => {
       if (file.size > MAX_SIZE) {
-        setError("File must be smaller than 10 MB.");
+        setError(t.tooLarge);
         return;
       }
       if (file.type !== "application/pdf") {
-        setError("Only PDF files are supported.");
+        setError(t.onlyPdf);
         return;
       }
 
@@ -72,14 +116,49 @@ export default function ResumeManager({
           .single<DbResume>();
 
         if (dbErr) throw dbErr;
-        if (data) setResumes((prev) => [data, ...prev]);
+        if (data) {
+          setResumes([data]);
+
+          const { data: oldResumeRows, error: oldResumeErr } = await supabase
+            .from("resumes")
+            .select("id, storage_path")
+            .eq("user_id", userId)
+            .neq("id", data.id);
+
+          if (oldResumeErr) {
+            setError(oldResumeErr.message || t.replaceCleanupFailed);
+            return;
+          }
+
+          const oldStoragePaths = (oldResumeRows ?? []).map((resume) => resume.storage_path);
+          const oldIds = (oldResumeRows ?? []).map((resume) => resume.id);
+
+          if (oldStoragePaths.length) {
+            const { error: removeErr } = await supabase.storage
+              .from("resumes")
+              .remove(oldStoragePaths);
+
+            const { error: cleanupDbErr } = await supabase
+              .from("resumes")
+              .delete()
+              .in("id", oldIds);
+
+            if (removeErr || cleanupDbErr) {
+              setError(
+                removeErr?.message ||
+                  cleanupDbErr?.message ||
+                  t.replaceCleanupFailed,
+              );
+            }
+          }
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Upload failed.");
+        setError(err instanceof Error ? err.message : t.uploadFailed);
       } finally {
         setUploading(false);
       }
     },
-    [userId],
+    [t.onlyPdf, t.replaceCleanupFailed, t.tooLarge, t.uploadFailed, userId],
   );
 
   const deleteResume = useCallback(
@@ -96,10 +175,10 @@ export default function ResumeManager({
         if (dbErr) throw dbErr;
         setResumes((prev) => prev.filter((r) => r.id !== resume.id));
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Delete failed.");
+        setError(err instanceof Error ? err.message : t.deleteFailed);
       }
     },
-    [],
+    [t.deleteFailed],
   );
 
   const parseResume = useCallback(
@@ -115,26 +194,33 @@ export default function ResumeManager({
           body: JSON.stringify({ storagePath: resume.storage_path }),
         });
 
-        if (!res.ok) throw new Error("Parse request failed.");
-
         const data = await res.json();
+        if (!res.ok) {
+          throw new Error(
+            typeof data?.error === "string" && data.error
+              ? data.error
+              : t.parseFailed,
+          );
+        }
+
         setParsedText(data.rawText?.slice(0, 2000) ?? null);
 
         if (data.profile && onProfileParsed) {
           onProfileParsed(data.profile);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Parse failed.");
+        setError(err instanceof Error ? err.message : t.parseFailed);
       } finally {
         setParsing(null);
       }
     },
-    [onProfileParsed],
+    [onProfileParsed, t.parseFailed],
   );
 
   return (
     <div className="rounded-2xl border border-brand-line bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-lg font-semibold text-brand-ink">Resumes</h2>
+      <h2 className="mb-2 text-lg font-semibold text-brand-ink">{t.title}</h2>
+      <p className="mb-4 text-xs text-brand-muted">{t.replaceHint}</p>
 
       {/* Upload area */}
       <label className="mb-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-brand-line bg-brand-bg/30 px-4 py-8 text-center transition-colors hover:border-brand hover:bg-brand-bg/60">
@@ -152,9 +238,9 @@ export default function ResumeManager({
           />
         </svg>
         <span className="text-sm font-medium text-brand-muted">
-          {uploading ? "Uploading…" : "Upload PDF resume"}
+          {uploading ? t.uploading : t.upload}
         </span>
-        <span className="mt-1 text-xs text-brand-muted/70">Max 10 MB</span>
+        <span className="mt-1 text-xs text-brand-muted/70">{t.max}</span>
         <input
           type="file"
           accept=".pdf,application/pdf"
@@ -177,7 +263,7 @@ export default function ResumeManager({
       {/* Resume list */}
       {resumes.length === 0 ? (
         <p className="py-6 text-center text-sm text-brand-muted">
-          No resumes uploaded yet.
+          {t.empty}
         </p>
       ) : (
         <ul className="space-y-3">
@@ -200,7 +286,7 @@ export default function ResumeManager({
                   type="button"
                   onClick={() => deleteResume(r)}
                   className="shrink-0 rounded-md p-1 text-brand-muted transition-colors hover:bg-red-50 hover:text-red-600"
-                  title="Delete"
+                  title={t.delete}
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -225,7 +311,7 @@ export default function ResumeManager({
                   disabled={parsing === r.id}
                   className="rounded-lg border border-brand-line px-3 py-1.5 text-xs font-medium text-brand-muted transition-colors hover:border-brand hover:text-brand-ink disabled:opacity-50"
                 >
-                  {parsing === r.id ? "Parsing…" : "Parse resume"}
+                  {parsing === r.id ? t.parsing : t.parse}
                 </button>
               </div>
             </li>
@@ -238,14 +324,14 @@ export default function ResumeManager({
         <div className="mt-4 rounded-xl border border-brand-line bg-brand-bg/30 p-4">
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-brand">
-              Extracted text
+              {t.extracted}
             </h3>
             <button
               type="button"
               onClick={() => setParsedText(null)}
               className="text-xs text-brand-muted hover:text-brand-ink"
             >
-              Close
+              {t.close}
             </button>
           </div>
           <pre className="max-h-64 overflow-auto whitespace-pre-wrap text-xs text-brand-muted">

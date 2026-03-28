@@ -59,6 +59,7 @@ export default async function DashboardPage() {
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
+      .limit(1)
       .returns<DbResume[]>();
     resumes = resumeRows ?? [];
   }
