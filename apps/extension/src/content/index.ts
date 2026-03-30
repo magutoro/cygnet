@@ -38,6 +38,38 @@ interface Candidate {
   combineCityForAddressLine1: boolean;
 }
 
+type SiteProviderId = "generic" | "iweb" | "axol";
+
+interface CompatibilityFieldReport {
+  tag: string;
+  type: string;
+  name: string;
+  id: string;
+  placeholder: string;
+  labels: string[];
+  meta: string;
+  rawHint: string;
+  classifiedField: string | null;
+  required: boolean;
+  visible: boolean;
+  options?: string[];
+  validationText?: string;
+}
+
+interface CompatibilityReport {
+  version: 1;
+  url: string;
+  origin: string;
+  provider: SiteProviderId;
+  generatedAt: string;
+  summary: {
+    matched: number;
+    unmatched: number;
+    fieldCounts: Record<string, number>;
+  };
+  fields: CompatibilityFieldReport[];
+}
+
 interface OverlayRefs {
   host: HTMLElement;
   shadow: ShadowRoot;
@@ -52,6 +84,7 @@ interface OverlayRefs {
   controlsWrap: HTMLElement;
   enabledToggle: HTMLInputElement;
   autofillBtn: HTMLElement;
+  reportIssueBtn: HTMLButtonElement;
   tabsWrap: HTMLElement;
   tabMainBtn: HTMLButtonElement;
   tabAdditionalBtn: HTMLButtonElement;
@@ -152,6 +185,7 @@ const NON_NAME_FIELD_PATTERNS: Record<string, RegExp[]> = {
   department: [/department/, /学科/, /専攻/, /course/],
   humanitiesScienceType: [/文理区分/, /文系理系/, /arts.?science/, /humanities/, /science/],
   graduationYear: [/graduation/, /graduation.?month/, /卒業/, /卒業年月/, /year/, /year.?month/],
+  latestAcademicAdmissionDate: [/admission/, /admission.?date/, /entrance/, /entrance.?date/, /entry/, /enrollment/, /入学/, /入学年月/, /入学年/],
   company: [/company/, /current.?employer/, /勤務先/, /会社/],
   highSchool: [/出身.*(?:高等学校|高校)/, /卒業された.*(?:高等学校|高校)/, /(?:高等学校|高校).*(?:名|学校)/, /high.?school/],
   highSchoolGraduationDate: [/(?:高等学校|高校).*卒業/, /high.?school.*graduation/],
@@ -179,6 +213,7 @@ const KANA_FIELD_KEYS = new Set(["lastNameKana", "firstNameKana"]);
 const KANA_SCRIPT_KEYS = new Set(["kana", "hiragana", "katakana"]);
 const AUTO_RUN_OBSERVE_MS = 15000;
 const AUTO_RUN_DEBOUNCE_MS = 600;
+const AXOL_SEARCH_COOLDOWN_MS = 2500;
 const AUTH_STATE_CACHE_TTL_MS = 3000;
 const CREDENTIAL_CAPTURE_DEDUPE_MS = 5000;
 const CREDENTIAL_REVEAL_TTL_MS = 12000;
@@ -1157,6 +1192,66 @@ function getRawHintText(el: HTMLElement): string {
   return parts.filter(Boolean).join(" ");
 }
 
+function createCandidate(el: HTMLElement): Candidate {
+  return {
+    el,
+    layoutEl: getLayoutElement(el),
+    meta: getTextMeta(el),
+    rawHint: getRawHintText(el),
+    field: null,
+    contactSubtype: null,
+    kanaTarget: null,
+    namePart: null,
+    scriptHint: null,
+    combineCityForAddressLine1: false
+  };
+}
+
+function collectCandidates(): Candidate[] {
+  return Array.from(document.querySelectorAll("input, textarea, select, [role='combobox']"))
+    .filter(isFillable)
+    .map((el) => createCandidate(el as HTMLElement));
+}
+
+function classifyCandidates(candidates: Candidate[]): Candidate[] {
+  assignNameFields(candidates);
+  assignNameFieldsByPairRows(candidates);
+
+  for (const candidate of candidates) {
+    if (candidate.field !== null && candidate.field !== undefined) continue;
+    candidate.field = matchNonNameField(
+      candidate.meta,
+      ((candidate.el as HTMLInputElement).type || "").toLowerCase(),
+      candidate.el,
+      candidate.rawHint
+    );
+  }
+
+  const hasCityFieldCandidate = candidates.some((candidate) => candidate.field === "city");
+  for (const candidate of candidates) {
+    if (candidate.field !== "addressLine1") continue;
+    if (hasCityFieldCandidate) continue;
+
+    const hint = `${candidate.meta || ""} ${candidate.rawHint || ""}`;
+    const wantsTownOrFullAddress =
+      /(町名以降|市区町村以降|番地と住所|住所.*以降|住所|address|street|丁目|番地)/.test(hint) &&
+      !/(建物|マンション|アパート|部屋|号室|address.?line.?2|address.?2)/.test(hint);
+
+    if (wantsTownOrFullAddress) {
+      candidate.combineCityForAddressLine1 = true;
+    }
+  }
+
+  for (const candidate of candidates) {
+    if (candidate.field === "email" || candidate.field === "phone") {
+      const text = `${candidate.meta || ""} ${candidate.rawHint || ""}`;
+      candidate.contactSubtype = detectContactSubtype(candidate.field, text);
+    }
+  }
+
+  return candidates;
+}
+
 function detectNamePart(meta: string): "last" | "first" | null {
   if (!meta) return null;
 
@@ -1276,6 +1371,28 @@ function assignNameFields(candidates: Candidate[]): void {
       if (["hidden", "radio", "checkbox"].includes(inputType)) continue;
     }
 
+    const keyed = normalize(
+      toHalfWidth(`${candidate.el.getAttribute("name") || (candidate.el as HTMLInputElement).name || ""} ${candidate.el.id || ""}`)
+    );
+    if (/\bkanji_sei\b/.test(keyed)) {
+      candidate.field = "lastNameKanji";
+      continue;
+    }
+    if (/\bkanji_na\b/.test(keyed)) {
+      candidate.field = "firstNameKanji";
+      continue;
+    }
+    if (/\bkana_sei\b/.test(keyed)) {
+      candidate.field = "lastNameKana";
+      candidate.kanaTarget = "katakana";
+      continue;
+    }
+    if (/\bkana_na\b/.test(keyed)) {
+      candidate.field = "firstNameKana";
+      candidate.kanaTarget = "katakana";
+      continue;
+    }
+
     const part = detectNamePart(candidate.meta);
     if (!part) continue;
 
@@ -1348,7 +1465,7 @@ function hasVacationContext(el: HTMLElement | null, meta: string, rawHint: strin
   const keyed = normalize(
     toHalfWidth(`${el?.getAttribute?.("name") || (el as HTMLInputElement | null)?.name || ""} ${el?.id || ""}`)
   );
-  if (/\badch\b|\bkyubin\d*\b|\bkken\b|\bkadrs\d*\b|\bktel\d*\b/.test(keyed)) return true;
+  if (/\badch\b|\bjushosame\b|\bkyubin\d*\b|\bkken\b|\bkadrs\d*\b|\bktel\d*\b/.test(keyed)) return true;
 
   const scopedContainer = el?.closest?.("tbody") || el?.closest?.("fieldset") || el?.closest?.("section");
   if (scopedContainer) {
@@ -1381,6 +1498,7 @@ function hasVacationContext(el: HTMLElement | null, meta: string, rawHint: strin
 
 function matchVacationField(meta: string, type: string): string | null {
   if (/\badch\b/.test(meta)) return "vacationAddressSameAsCurrent";
+  if (/\bjushosame\b/.test(meta)) return "vacationAddressSameAsCurrent";
   if (/\bkyubin\d*\b/.test(meta)) return "vacationPostalCode";
   if (/\bkken\b/.test(meta)) return "vacationPrefecture";
   if (/\bkadrs1\b/.test(meta)) return "vacationAddressLine1";
@@ -1428,6 +1546,14 @@ function matchNonNameField(meta: string, type: string, el: HTMLElement | null, r
     return "graduationYear";
   }
 
+  if (
+    el &&
+    (el.tagName === "SELECT" || isCustomCombobox(el)) &&
+    /(入学年月|入学年|admission.?date|entrance.?date|enrollment|entry.?date)/i.test(contextualMeta)
+  ) {
+    return "latestAcademicAdmissionDate";
+  }
+
   if (hasVacationContext(el, meta, rawHint)) {
     const vacationField = matchVacationField(`${meta} ${keyed}`, type);
     if (vacationField) return vacationField;
@@ -1446,11 +1572,24 @@ function matchNonNameField(meta: string, type: string, el: HTMLElement | null, r
   if (/\bbunri\b|\bhumanities.?science\b|\barts.?science\b/.test(keyed)) return "humanitiesScienceType";
   if (/\bybirth\b|\bmbirth\b|\bdbirth\b/.test(keyed)) return "birthDate";
   if (/\bsyear\b|\bsmonth\b|\bshikbn\b/.test(keyed)) return "graduationYear";
+  if (/\bschool_to_[ym]\b/.test(keyed)) return "graduationYear";
+  if (/\bschool_from_[ym]\b/.test(keyed)) return "latestAcademicAdmissionDate";
   if (/\bgyubin\d*\b/.test(keyed)) return "postalCode";
+  if (/\byubing_[hl]\b/.test(keyed)) return "postalCode";
   if (/\bgken\b/.test(keyed)) return "prefecture";
+  if (/\bkeng\b/.test(keyed)) return "prefecture";
   if (/\bgadrs1\b/.test(keyed)) return "addressLine1";
   if (/\bgadrs2\b/.test(keyed)) return "addressLine2";
+  if (/\bjushog1\b/.test(keyed)) return "city";
+  if (/\bjushog2\b/.test(keyed)) return "addressLine1";
+  if (/\bjushog3\b/.test(keyed)) return "addressLine2";
   if (/\bgtel\d*\b/.test(keyed)) return "phone";
+  if (/\btelg_[hml]\b/.test(keyed)) return "phone";
+  if (/\binitial\b/.test(keyed)) return "universityKanaInitial";
+  if (/\bdcd\b|\bdname\b/.test(keyed)) return "university";
+  if (/\bbcd\b|\bbname\b/.test(keyed)) return "faculty";
+  if (/\bpaxcd\b|\bkname\b/.test(keyed)) return "department";
+  if (/\bdegree\b/.test(keyed)) return "degree";
   if (/\bpostal\b|\bpost.?code\b|\bzip\b|郵便/.test(keyId)) return "postalCode";
   if (/\bcity\b|\bmunicipality\b|市区町村|市区郡/.test(keyId)) return "city";
   if (/\baddress.?line.?2\b|\baddress.?2\b|\bline.?2\b|\baddr.?2\b/.test(keyId)) return "addressLine2";
@@ -1748,13 +1887,14 @@ function resolveAutofillValue(candidate: Candidate, profile: Profile): string | 
 
   if (field === "universityKanaInitial") {
     rawValue = rawValue || deriveUniversityKanaInitial(profile);
+    rawValue = hiraganaToKatakana(rawValue).slice(0, 1);
   }
 
   if (URL_FIELD_KEYS.has(field!)) {
     rawValue = normalizeProfileUrl(rawValue);
   }
 
-  if (field === "graduationYear") {
+  if (field === "graduationYear" || field === "latestAcademicAdmissionDate") {
     const parsed = parseYearMonth(rawValue);
     if (parsed) {
       const hints = [
@@ -1769,7 +1909,10 @@ function resolveAutofillValue(candidate: Candidate, profile: Profile): string | 
         .map((x) => toHalfWidth(String(x || "")))
         .join(" ");
 
-      const asksYearMonth = /(卒業年月|year.?month|graduation.?month)/i.test(hints);
+      const asksYearMonth =
+        field === "graduationYear"
+          ? /(卒業年月|year.?month|graduation.?month)/i.test(hints)
+          : /(入学年月|year.?month|admission.?date|entrance.?date|enrollment)/i.test(hints);
       const asksMonthOnly = /(月|month)/i.test(hints) && !asksYearMonth && !/(年|year)/i.test(hints);
       const asksYearOnly = /(年|year)/i.test(hints) && !asksYearMonth && !/(月|month)/i.test(hints);
 
@@ -2127,6 +2270,7 @@ function setRadioValue(
 
   const matched = fuzzy;
   if (!matched) return false;
+  if (matched.checked) return false;
 
   if (isJqTransformHiddenChoice(matched)) {
     const proxy = matched.parentElement?.querySelector("a.jqTransformRadio, a.jqTransformCheckbox");
@@ -2503,6 +2647,10 @@ function detectGraduationSelectPart(candidate: Candidate): "year" | "month" | "s
   if (/\bsyear\b/.test(idName)) return "year";
   if (/\bsmonth\b/.test(idName)) return "month";
   if (/\bshikbn\b/.test(idName)) return "status";
+  if (/\bschool_to_y\b/.test(idName)) return "year";
+  if (/\bschool_to_m\b/.test(idName)) return "month";
+  if (/\bschool_from_y\b/.test(idName)) return "year";
+  if (/\bschool_from_m\b/.test(idName)) return "month";
 
   const hints = [
     candidate.meta,
@@ -2981,52 +3129,30 @@ function fillSplitBirthDateFields(
 }
 
 function collectBirthCandidates(): Candidate[] {
-  const elements = Array.from(
-    document.querySelectorAll("input, select, [role='combobox']")
-  ).filter(isFillable);
-  return elements
-    .map((el) => {
-      const meta = getTextMeta(el);
-      const rawHint = getRawHintText(el);
-      const field = matchNonNameField(meta, ((el as HTMLInputElement).type || "").toLowerCase(), el, rawHint);
-      return {
-        el,
-        layoutEl: getLayoutElement(el),
-        meta,
-        rawHint,
-        field,
-        contactSubtype: null,
-        kanaTarget: null,
-        namePart: null,
-        scriptHint: null,
-        combineCityForAddressLine1: false
-      };
-    })
+  return collectCandidates()
+    .map((candidate) => ({
+      ...candidate,
+      field: matchNonNameField(
+        candidate.meta,
+        ((candidate.el as HTMLInputElement).type || "").toLowerCase(),
+        candidate.el,
+        candidate.rawHint
+      )
+    }))
     .filter((candidate) => candidate.field === "birthDate");
 }
 
 function collectCandidatesByFields(fields: Set<string>): Candidate[] {
-  const elements = Array.from(
-    document.querySelectorAll("input, textarea, select, [role='combobox']")
-  ).filter(isFillable);
-  return elements
-    .map((el) => {
-      const meta = getTextMeta(el);
-      const rawHint = getRawHintText(el);
-      const field = matchNonNameField(meta, ((el as HTMLInputElement).type || "").toLowerCase(), el, rawHint);
-      return {
-        el,
-        layoutEl: getLayoutElement(el),
-        meta,
-        rawHint,
-        field,
-        contactSubtype: null,
-        kanaTarget: null,
-        namePart: null,
-        scriptHint: null,
-        combineCityForAddressLine1: false
-      };
-    })
+  return collectCandidates()
+    .map((candidate) => ({
+      ...candidate,
+      field: matchNonNameField(
+        candidate.meta,
+        ((candidate.el as HTMLInputElement).type || "").toLowerCase(),
+        candidate.el,
+        candidate.rawHint
+      )
+    }))
     .filter((candidate) => Boolean(candidate.field && fields.has(candidate.field)));
 }
 
@@ -3095,6 +3221,7 @@ async function retrySplitBirthDateFields(
 }
 
 async function retryUniversitySelectionFlow(
+  providerId: SiteProviderId,
   profile: Profile,
   overwrite: boolean,
   handledElements: Set<HTMLElement>
@@ -3129,11 +3256,35 @@ async function retryUniversitySelectionFlow(
       fillCandidatesForField(candidates, field, profile, overwrite, handledElements);
     }
     fillUniversityChoiceGroups(profile, overwrite, handledElements);
+    await runProviderWorkflow(providerId, profile, overwrite, handledElements);
   }
 }
 
 function isIwebsPage(): boolean {
   return /\.i-webs\.jp$/i.test(String(location.hostname || ""));
+}
+
+function isAxolPage(): boolean {
+  if (/axol/i.test(String(location.hostname || ""))) return true;
+  return Boolean(
+    document.querySelector(
+      ".jsAxolSchool_wrap, input[name='kanji_sei'], input[name='kanji_na'], input[name='kana_sei'], input[name='kana_na'], input[name='yubing_h'], input[name='jushog1'], input[name='school_to_Y'], input[name='school_from_Y']"
+    )
+  );
+}
+
+function isAxolSchoolPage(): boolean {
+  return Boolean(
+    document.querySelector(
+      ".jsAxolSchool_wrap, #jsAxolSchool_dcd_search, select[name='school_to_Y'], select[name='school_to_m']"
+    )
+  );
+}
+
+function detectSiteProviderId(): SiteProviderId {
+  if (isIwebsPage()) return "iweb";
+  if (isAxolPage()) return "axol";
+  return "generic";
 }
 
 function getTokyoCurrentYearMonth(): string {
@@ -3157,6 +3308,352 @@ function inferIwebsGraduationStatusLabel(value: string): string {
   return target >= getTokyoCurrentYearMonth() ? "卒業（修了）見込み" : "卒業（修了）";
 }
 
+function inferAxolSchoolTypeLabel(profile: Profile): string {
+  const educationType = cleanProfileValue(profile.educationType);
+  if (
+    [
+      "national_graduate_school",
+      "public_graduate_school",
+      "private_graduate_school",
+      "graduate_master",
+      "graduate_doctor",
+    ].includes(educationType)
+  ) {
+    return "大学院";
+  }
+  if (["technical_college"].includes(educationType) || /高等専門学校|高専/i.test(educationType)) {
+    return "高等専門学校";
+  }
+  return "大学";
+}
+
+function inferAxolSchoolOwnershipLabel(profile: Profile): string {
+  const educationType = cleanProfileValue(profile.educationType);
+  if (/overseas|foreign|海外|外国|日本国外/i.test(educationType) || isYesValue(profile.latestAcademicOverseasSchool)) {
+    return "日本国外";
+  }
+  if (/national|国立/i.test(educationType)) return "国立";
+  if (/public|公立/i.test(educationType)) return "公立";
+  return "私立";
+}
+
+function inferAxolDegreeLabel(profile: Profile): string {
+  const degree = cleanProfileValue(profile.degree);
+  if (/doctor|phd|博士/i.test(degree)) return "博士";
+  if (/master|修士/i.test(degree)) return "修士";
+  return degree;
+}
+
+function shouldClickAxolSearchButton(
+  button: HTMLInputElement,
+  schoolSelect: HTMLSelectElement | null,
+  initial: string
+): boolean {
+  if (!initial) return false;
+  if (schoolSelect && schoolSelect.options.length > 1) return false;
+
+  const now = Date.now();
+  const lastAt = Number(button.dataset.cygnetLastClickAt || "0");
+  const lastInitial = button.dataset.cygnetLastInitial || "";
+  if (lastInitial === initial && now - lastAt < AXOL_SEARCH_COOLDOWN_MS) {
+    return false;
+  }
+
+  button.dataset.cygnetLastClickAt = String(now);
+  button.dataset.cygnetLastInitial = initial;
+  return true;
+}
+
+function fillAxolDirectFields(
+  candidates: Candidate[],
+  profile: Profile,
+  overwrite: boolean,
+  handledElements: Set<HTMLElement>
+): void {
+  if (!isAxolPage()) return;
+
+  const lastNameKanji = getCandidatesByNameOrId(candidates, "kanji_sei");
+  const firstNameKanji = getCandidatesByNameOrId(candidates, "kanji_na");
+  const lastNameKana = getCandidatesByNameOrId(candidates, "kana_sei");
+  const firstNameKana = getCandidatesByNameOrId(candidates, "kana_na");
+  const postalHigh = getCandidatesByNameOrId(candidates, "yubing_h");
+  const postalLow = getCandidatesByNameOrId(candidates, "yubing_l");
+  const prefectures = getCandidatesByNameOrId(candidates, "keng");
+  const cityFields = getCandidatesByNameOrId(candidates, "jushog1");
+  const address1Fields = getCandidatesByNameOrId(candidates, "jushog2");
+  const address2Fields = getCandidatesByNameOrId(candidates, "jushog3");
+  const telHigh = getCandidatesByNameOrId(candidates, "telg_h");
+  const telMid = getCandidatesByNameOrId(candidates, "telg_m");
+  const telLow = getCandidatesByNameOrId(candidates, "telg_l");
+  const sameAsCurrent = getCandidatesByNameOrId(candidates, "jushosame");
+  const graduationYearFields = getCandidatesByNameOrId(candidates, "school_to_Y");
+  const graduationMonthFields = getCandidatesByNameOrId(candidates, "school_to_m");
+  const admissionYearFields = getCandidatesByNameOrId(candidates, "school_from_Y");
+  const admissionMonthFields = getCandidatesByNameOrId(candidates, "school_from_m");
+
+  for (const candidate of lastNameKanji) {
+    if (setFieldValue(candidate.el, "lastNameKanji", cleanProfileValue(profile.lastNameKanji), { overwrite })) {
+      handledElements.add(candidate.el);
+    }
+  }
+  for (const candidate of firstNameKanji) {
+    if (setFieldValue(candidate.el, "firstNameKanji", cleanProfileValue(profile.firstNameKanji), { overwrite })) {
+      handledElements.add(candidate.el);
+    }
+  }
+  for (const candidate of lastNameKana) {
+    if (
+      setFieldValue(candidate.el, "lastNameKana", hiraganaToKatakana(cleanProfileValue(profile.lastNameKana)), {
+        overwrite
+      })
+    ) {
+      handledElements.add(candidate.el);
+    }
+  }
+  for (const candidate of firstNameKana) {
+    if (
+      setFieldValue(candidate.el, "firstNameKana", hiraganaToKatakana(cleanProfileValue(profile.firstNameKana)), {
+        overwrite
+      })
+    ) {
+      handledElements.add(candidate.el);
+    }
+  }
+
+  const [postalA, postalB] = splitPostalDigits(profile.postalCode);
+  for (const candidate of postalHigh) {
+    if (postalA && setFieldValue(candidate.el, "postalCode", postalA, { overwrite })) {
+      handledElements.add(candidate.el);
+    }
+  }
+  for (const candidate of postalLow) {
+    if (postalB && setFieldValue(candidate.el, "postalCode", postalB, { overwrite })) {
+      handledElements.add(candidate.el);
+    }
+  }
+  for (const candidate of prefectures) {
+    if (setFieldValue(candidate.el, "prefecture", cleanProfileValue(profile.prefecture), { overwrite })) {
+      handledElements.add(candidate.el);
+    }
+  }
+  for (const candidate of cityFields) {
+    if (setFieldValue(candidate.el, "city", cleanProfileValue(profile.city), { overwrite })) {
+      handledElements.add(candidate.el);
+    }
+  }
+  for (const candidate of address1Fields) {
+    if (setFieldValue(candidate.el, "addressLine1", cleanProfileValue(profile.addressLine1), { overwrite })) {
+      handledElements.add(candidate.el);
+    }
+  }
+  for (const candidate of address2Fields) {
+    if (setFieldValue(candidate.el, "addressLine2", cleanProfileValue(profile.addressLine2), { overwrite })) {
+      handledElements.add(candidate.el);
+    }
+  }
+
+  const phoneSegments = splitPhoneDigits(profile.phone, 3);
+  for (const candidate of telHigh) {
+    if (phoneSegments[0] && setFieldValue(candidate.el, "phone", phoneSegments[0], { overwrite })) {
+      handledElements.add(candidate.el);
+    }
+  }
+  for (const candidate of telMid) {
+    if (phoneSegments[1] && setFieldValue(candidate.el, "phone", phoneSegments[1], { overwrite })) {
+      handledElements.add(candidate.el);
+    }
+  }
+  for (const candidate of telLow) {
+    if (phoneSegments[2] && setFieldValue(candidate.el, "phone", phoneSegments[2], { overwrite })) {
+      handledElements.add(candidate.el);
+    }
+  }
+
+  const useSameAsCurrent = shouldUseVacationSameAsCurrent(profile);
+  for (const candidate of sameAsCurrent) {
+    if (
+      setFieldValue(candidate.el, "vacationAddressSameAsCurrent", useSameAsCurrent ? "yes" : "no", { overwrite })
+    ) {
+      handledElements.add(candidate.el);
+    }
+  }
+
+  const graduation = parseYearMonth(profile.graduationYear);
+  if (graduation) {
+    for (const candidate of graduationYearFields) {
+      if (setFieldValue(candidate.el, "graduationYear", graduation.year, { overwrite: true })) {
+        handledElements.add(candidate.el);
+      }
+    }
+    for (const candidate of graduationMonthFields) {
+      if (
+        [graduation.month, graduation.monthRaw].some((value) =>
+          value ? setFieldValue(candidate.el, "graduationYear", value, { overwrite: true }) : false
+        )
+      ) {
+        handledElements.add(candidate.el);
+      }
+    }
+  }
+
+  const admission = parseYearMonth(profile.latestAcademicAdmissionDate);
+  if (admission) {
+    for (const candidate of admissionYearFields) {
+      if (
+        setFieldValue(candidate.el, "latestAcademicAdmissionDate", admission.year, {
+          overwrite: true
+        })
+      ) {
+        handledElements.add(candidate.el);
+      }
+    }
+    for (const candidate of admissionMonthFields) {
+      if (
+        [admission.month, admission.monthRaw].some((value) =>
+          value
+            ? setFieldValue(candidate.el, "latestAcademicAdmissionDate", value, { overwrite: true })
+            : false
+        )
+      ) {
+        handledElements.add(candidate.el);
+      }
+    }
+  }
+
+  markCandidatesHandled(handledElements, [
+    ...lastNameKanji,
+    ...firstNameKanji,
+    ...lastNameKana,
+    ...firstNameKana,
+    ...postalHigh,
+    ...postalLow,
+    ...prefectures,
+    ...cityFields,
+    ...address1Fields,
+    ...address2Fields,
+    ...telHigh,
+    ...telMid,
+    ...telLow,
+    ...sameAsCurrent,
+    ...graduationYearFields,
+    ...graduationMonthFields,
+    ...admissionYearFields,
+    ...admissionMonthFields
+  ]);
+}
+
+async function fillAxolSchoolSearchFlow(
+  profile: Profile,
+  overwrite: boolean,
+  handledElements: Set<HTMLElement>
+): Promise<void> {
+  if (!isAxolSchoolPage()) return;
+  if (!overwrite) return;
+
+  const initialInput = document.querySelector<HTMLInputElement>("input[name='initial']");
+  const schoolTypeRadio = document.querySelector<HTMLInputElement>("input[type='radio'][name='kubun']");
+  const ownershipRadio = document.querySelector<HTMLInputElement>("input[type='radio'][name='kokushi']");
+  const degreeRadio = document.querySelector<HTMLInputElement>("input[type='radio'][name='degree']");
+  const yearSelect = document.querySelector<HTMLSelectElement>("select[name='school_to_Y']");
+  const monthSelect = document.querySelector<HTMLSelectElement>("select[name='school_to_m']");
+  const schoolSelect = document.querySelector<HTMLSelectElement>("select[name='dcd'], select#dcd");
+  const schoolTextInput = document.querySelector<HTMLInputElement>("input[name='dname']");
+  const facultySelect = document.querySelector<HTMLSelectElement>("select[name='bcd'], select#bcd");
+  const facultyTextInput = document.querySelector<HTMLInputElement>("input[name='bname']");
+  const departmentSelect = document.querySelector<HTMLSelectElement>("select[name='paxcd'], select#paxcd");
+  const departmentTextInput = document.querySelector<HTMLInputElement>("input[name='kname']");
+  const schoolTypeLabel = inferAxolSchoolTypeLabel(profile);
+
+  const graduation = parseYearMonth(profile.graduationYear);
+  if (graduation) {
+    if (yearSelect) {
+      forceSelectOption(yearSelect, [graduation.year], { silent: !overwrite });
+      handledElements.add(yearSelect);
+    }
+    if (monthSelect) {
+      forceSelectOption(monthSelect, [graduation.month, graduation.monthRaw], { silent: !overwrite });
+      handledElements.add(monthSelect);
+    }
+  }
+
+  if (schoolTypeRadio) {
+    setRadioValue(schoolTypeRadio, "educationType", schoolTypeLabel, { overwrite: true });
+    document
+      .querySelectorAll<HTMLInputElement>("input[type='radio'][name='kubun']")
+      .forEach((radio) => handledElements.add(radio));
+  }
+
+  if (ownershipRadio) {
+    setRadioValue(ownershipRadio, "educationType", inferAxolSchoolOwnershipLabel(profile), { overwrite: true });
+    document
+      .querySelectorAll<HTMLInputElement>("input[type='radio'][name='kokushi']")
+      .forEach((radio) => handledElements.add(radio));
+  }
+
+  const degreeLabel = inferAxolDegreeLabel(profile);
+  if (degreeRadio && degreeLabel && schoolTypeLabel === "大学院") {
+    setRadioValue(degreeRadio, "degree", degreeLabel, { overwrite: true });
+    document
+      .querySelectorAll<HTMLInputElement>("input[type='radio'][name='degree']")
+      .forEach((radio) => handledElements.add(radio));
+  }
+
+  const initial = hiraganaToKatakana(deriveUniversityKanaInitial(profile)).slice(0, 1);
+  if (initialInput && initial) {
+    setFieldValue(initialInput, "universityKanaInitial", initial, { overwrite: true });
+    handledElements.add(initialInput);
+  }
+
+  const searchButton = document.getElementById("jsAxolSchool_dcd_search");
+  if (
+    searchButton instanceof HTMLInputElement &&
+    initialInput &&
+    initial &&
+    shouldClickAxolSearchButton(searchButton, schoolSelect, initial)
+  ) {
+    clickLikeUser(searchButton);
+    await sleep(250);
+    await sleep(450);
+  }
+
+  const universityValue = cleanProfileValue(profile.university);
+  if (schoolSelect && universityValue) {
+    const selected = forceSelectOption(
+      schoolSelect,
+      buildUniversityChoiceCandidates(universityValue),
+      { silent: !overwrite }
+    );
+    if (selected) handledElements.add(schoolSelect);
+  } else if (schoolTextInput && universityValue && isVisible(schoolTextInput)) {
+    setFieldValue(schoolTextInput, "university", universityValue, { overwrite: true });
+    handledElements.add(schoolTextInput);
+  }
+
+  if (facultySelect && cleanProfileValue(profile.faculty)) {
+    const ok = forceSelectOption(facultySelect, [cleanProfileValue(profile.faculty)], { silent: !overwrite });
+    if (ok) handledElements.add(facultySelect);
+  } else if (facultyTextInput && cleanProfileValue(profile.faculty) && isVisible(facultyTextInput)) {
+    setFieldValue(facultyTextInput, "faculty", cleanProfileValue(profile.faculty), { overwrite: true });
+    handledElements.add(facultyTextInput);
+  }
+
+  if (departmentSelect && cleanProfileValue(profile.department)) {
+    const ok = forceSelectOption(departmentSelect, [cleanProfileValue(profile.department)], {
+      silent: !overwrite
+    });
+    if (ok) handledElements.add(departmentSelect);
+  } else if (
+    departmentTextInput &&
+    cleanProfileValue(profile.department) &&
+    isVisible(departmentTextInput)
+  ) {
+    setFieldValue(departmentTextInput, "department", cleanProfileValue(profile.department), {
+      overwrite: true
+    });
+    handledElements.add(departmentTextInput);
+  }
+}
+
 function getCandidateByNameOrId(candidates: Candidate[], key: string): Candidate | null {
   const normalizedKey = normalize(toHalfWidth(key));
   return (
@@ -3166,6 +3663,15 @@ function getCandidateByNameOrId(candidates: Candidate[], key: string): Candidate
       return name === normalizedKey || id === normalizedKey;
     }) || null
   );
+}
+
+function getCandidatesByNameOrId(candidates: Candidate[], key: string): Candidate[] {
+  const normalizedKey = normalize(toHalfWidth(key));
+  return candidates.filter((candidate) => {
+    const name = normalize(toHalfWidth((candidate.el as HTMLInputElement).name || ""));
+    const id = normalize(toHalfWidth(candidate.el.id || ""));
+    return name === normalizedKey || id === normalizedKey;
+  });
 }
 
 function markCandidatesHandled(handledElements: Set<HTMLElement>, candidates: Array<Candidate | null | undefined>): void {
@@ -3283,6 +3789,34 @@ function fillIwebsProviderFields(
   fillIwebsVacationFields(candidates, profile, overwrite, handledElements);
 }
 
+function applyProviderDirectFill(
+  providerId: SiteProviderId,
+  candidates: Candidate[],
+  profile: Profile,
+  overwrite: boolean,
+  handledElements: Set<HTMLElement>
+): void {
+  if (providerId === "iweb") {
+    fillIwebsProviderFields(candidates, profile, overwrite, handledElements);
+    return;
+  }
+
+  if (providerId === "axol") {
+    fillAxolDirectFields(candidates, profile, overwrite, handledElements);
+  }
+}
+
+async function runProviderWorkflow(
+  providerId: SiteProviderId,
+  profile: Profile,
+  overwrite: boolean,
+  handledElements: Set<HTMLElement>
+): Promise<void> {
+  if (providerId === "axol") {
+    await fillAxolSchoolSearchFlow(profile, overwrite, handledElements);
+  }
+}
+
 function fillVacationSameAsCurrentFallback(
   profile: Profile,
   overwrite: boolean,
@@ -3398,18 +3932,84 @@ function fillGroupedGraduationFields(
   }
 }
 
-function fillGroupedFields(
+function fillGroupedAdmissionDateFields(
   candidates: Candidate[],
   profile: Profile,
   overwrite: boolean,
   handledElements: Set<HTMLElement>
 ): void {
-  fillIwebsProviderFields(candidates, profile, overwrite, handledElements);
+  const parsed = parseYearMonth(profile.latestAcademicAdmissionDate);
+  if (!parsed) return;
+
+  const admissionCandidates = candidates.filter((candidate) => {
+    if (handledElements.has(candidate.el)) return false;
+    if (candidate.field === "latestAcademicAdmissionDate") return true;
+    if (!(candidate.el.tagName === "SELECT" || isCustomCombobox(candidate.el))) return false;
+    const rowText = toHalfWidth(String(candidate.el.closest("tr, .form__item, .form__item__group")?.textContent || candidate.meta || ""));
+    return /(入学年月|入学年|admission.?date|entrance.?date|enrollment)/i.test(rowText);
+  });
+
+  const rows = buildLineGroups(admissionCandidates);
+  for (const row of rows) {
+    if (row.length < 2) continue;
+    const rowCandidates = row.map((item) => item.candidate);
+    const yearCandidates: Candidate[] = [];
+    const monthCandidates: Candidate[] = [];
+    const unknown: Candidate[] = [];
+
+    for (const candidate of rowCandidates) {
+      const part = detectGraduationSelectPart(candidate);
+      if (part === "year") {
+        yearCandidates.push(candidate);
+      } else if (part === "month") {
+        monthCandidates.push(candidate);
+      } else {
+        unknown.push(candidate);
+      }
+    }
+
+    if (!yearCandidates.length && unknown.length) yearCandidates.push(unknown.shift()!);
+    if (!monthCandidates.length && unknown.length) monthCandidates.push(unknown.shift()!);
+
+    let changed = false;
+    for (const candidate of yearCandidates) {
+      if (setFieldValue(candidate.el, "latestAcademicAdmissionDate", parsed.year, { overwrite })) {
+        handledElements.add(candidate.el);
+        changed = true;
+      }
+    }
+    for (const candidate of monthCandidates) {
+      const ok = [parsed.month, parsed.monthRaw].some((value) =>
+        value ? setFieldValue(candidate.el, "latestAcademicAdmissionDate", value, { overwrite }) : false
+      );
+      if (ok) {
+        handledElements.add(candidate.el);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      for (const candidate of rowCandidates) {
+        if (hasExistingValue(candidate.el)) handledElements.add(candidate.el);
+      }
+    }
+  }
+}
+
+function fillGroupedFields(
+  providerId: SiteProviderId,
+  candidates: Candidate[],
+  profile: Profile,
+  overwrite: boolean,
+  handledElements: Set<HTMLElement>
+): void {
+  applyProviderDirectFill(providerId, candidates, profile, overwrite, handledElements);
   fillVacationSameAsCurrentFallback(profile, overwrite, handledElements);
   fillSplitBirthDateFields(candidates, profile, overwrite, handledElements);
   fillSplitEmailFields(candidates, profile, overwrite, handledElements);
   fillSplitPostalFields(candidates, profile, overwrite, handledElements);
   fillSplitPhoneFields(candidates, profile, overwrite, handledElements);
+  fillGroupedAdmissionDateFields(candidates, profile, overwrite, handledElements);
   fillGroupedGraduationFields(candidates, profile, overwrite, handledElements);
   fillUniversityChoiceGroups(profile, overwrite, handledElements);
 }
@@ -3574,6 +4174,62 @@ async function copyTextToClipboard(text: string | null | undefined): Promise<boo
   const ok = document.execCommand("copy");
   document.body.removeChild(ta);
   return ok;
+}
+
+function getCompatibilityValidationText(el: HTMLElement): string {
+  const container =
+    el.closest(".fb_checkpoint, .form__item__group, .form__item, .formbox, tr, fieldset, section") || el.parentElement;
+  const alertNode = container?.querySelector(".fb_ownAlertStrs, [role='alert'], .fb_ownAlertBox");
+  return normalize(toHalfWidth(String(alertNode?.textContent || "")));
+}
+
+function buildCompatibilityReport(): CompatibilityReport {
+  const provider = detectSiteProviderId();
+  const candidates = classifyCandidates(collectCandidates());
+  const matched = candidates.filter((candidate) => Boolean(candidate.field));
+  const unmatched = candidates.length - matched.length;
+  const fieldCounts = matched.reduce<Record<string, number>>((acc, candidate) => {
+    const key = String(candidate.field || "");
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  return {
+    version: 1,
+    url: location.href,
+    origin: location.origin,
+    provider,
+    generatedAt: new Date().toISOString(),
+    summary: {
+      matched: matched.length,
+      unmatched,
+      fieldCounts
+    },
+    fields: candidates.map((candidate) => {
+      const inputEl = candidate.el as HTMLInputElement;
+      return {
+        tag: candidate.el.tagName,
+        type: String(inputEl.type || "").toLowerCase(),
+        name: inputEl.name || "",
+        id: candidate.el.id || "",
+        placeholder: inputEl.placeholder || "",
+        labels: inputEl.labels ? Array.from(inputEl.labels).map((label) => normalize(label.textContent || "")) : [],
+        meta: candidate.meta,
+        rawHint: normalize(toHalfWidth(candidate.rawHint)),
+        classifiedField: candidate.field,
+        required: candidate.el.matches("[required], [aria-required='true']"),
+        visible: isVisible(candidate.el) || isJqTransformHiddenChoice(candidate.el) || isJqTransformHiddenSelect(candidate.el),
+        options:
+          candidate.el instanceof HTMLSelectElement
+            ? Array.from(candidate.el.options)
+                .map((option) => normalize(toHalfWidth(option.textContent || option.label || "")))
+                .filter(Boolean)
+                .slice(0, 50)
+            : undefined,
+        validationText: getCompatibilityValidationText(candidate.el) || undefined
+      };
+    })
+  };
 }
 
 function flashCopiedElement(el: HTMLElement): void {
@@ -4359,6 +5015,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
             </label>
             <div class="mg-actions">
               <button class="mg-btn" type="button" data-role="autofill">Autofill this page</button>
+              <button class="mg-btn secondary" type="button" data-role="report-compat">Copy support report</button>
             </div>
           </div>
           <div class="mg-tabs is-hidden" data-role="tabs">
@@ -4385,6 +5042,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
   const controlsWrap = shadow.querySelector("[data-role='controls']") as HTMLElement;
   const enabledToggle = shadow.querySelector("[data-role='enabled-toggle']") as HTMLInputElement;
   const autofillBtn = shadow.querySelector("[data-role='autofill']") as HTMLElement;
+  const reportIssueBtn = shadow.querySelector("[data-role='report-compat']") as HTMLButtonElement;
   const tabsWrap = shadow.querySelector("[data-role='tabs']") as HTMLElement;
   const tabMainBtn = shadow.querySelector("[data-role='tab-main']") as HTMLButtonElement;
   const tabAdditionalBtn = shadow.querySelector("[data-role='tab-additional']") as HTMLButtonElement;
@@ -4504,6 +5162,12 @@ function ensureInPageOverlay(): OverlayRefs | null {
     setOverlayStatus(`${result.filled || 0} 項目を入力しました`);
   });
 
+  reportIssueBtn.addEventListener("click", async () => {
+    const report = buildCompatibilityReport();
+    const ok = await copyTextToClipboard(JSON.stringify(report, null, 2));
+    setOverlayStatus(ok ? "互換性レポートをコピーしました" : "レポートのコピーに失敗しました");
+  });
+
   let dragging = false;
   let dragOffset = 0;
   let dragStartY = 0;
@@ -4548,6 +5212,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
     controlsWrap,
     enabledToggle,
     autofillBtn,
+    reportIssueBtn,
     tabsWrap,
     tabMainBtn,
     tabAdditionalBtn,
@@ -4649,61 +5314,8 @@ async function autofill(options: { overwrite?: boolean } = {}): Promise<{ filled
   }
 
   const profile = settings.profile || {};
-  const inputs = Array.from(
-    document.querySelectorAll("input, textarea, select, [role='combobox']")
-  ).filter(isFillable);
-
-  const candidates: Candidate[] = inputs.map((el) => {
-    const meta = getTextMeta(el);
-    const rawHint = getRawHintText(el);
-    return {
-      el,
-      layoutEl: getLayoutElement(el),
-      meta,
-      rawHint,
-      field: null,
-      contactSubtype: null,
-      kanaTarget: null,
-      namePart: null,
-      scriptHint: null,
-      combineCityForAddressLine1: false
-    };
-  });
-
-  assignNameFields(candidates);
-  assignNameFieldsByPairRows(candidates);
-
-  for (const candidate of candidates) {
-    if (candidate.field !== null && candidate.field !== undefined) continue;
-    candidate.field = matchNonNameField(
-      candidate.meta,
-      ((candidate.el as HTMLInputElement).type || "").toLowerCase(),
-      candidate.el,
-      candidate.rawHint
-    );
-  }
-
-  const hasCityFieldCandidate = candidates.some((candidate) => candidate.field === "city");
-  for (const candidate of candidates) {
-    if (candidate.field !== "addressLine1") continue;
-    if (hasCityFieldCandidate) continue;
-
-    const hint = `${candidate.meta || ""} ${candidate.rawHint || ""}`;
-    const wantsTownOrFullAddress =
-      /(町名以降|市区町村以降|番地と住所|住所.*以降|住所|address|street|丁目|番地)/.test(hint) &&
-      !/(建物|マンション|アパート|部屋|号室|address.?line.?2|address.?2)/.test(hint);
-
-    if (wantsTownOrFullAddress) {
-      candidate.combineCityForAddressLine1 = true;
-    }
-  }
-
-  for (const candidate of candidates) {
-    if (candidate.field === "email" || candidate.field === "phone") {
-      const text = `${candidate.meta || ""} ${candidate.rawHint || ""}`;
-      candidate.contactSubtype = detectContactSubtype(candidate.field, text);
-    }
-  }
+  const providerId = detectSiteProviderId();
+  const candidates = classifyCandidates(collectCandidates());
 
   const matchedCredential = await getBestCredentialForCurrentPage().catch(() => null);
   const revealedPassword = matchedCredential
@@ -4711,7 +5323,7 @@ async function autofill(options: { overwrite?: boolean } = {}): Promise<{ filled
     : "";
   let filled = applyStoredCredentialToAuthForms(matchedCredential, revealedPassword, overwrite);
   const handledElements = new Set<HTMLElement>();
-  fillGroupedFields(candidates, profile, overwrite, handledElements);
+  fillGroupedFields(providerId, candidates, profile, overwrite, handledElements);
   await retrySplitBirthDateFields(profile, overwrite, handledElements);
 
   for (const candidate of candidates) {
@@ -4723,7 +5335,7 @@ async function autofill(options: { overwrite?: boolean } = {}): Promise<{ filled
   }
 
   fillVacationSameAsCurrentFallback(profile, overwrite, handledElements);
-  await retryUniversitySelectionFlow(profile, overwrite, handledElements);
+  await retryUniversitySelectionFlow(providerId, profile, overwrite, handledElements);
   fillVacationSameAsCurrentFallback(profile, overwrite, handledElements);
 
   return {

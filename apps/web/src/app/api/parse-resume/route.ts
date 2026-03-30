@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@cygnet/shared";
 
+const PARSE_WINDOW_MS = 60_000;
+const PARSE_MIN_INTERVAL_MS = 5_000;
+const PARSE_MAX_REQUESTS_PER_WINDOW = 6;
+const parseRateLimitBuckets = new Map<
+  string,
+  { timestamps: number[]; lastAttemptAt: number }
+>();
+
 const PREFECTURES = [
   "北海道",
   "青森県",
@@ -113,6 +121,51 @@ function formatYearMonth(year: string, month: string): string {
   return `${year.padStart(4, "0")}-${month.padStart(2, "0")}`;
 }
 
+function getParseRateLimitError(userId: string): string | null {
+  const now = Date.now();
+  const bucket = parseRateLimitBuckets.get(userId) || {
+    timestamps: [],
+    lastAttemptAt: 0,
+  };
+
+  const recentTimestamps = bucket.timestamps.filter(
+    (timestamp) => now - timestamp < PARSE_WINDOW_MS,
+  );
+
+  if (bucket.lastAttemptAt && now - bucket.lastAttemptAt < PARSE_MIN_INTERVAL_MS) {
+    parseRateLimitBuckets.set(userId, {
+      timestamps: recentTimestamps,
+      lastAttemptAt: bucket.lastAttemptAt,
+    });
+    return "Please wait a few seconds before parsing another resume.";
+  }
+
+  if (recentTimestamps.length >= PARSE_MAX_REQUESTS_PER_WINDOW) {
+    parseRateLimitBuckets.set(userId, {
+      timestamps: recentTimestamps,
+      lastAttemptAt: bucket.lastAttemptAt,
+    });
+    return "Too many resume parse requests. Please try again in about a minute.";
+  }
+
+  recentTimestamps.push(now);
+  parseRateLimitBuckets.set(userId, {
+    timestamps: recentTimestamps,
+    lastAttemptAt: now,
+  });
+
+  if (parseRateLimitBuckets.size > 500) {
+    for (const [key, value] of parseRateLimitBuckets.entries()) {
+      const latest = value.timestamps[value.timestamps.length - 1] || 0;
+      if (now - latest > PARSE_WINDOW_MS * 2) {
+        parseRateLimitBuckets.delete(key);
+      }
+    }
+  }
+
+  return null;
+}
+
 function extractBasicProfileFromText(rawText: string): Partial<Profile> {
   const text = cleanText(rawText);
   const profile: Partial<Profile> = {};
@@ -173,9 +226,11 @@ function extractBasicProfileFromText(rawText: string): Partial<Profile> {
 
 export async function POST(request: Request) {
   try {
-    const { storagePath } = await request.json();
+    const body = await request.json();
+    const storagePath = typeof body?.storagePath === "string" ? body.storagePath : "";
+    const includeRawText = body?.includeRawText === true;
 
-    if (!storagePath || typeof storagePath !== "string") {
+    if (!storagePath) {
       return NextResponse.json(
         { error: "storagePath is required" },
         { status: 400 },
@@ -189,6 +244,19 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimitError = getParseRateLimitError(user.id);
+    if (rateLimitError) {
+      return NextResponse.json(
+        { error: rateLimitError },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": "60",
+          },
+        },
+      );
     }
 
     if (!storagePath.startsWith(`${user.id}/`)) {
@@ -301,7 +369,9 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ profile, rawText });
+    return NextResponse.json(
+      includeRawText ? { profile, rawText } : { profile },
+    );
   } catch (error) {
     console.error("Resume parse route failed", error);
     return NextResponse.json(

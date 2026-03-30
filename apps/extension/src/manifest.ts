@@ -25,6 +25,7 @@ export default defineManifest({
     },
   ],
   action: {
+    default_popup: "src/popup/index.html",
     default_icon: {
       16: "icons/icon16.png",
       32: "icons/icon32.png",
@@ -42,8 +43,6 @@ export default defineManifest({
   externally_connectable: {
     matches: [
       "https://cygnet-two.vercel.app/*",
-      "http://localhost/*",
-      "http://127.0.0.1/*",
     ],
   },
   commands: {

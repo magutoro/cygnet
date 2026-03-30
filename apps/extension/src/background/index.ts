@@ -1,5 +1,5 @@
 import { DEFAULT_PROFILE } from "@cygnet/shared";
-import { getSession } from "../lib/auth.js";
+import { getSession, importSessionTokens } from "../lib/auth.js";
 import {
   captureCredentialFromForm,
   deleteCredentialEntry,
@@ -358,14 +358,10 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
     return;
   }
 
-  supabase.auth
-    .setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    })
-    .then(async ({ data, error }) => {
-      if (error) {
-        sendResponse({ ok: false, error: String(error.message || error) });
+  importSessionTokens(accessToken, refreshToken)
+    .then(async (session) => {
+      if (!session?.user) {
+        sendResponse({ ok: false, error: "not_authenticated" });
         return;
       }
 
@@ -373,7 +369,7 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
       await notifyStateChanged().catch(() => {});
       sendResponse({
         ok: true,
-        email: data.session?.user?.email ?? null,
+        email: session.user.email ?? null,
       });
     })
     .catch((error: unknown) => {

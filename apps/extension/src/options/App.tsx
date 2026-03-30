@@ -172,8 +172,6 @@ const BASIC_FIELDS: FieldDef[] = [
   { name: "birthDate", label: "生年月日(YYYY-MM-DD)", type: "date" }
 ];
 
-const ACCOUNT_FIELDS: FieldDef[] = [{ name: "password", label: "パスワード", type: "password" }];
-
 const EDUCATION_FIELDS: FieldDef[] = [
   { name: "educationType", label: "学校の種類", options: EDUCATION_TYPE_OPTIONS },
   { name: "universityKanaInitial", label: "学校名の頭文字(任意)" },
@@ -325,7 +323,6 @@ const ADDITIONAL_VACATION_CONTACT_FIELDS: FieldDef[] = [
 
 const MAIN_SECTIONS: SectionDef[] = [
   { title: "基本情報", fields: BASIC_FIELDS },
-  { title: "アカウント情報", fields: ACCOUNT_FIELDS },
   { title: "学歴・職歴", fields: EDUCATION_FIELDS },
   { title: "リンク", fields: LINKS_FIELDS }
 ];
@@ -605,6 +602,9 @@ export function App() {
           <div>
             <h1>Cygnet 設定</h1>
             <p>応募フォームに入力するプロフィールを登録してください。</p>
+            <p className="status">
+              保存済みログインのパスワードはこの画面では管理せず、拡張機能内のローカル暗号化された資格情報保管庫でのみ扱います。
+            </p>
           </div>
           <div className="auth-section">
             {user ? (

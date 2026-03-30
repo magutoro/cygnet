@@ -5,6 +5,7 @@ import { cookies, headers } from "next/headers";
 import AuthButton from "@/components/AuthButton";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import NavPrivacyLink from "@/components/NavPrivacyLink";
+import NavTermsLink from "@/components/NavTermsLink";
 import NavContactLink from "@/components/NavContactLink";
 import NavDashboardLink from "@/components/NavDashboardLink";
 import {
@@ -71,6 +72,7 @@ export default async function RootLayout({
                 </Link>
                 <NavDashboardLink />
                 <NavPrivacyLink />
+                <NavTermsLink />
                 <NavContactLink />
               </div>
               <div className="flex items-center gap-3">

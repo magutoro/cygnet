@@ -32,6 +32,7 @@ const COPY = {
     uploadFailed: "Upload failed.",
     deleteFailed: "Delete failed.",
     parseFailed: "Parse failed.",
+    parseSucceeded: "Profile draft updated from your resume. Review the fields before saving.",
     replaceCleanupFailed: "Uploaded, but failed to remove older resumes.",
   },
   ja: {
@@ -51,6 +52,7 @@ const COPY = {
     uploadFailed: "アップロードに失敗しました。",
     deleteFailed: "削除に失敗しました。",
     parseFailed: "抽出に失敗しました。",
+    parseSucceeded: "履歴書からプロフィール下書きを更新しました。保存前に内容をご確認ください。",
     replaceCleanupFailed: "アップロードは完了しましたが、古い履歴書の削除に失敗しました。",
   },
 } as const;
@@ -72,7 +74,7 @@ export default function ResumeManager({
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [parsedText, setParsedText] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const upload = useCallback(
     async (file: File) => {
@@ -82,11 +84,13 @@ export default function ResumeManager({
       }
       if (file.type !== "application/pdf") {
         setError(t.onlyPdf);
+        setNotice(null);
         return;
       }
 
       setUploading(true);
       setError(null);
+      setNotice(null);
 
       try {
         const supabase = createClient();
@@ -118,6 +122,7 @@ export default function ResumeManager({
         if (dbErr) throw dbErr;
         if (data) {
           setResumes([data]);
+          setNotice(null);
 
           const { data: oldResumeRows, error: oldResumeErr } = await supabase
             .from("resumes")
@@ -165,6 +170,7 @@ export default function ResumeManager({
     async (resume: DbResume) => {
       try {
         const supabase = createClient();
+        setNotice(null);
 
         await supabase.storage.from("resumes").remove([resume.storage_path]);
         const { error: dbErr } = await supabase
@@ -185,7 +191,7 @@ export default function ResumeManager({
     async (resume: DbResume) => {
       setParsing(resume.id);
       setError(null);
-      setParsedText(null);
+      setNotice(null);
 
       try {
         const res = await fetch("/api/parse-resume", {
@@ -203,18 +209,17 @@ export default function ResumeManager({
           );
         }
 
-        setParsedText(data.rawText?.slice(0, 2000) ?? null);
-
         if (data.profile && onProfileParsed) {
           onProfileParsed(data.profile);
         }
+        setNotice(t.parseSucceeded);
       } catch (err) {
         setError(err instanceof Error ? err.message : t.parseFailed);
       } finally {
         setParsing(null);
       }
     },
-    [onProfileParsed, t.parseFailed],
+    [onProfileParsed, t.parseFailed, t.parseSucceeded],
   );
 
   return (
@@ -257,6 +262,12 @@ export default function ResumeManager({
       {error && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
           {error}
+        </div>
+      )}
+
+      {notice && (
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+          {notice}
         </div>
       )}
 
@@ -319,26 +330,6 @@ export default function ResumeManager({
         </ul>
       )}
 
-      {/* Parsed text preview */}
-      {parsedText && (
-        <div className="mt-4 rounded-xl border border-brand-line bg-brand-bg/30 p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-brand">
-              {t.extracted}
-            </h3>
-            <button
-              type="button"
-              onClick={() => setParsedText(null)}
-              className="text-xs text-brand-muted hover:text-brand-ink"
-            >
-              {t.close}
-            </button>
-          </div>
-          <pre className="max-h-64 overflow-auto whitespace-pre-wrap text-xs text-brand-muted">
-            {parsedText}
-          </pre>
-        </div>
-      )}
     </div>
   );
 }

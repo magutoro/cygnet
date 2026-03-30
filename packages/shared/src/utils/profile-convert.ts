@@ -113,8 +113,14 @@ export function dbToProfile(row: DbProfile): Profile {
     universityPrefecture: row.university_prefecture,
     faculty: row.faculty,
     department: row.department || "",
+    latestAcademicAdmissionDate:
+      typeof additional.latestAcademicAdmissionDate === "string" ? additional.latestAcademicAdmissionDate : "",
     humanitiesScienceType: row.humanities_science_type || "",
     graduationYear: row.graduation_year,
+    highSchoolAdmissionDate:
+      typeof additional.highSchoolAdmissionDate === "string" ? additional.highSchoolAdmissionDate : "",
+    highSchoolGraduationDate:
+      typeof additional.highSchoolGraduationDate === "string" ? additional.highSchoolGraduationDate : "",
     company: row.company,
     linkedIn: row.linked_in,
     github: row.github,

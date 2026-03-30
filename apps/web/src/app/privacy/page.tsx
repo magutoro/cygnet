@@ -16,7 +16,7 @@ const COPY = {
   en: {
     backToWebsite: "Back to website",
     title: "Cygnet Privacy Policy",
-    updated: "Last updated: March 27, 2026",
+    updated: "Last updated: March 29, 2026",
     intro:
       "Cygnet provides a Chrome extension and web dashboard for autofilling job application forms. This page explains what is stored locally, what may be synced to Cygnet, and what we can and cannot access.",
     sections: [
@@ -36,13 +36,14 @@ const COPY = {
       {
         title: "2) Where data is stored",
         paragraphs: [
-          "Your profile data and extension settings are stored in browser extension storage. Depending on your browser configuration, that may include Chrome Sync.",
+          "Your profile data and extension settings are stored in local browser extension storage on the browser where you use Cygnet. Cygnet does not rely on Chrome Sync for profile PII.",
           "If you sign in to Cygnet and use sync features, your profile data and resumes are also stored in Cygnet's secured Supabase backend so they can appear on the web dashboard and sync across devices.",
           "Saved login passwords are different: they are stored locally in the extension only, protected with local encryption and your passphrase, and are not uploaded to Cygnet's servers.",
         ],
         bullets: [
           "Saved login passwords stay local to your browser extension",
           "Cygnet does not upload or read saved login passwords",
+          "Profile data stays on your current browser unless you choose Cygnet account sync",
           "Profile and resume data may be stored in Supabase when you use Cygnet account sync",
         ],
       },
@@ -77,7 +78,7 @@ const COPY = {
           "You can edit or delete profile data in the extension and dashboard",
           "You can delete uploaded resumes from the dashboard",
           "You can uninstall the extension to stop local extension processing",
-          "You can disable Chrome Sync if you do not want browser-level sync",
+          "You can sign out of your Cygnet account to stop backend sync on that browser",
         ],
       },
       {
@@ -90,8 +91,8 @@ const COPY = {
       {
         title: "7) Security",
         paragraphs: [
-          "We use reasonable security measures for synced account data, including authenticated access controls and backend security features such as Row-Level Security where applicable.",
-          "Even so, no system is completely risk-free. We recommend not storing highly sensitive secrets unless you truly need them, and we especially recommend against putting government IDs, financial account information, or other unnecessary sensitive data into profile notes.",
+          "We use administrative, technical, and organizational safeguards designed to protect personal information, including authenticated access controls and backend protections such as Row-Level Security where applicable.",
+          "However, no method of transmission over the Internet or electronic storage is completely secure, and we cannot guarantee absolute security. We recommend avoiding unnecessary sensitive data such as government IDs, financial account information, or similar secrets in profile notes.",
         ],
       },
       {
@@ -108,7 +109,7 @@ const COPY = {
   ja: {
     backToWebsite: "サイトに戻る",
     title: "Cygnet プライバシーポリシー",
-    updated: "最終更新日: 2026年3月27日",
+    updated: "最終更新日: 2026年3月29日",
     intro:
       "Cygnet は、求人応募フォームの自動入力を支援する Chrome 拡張機能と Web ダッシュボードを提供しています。このページでは、ローカルに保存される情報、Cygnet に同期される可能性がある情報、そして当社がアクセスできる情報とできない情報を説明します。",
     sections: [
@@ -128,13 +129,14 @@ const COPY = {
       {
         title: "2) 情報の保存場所",
         paragraphs: [
-          "プロフィール情報と拡張機能設定は、ブラウザ拡張機能のストレージに保存されます。ブラウザ設定によっては Chrome Sync が含まれる場合があります。",
+          "プロフィール情報と拡張機能設定は、Cygnet を使用しているブラウザ上のローカル拡張機能ストレージに保存されます。Cygnet はプロフィールの個人情報保存に Chrome Sync を前提としません。",
           "Cygnet にログインして同期機能を使う場合、プロフィール情報と履歴書は、Web ダッシュボード表示や端末間同期のために、Cygnet の保護された Supabase バックエンドにも保存されます。",
           "保存済みログインのパスワードは扱いが異なります。これらは拡張機能内にのみローカル保存され、ローカル暗号化とパスフレーズで保護され、Cygnet のサーバーにはアップロードされません。",
         ],
         bullets: [
           "保存済みログインのパスワードはブラウザ拡張機能内だけに保存されます",
           "Cygnet は保存済みログインのパスワードをアップロードせず、読むこともできません",
+          "プロフィール情報は、Cygnet アカウント同期を選ばない限り現在のブラウザ内にのみ保存されます",
           "プロフィールと履歴書は、Cygnet アカウント同期を使う場合に Supabase に保存されることがあります",
         ],
       },
@@ -169,7 +171,7 @@ const COPY = {
           "プロフィール情報は拡張機能とダッシュボードで編集・削除できます",
           "アップロードした履歴書はダッシュボードから削除できます",
           "拡張機能をアンインストールするとローカル処理を停止できます",
-          "ブラウザレベルの同期を望まない場合は Chrome Sync を無効化できます",
+          "現在のブラウザでバックエンド同期を止めたい場合は Cygnet からログアウトできます",
         ],
       },
       {
@@ -182,8 +184,8 @@ const COPY = {
       {
         title: "7) セキュリティ",
         paragraphs: [
-          "同期されたアカウントデータについては、認証済みアクセス制御や、必要に応じた Row-Level Security など、合理的なセキュリティ対策を講じます。",
-          "それでも、完全にリスクのないシステムは存在しません。特に、政府発行 ID、金融口座情報、その他不要に機微な情報は、プロフィールのメモ等に保存しないことを推奨します。",
+          "当社は、認証済みアクセス制御や必要に応じた Row-Level Security など、個人情報を保護するための管理的・技術的・組織的な安全管理措置を講じます。",
+          "ただし、インターネット送信や電子保存に絶対的に安全な方法は存在せず、完全な安全性を保証することはできません。特に、政府発行 ID、金融口座情報、その他不要に機微な情報は、プロフィールのメモ等へ保存しないことを推奨します。",
         ],
       },
       {

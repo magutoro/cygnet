@@ -21,12 +21,17 @@ const COPY = {
       "Please confirm that you understand how Cygnet handles account-backed data before continuing with Google sign-in.",
     cardTitle: "What you are acknowledging",
     bullets: [
-      "Your synced profile and uploaded resumes may be stored in Cygnet's secured backend so they can appear in the web dashboard and sync across devices.",
+      "If you choose sync or upload features, your profile data and resumes may be stored in Cygnet's secured backend and processed by Cygnet and its service providers so they can appear in the web dashboard and sync across devices.",
       "Cygnet staff may access synced profile or resume data only when needed for user-requested support, security or abuse investigation, or legal compliance.",
       "Saved login passwords are different: they stay local in the extension, are protected with your local passphrase, and are not uploaded to Cygnet.",
     ],
     checkbox:
-      "I understand that synced profile and resume data may be stored by Cygnet and accessed only for user-requested support, security or abuse investigation, or legal compliance, and that saved login passwords stay local-only in the extension.",
+      "I understand that if I choose sync or upload features, my profile or resume data may be stored and processed as described in the Privacy Policy, that human access is limited to user-requested support, security or abuse investigation, or legal compliance, and that saved login passwords stay local-only in the extension.",
+    legalIntro: "Please review the following before continuing:",
+    privacy: "Privacy Policy",
+    terms: "Terms of Service",
+    securityNote:
+      "No method of transmission or storage is completely secure, and Cygnet cannot guarantee absolute security.",
     continue: "Continue with Google",
   },
   ja: {
@@ -36,12 +41,17 @@ const COPY = {
       "Google ログインへ進む前に、Cygnet がアカウント連携データをどのように扱うかをご確認ください。",
     cardTitle: "確認していただく内容",
     bullets: [
-      "同期したプロフィール情報やアップロードした履歴書は、Web ダッシュボード表示や端末間同期のために、Cygnet の保護されたバックエンドへ保存されることがあります。",
+      "同期やアップロード機能を選択した場合、プロフィール情報や履歴書は、Web ダッシュボード表示や端末間同期のために、Cygnet およびそのサービス提供者によって処理・保存されることがあります。",
       "Cygnet 担当者が同期済みプロフィールまたは履歴書データへアクセスできるのは、ユーザーからのサポート依頼、セキュリティまたは不正利用の調査、法令対応が必要な場合に限られます。",
       "保存済みログインのパスワードは別扱いです。これらは拡張機能内だけに保存され、ローカルのパスフレーズで保護され、Cygnet へアップロードされません。",
     ],
     checkbox:
-      "同期したプロフィール情報や履歴書は Cygnet に保存され、閲覧はユーザーからのサポート依頼、セキュリティまたは不正利用の調査、法令対応に限られること、また保存済みログインパスワードは拡張機能内のローカル保存のみであることを理解しました。",
+      "同期またはアップロード機能を選択した場合、プロフィール情報や履歴書がプライバシーポリシー記載のとおり保存・処理されること、人による閲覧はユーザーからのサポート依頼、セキュリティまたは不正利用の調査、法令対応に限られること、また保存済みログインパスワードは拡張機能内のローカル保存のみであることを理解しました。",
+    legalIntro: "続行前に以下をご確認ください:",
+    privacy: "プライバシーポリシー",
+    terms: "利用規約",
+    securityNote:
+      "インターネット送信や電子保存に絶対的に安全な方法は存在せず、Cygnet は完全な安全性を保証できません。",
     continue: "Google で続行",
   },
 } as const;
@@ -84,6 +94,18 @@ export default async function AuthConsentPage({
                 <li key={bullet}>{bullet}</li>
               ))}
             </ul>
+            <div className="mt-4 text-sm text-brand-muted">
+              <p>{t.legalIntro}</p>
+              <div className="mt-2 flex flex-wrap gap-4">
+                <Link href="/privacy" className="font-medium text-brand-strong hover:text-brand-ink">
+                  {t.privacy}
+                </Link>
+                <Link href="/terms" className="font-medium text-brand-strong hover:text-brand-ink">
+                  {t.terms}
+                </Link>
+              </div>
+              <p className="mt-3 text-xs leading-relaxed">{t.securityNote}</p>
+            </div>
           </section>
 
           <form action="/auth/login" method="get" className="mt-8 space-y-5">

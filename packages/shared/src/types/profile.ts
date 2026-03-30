@@ -25,8 +25,11 @@ export interface Profile {
   universityPrefecture: string;
   faculty: string;
   department: string;
+  latestAcademicAdmissionDate: string;
   humanitiesScienceType: string;
   graduationYear: string;
+  highSchoolAdmissionDate: string;
+  highSchoolGraduationDate: string;
   company: string;
   linkedIn: string;
   github: string;
@@ -62,8 +65,11 @@ export const DEFAULT_PROFILE: Profile = {
   universityPrefecture: "",
   faculty: "",
   department: "",
+  latestAcademicAdmissionDate: "",
   humanitiesScienceType: "",
   graduationYear: "",
+  highSchoolAdmissionDate: "",
+  highSchoolGraduationDate: "",
   company: "",
   linkedIn: "",
   github: "",

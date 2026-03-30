@@ -51,16 +51,17 @@ const COPY = {
         desc: "Works across Rikunabi, MyNavi, and other major Japanese job platforms out of the box.",
       },
     ],
-    trustTitle: "Your data stays yours",
+    trustTitle: "Security and control by default",
     trustDesc:
-      "Cygnet stores everything locally in your browser. No remote servers, no analytics, no tracking. Your profile never leaves your machine unless you choose to autofill a form.",
-    trustPoint1: "100% local storage",
-    trustPoint2: "No analytics or telemetry",
-    trustPoint3: "Open source",
+      "Saved login passwords stay encrypted locally in the extension. If you sign in, your profile and resumes can sync through Cygnet's secured backend so they appear in the dashboard across devices.",
+    trustPoint1: "Saved passwords remain local-only",
+    trustPoint2: "Profile and resume sync is optional",
+    trustPoint3: "Autofill runs only when you choose to use it",
     ctaTitle: "Ready to simplify shuukatsu?",
     ctaDesc: "Install Cygnet for free and never hand-type the same info again.",
     ctaButton: "Add to Chrome — it's free",
     privacyPolicy: "Privacy Policy",
+    termsOfService: "Terms of Service",
     contact: "Contact",
     rightsReserved: "All rights reserved.",
   },
@@ -111,16 +112,17 @@ const COPY = {
         desc: "リクナビ、マイナビなど主要な日本の就活サイトで利用できます。",
       },
     ],
-    trustTitle: "データはあなたの手元に",
+    trustTitle: "セキュリティとコントロールを前提に",
     trustDesc:
-      "Cygnetのデータはブラウザ内に保存されます。不要な解析やトラッキングは行いません。",
-    trustPoint1: "ローカル保存 100%",
-    trustPoint2: "解析・トラッキングなし",
-    trustPoint3: "オープンソース",
+      "保存済みログインパスワードは拡張機能内で暗号化されたままローカル保存されます。ログインして同期機能を使う場合のみ、プロフィールや履歴書が Cygnet の保護されたバックエンドを通じて端末間同期されます。",
+    trustPoint1: "保存済みパスワードはローカル保存のみ",
+    trustPoint2: "プロフィール・履歴書同期は任意",
+    trustPoint3: "自動入力はユーザー操作時のみ実行",
     ctaTitle: "就活入力をもっと速く",
     ctaDesc: "Cygnetを無料で使い始めましょう。",
     ctaButton: "Chromeに追加（無料）",
     privacyPolicy: "プライバシーポリシー",
+    termsOfService: "利用規約",
     contact: "お問い合わせ",
     rightsReserved: "All rights reserved.",
   },
@@ -332,6 +334,9 @@ export default function HomePage() {
           <div className="flex gap-6 text-sm text-brand-muted">
             <Link href="/privacy" className="transition-colors hover:text-brand-ink">
               {t.privacyPolicy}
+            </Link>
+            <Link href="/terms" className="transition-colors hover:text-brand-ink">
+              {t.termsOfService}
             </Link>
             <Link href="/contact" className="transition-colors hover:text-brand-ink">
               {t.contact}

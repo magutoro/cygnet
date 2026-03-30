@@ -1,5 +1,6 @@
 import { supabase } from "./supabase.js";
 import type { User } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
 
 function parseAuthFragment(fragment: string): URLSearchParams {
   const raw = fragment.startsWith("#") ? fragment.slice(1) : fragment;
@@ -30,6 +31,28 @@ function parseResponseUrl(responseUrl: string): {
       ""
     ).trim(),
   };
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return String(error || "");
+}
+
+export function isInvalidRefreshTokenError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return message.includes("invalid refresh token") || message.includes("already used");
+}
+
+async function clearLocalSession(): Promise<void> {
+  try {
+    await supabase.auth.signOut({ scope: "local" });
+    return;
+  } catch {}
+
+  try {
+    await supabase.auth.signOut();
+  } catch {}
 }
 
 async function finalizeExtensionSession(responseUrl: string): Promise<void> {
@@ -102,20 +125,62 @@ export async function signInWithGoogle() {
 }
 
 export async function signOut() {
-  await supabase.auth.signOut();
+  await clearLocalSession();
 }
 
 export async function getUser() {
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (sessionData.session?.user) return sessionData.session.user;
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData.session?.user) return sessionData.session.user;
 
-  const { data } = await supabase.auth.getUser();
-  return data.user ?? null;
+    const { data } = await supabase.auth.getUser();
+    return data.user ?? null;
+  } catch (error) {
+    if (isInvalidRefreshTokenError(error)) {
+      await clearLocalSession();
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function getSession() {
-  const { data } = await supabase.auth.getSession();
-  return data.session;
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session;
+  } catch (error) {
+    if (isInvalidRefreshTokenError(error)) {
+      await clearLocalSession();
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function importSessionTokens(
+  accessToken: string,
+  refreshToken: string
+): Promise<Session | null> {
+  try {
+    const { data, error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (error) throw error;
+    return data.session ?? null;
+  } catch (error) {
+    if (!isInvalidRefreshTokenError(error)) {
+      throw error;
+    }
+
+    const existingSession = await getSession();
+    if (existingSession?.user) {
+      return existingSession;
+    }
+
+    await clearLocalSession();
+    return null;
+  }
 }
 
 export async function waitForUser(timeoutMs = 5000, intervalMs = 200): Promise<User | null> {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getSettings, saveSettings } from "../lib/storage.js";
 import { queryTabs, sendMessage } from "../lib/tabs.js";
 import { signInWithGoogle, signOut, getUser, waitForUser, onAuthStateChange } from "../lib/auth.js";
@@ -24,7 +24,6 @@ export function App() {
   const [status, setStatus] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
-  const hasRequestedPanelRef = useRef(false);
 
   const refreshState = useCallback(async () => {
     const [nextSettings, nextUser] = await Promise.all([getSettings(), getUser()]);
@@ -84,12 +83,6 @@ export function App() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!user || hasRequestedPanelRef.current) return;
-    hasRequestedPanelRef.current = true;
-    showSidePanel(true).catch(() => {});
-  }, [user, showSidePanel]);
-
   const handleSignIn = useCallback(async () => {
     setAuthLoading(true);
     try {
@@ -103,7 +96,6 @@ export function App() {
       const refreshed = await getSettings();
       setSettings(refreshed);
       setStatus("ログインしました");
-      showSidePanel(false).catch(() => {});
     } catch (err) {
       const message = err instanceof Error ? err.message : "ログインに失敗しました";
       setStatus(`ログイン失敗: ${message}`);
@@ -115,7 +107,6 @@ export function App() {
   const handleSignOut = useCallback(async () => {
     await signOut();
     setUser(null);
-    hasRequestedPanelRef.current = false;
     setStatus("ログアウトしました");
   }, []);
 
@@ -161,9 +152,9 @@ export function App() {
   const handleOpenDashboard = useCallback(async () => {
     try {
       await openWebDashboard();
-      setStatus("Webダッシュボードを開きました");
+      setStatus("プロフィール編集画面を開きました");
     } catch {
-      setStatus("Webダッシュボードを開けませんでした");
+      setStatus("プロフィール編集画面を開けませんでした");
     }
   }, []);
 
@@ -221,7 +212,7 @@ export function App() {
         <p className="status">ログインするとAutofillが使えます。</p>
       )}
       <button type="button" className="secondary" onClick={handleOpenDashboard}>
-        Webダッシュボード
+        プロフィールを編集
       </button>
       {status && (
         <p className="status" role="status">
