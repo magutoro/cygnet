@@ -926,6 +926,9 @@ function shouldRenderAdditionalField(fieldKey: ProfileKey, profile: Profile): bo
   return true;
 }
 
+const TEXT_INPUT_CLASSES =
+  "w-full rounded-lg border border-brand-line bg-brand-bg/40 px-3 py-2 text-sm text-brand-ink placeholder:text-brand-muted/50 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20";
+
 function InputField({
   label,
   type = "text",
@@ -949,7 +952,7 @@ function InputField({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-brand-line bg-brand-bg/40 px-3 py-2 text-sm text-brand-ink placeholder:text-brand-muted/50 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+        className={TEXT_INPUT_CLASSES}
       />
     </label>
   );
@@ -984,7 +987,7 @@ function CalendarButton({
       type="button"
       onClick={onClick}
       aria-label="Open date picker"
-      className={`absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg transition-colors ${
+      className={`absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md transition-colors ${
         active ? "bg-brand-bg text-brand-ink" : "text-brand-muted/70 hover:bg-brand-bg hover:text-brand-ink"
       }`}
     >
@@ -1055,7 +1058,7 @@ function MonthPickerField({
             setFocused(false);
             commitDraft(e.target.value);
           }}
-          className="w-full rounded-2xl border border-[#cfe0f5] bg-white px-4 py-3 pr-12 text-xl font-medium tracking-[0.01em] text-brand-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] transition-colors placeholder:text-brand-muted/40 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
+          className={`${TEXT_INPUT_CLASSES} pr-10`}
         />
         <CalendarButton onClick={() => setOpen((prev) => !prev)} active={open} />
 
@@ -1189,7 +1192,7 @@ function DatePickerField({
             setFocused(false);
             commitDraft(e.target.value);
           }}
-          className="w-full rounded-2xl border border-[#cfe0f5] bg-white px-4 py-3 pr-12 text-xl font-medium tracking-[0.01em] text-brand-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] transition-colors placeholder:text-brand-muted/40 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
+          className={`${TEXT_INPUT_CLASSES} pr-10`}
         />
         <CalendarButton onClick={() => setOpen((prev) => !prev)} active={open} />
 
