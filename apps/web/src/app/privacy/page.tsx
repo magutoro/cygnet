@@ -255,10 +255,10 @@ export default async function PrivacyPage() {
               <li>
                 {t.contactEmailLabel}:{" "}
                 <a
-                  href="mailto:markoguro@gmail.com"
+                  href="mailto:c251771e@gmail.com"
                   className="text-brand-strong underline decoration-brand/30 underline-offset-2 transition-colors hover:text-brand-ink"
                 >
-                  markoguro@gmail.com
+                  c251771e@gmail.com
                 </a>
               </li>
               <li>

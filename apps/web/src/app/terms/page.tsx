@@ -169,8 +169,8 @@ export default async function TermsPage() {
               <span className="font-semibold text-brand-ink">{t.contactNameLabel}</span>
               <span>{t.contactNameValue}</span>
               <span className="font-semibold text-brand-ink">{t.contactEmailLabel}</span>
-              <a href="mailto:markoguro@gmail.com" className="text-brand-strong hover:text-brand-ink">
-                markoguro@gmail.com
+              <a href="mailto:c251771e@gmail.com" className="text-brand-strong hover:text-brand-ink">
+                c251771e@gmail.com
               </a>
               <span className="font-semibold text-brand-ink">{t.contactWebsiteLabel}</span>
               <a href="https://cygnet-two.vercel.app" className="text-brand-strong hover:text-brand-ink">
