@@ -1,5 +1,12 @@
 /// <reference types="chrome" />
 
+import {
+  getSettings as getStoredSettings,
+  saveSettings as saveStoredSettings,
+  getOverlayDomainStateMap as getStoredOverlayDomainStateMap,
+  updateOverlayDomainState as updateStoredOverlayDomainState,
+} from "../lib/storage.js";
+
 /* ── Types ── */
 
 interface Profile {
@@ -85,6 +92,7 @@ interface OverlayRefs {
   enabledToggle: HTMLInputElement;
   autofillBtn: HTMLElement;
   reportIssueBtn: HTMLButtonElement;
+  openDashboardBtn: HTMLButtonElement;
   tabsWrap: HTMLElement;
   tabMainBtn: HTMLButtonElement;
   tabAdditionalBtn: HTMLButtonElement;
@@ -157,10 +165,6 @@ interface OptionLike {
   value?: string;
 }
 
-/* ── Storage helper ── */
-
-const storageArea: chrome.storage.StorageArea = chrome.storage.sync ?? chrome.storage.local;
-
 /* ── Constants ── */
 
 const STORAGE_KEY = "settings";
@@ -218,7 +222,6 @@ const AUTH_STATE_CACHE_TTL_MS = 3000;
 const CREDENTIAL_CAPTURE_DEDUPE_MS = 5000;
 const CREDENTIAL_REVEAL_TTL_MS = 12000;
 const OVERLAY_HOST_ID = "cygnet-inpage-overlay";
-const OVERLAY_DOMAIN_STATE_KEY = "overlayDomainState";
 const WEB_BRIDGE_ORIGINS = new Set([
   "https://cygnet-two.vercel.app",
   "http://localhost:3000",
@@ -1515,6 +1518,55 @@ function matchVacationField(meta: string, type: string): string | null {
   return null;
 }
 
+function matchExactKeyedField(keyed: string, keyId: string): string | null {
+  if (/\badch\b|\bjushosame\b/.test(keyed)) return "vacationAddressSameAsCurrent";
+  if (/\bkyubin\d*\b/.test(keyed)) return "vacationPostalCode";
+  if (/\bkken\b/.test(keyed)) return "vacationPrefecture";
+  if (/\bkadrs1\b/.test(keyed)) return "vacationAddressLine1";
+  if (/\bkadrs2\b/.test(keyed)) return "vacationAddressLine2";
+  if (/\bktel\d*\b/.test(keyed)) return "vacationPhone";
+
+  if (/\bkubun\b|\bkokushi\b|\bdegree\b|\bjsaxolschool_dcd_search\b|\bkoko_search\b/.test(keyed)) {
+    return null;
+  }
+
+  if (/\bgkbn\b/.test(keyed)) return "educationType";
+  if (/\bgon\b/.test(keyed)) return "universityKanaInitial";
+  if (/\bdken\b/.test(keyed)) return "universityPrefecture";
+  if (/\bgakka\b|\bdepartment\b/.test(keyed)) return "department";
+  if (/\bbunri\b|\bhumanities.?science\b|\barts.?science\b/.test(keyed)) return "humanitiesScienceType";
+  if (/\bybirth\b|\bmbirth\b|\bdbirth\b/.test(keyed)) return "birthDate";
+  if (/\bsyear\b|\bsmonth\b|\bshikbn\b/.test(keyed)) return "graduationYear";
+  if (/\bschool_to_[ym]\b/.test(keyed)) return "graduationYear";
+  if (/\bschool_from_[ym]\b/.test(keyed)) return "latestAcademicAdmissionDate";
+  if (/\bkoko_from_[ym]\b/.test(keyed)) return "highSchoolAdmissionDate";
+  if (/\bkoko_to_[ym]\b/.test(keyed)) return "highSchoolGraduationDate";
+  if (/\bgyubin\d*\b/.test(keyed)) return "postalCode";
+  if (/\byubing_[hl]\b/.test(keyed)) return "postalCode";
+  if (/\bgken\b|\bkeng\b/.test(keyed)) return "prefecture";
+  if (/\bgadrs1\b/.test(keyed)) return "addressLine1";
+  if (/\bgadrs2\b/.test(keyed)) return "addressLine2";
+  if (/\bjushog1\b/.test(keyed)) return "city";
+  if (/\bjushog2\b/.test(keyed)) return "addressLine1";
+  if (/\bjushog3\b/.test(keyed)) return "addressLine2";
+  if (/\bgtel\d*\b|\btelg_[hml]\b/.test(keyed)) return "phone";
+  if (/\bkeitai_[hml]\b/.test(keyed)) return "mobilePhone";
+  if (/\binitial\b/.test(keyed)) return "universityKanaInitial";
+  if (/\bdcd\b|\bdname\b/.test(keyed)) return "university";
+  if (/\bbcd\b|\bbname\b/.test(keyed)) return "faculty";
+  if (/\bpaxcd\b|\bkname\b/.test(keyed)) return "department";
+  if (/\bzemi\b/.test(keyed)) return "seminarLaboratory";
+  if (/\bclub\b/.test(keyed)) return "schoolClubActivity";
+  if (/\bkoko_word\b|\bkoko_ken\b/.test(keyed)) return null;
+  if (/\bpostal\b|\bpost.?code\b|\bzip\b|郵便/.test(keyId)) return "postalCode";
+  if (/\bcity\b|\bmunicipality\b|市区町村|市区郡/.test(keyId)) return "city";
+  if (/\baddress.?line.?2\b|\baddress.?2\b|\bline.?2\b|\baddr.?2\b/.test(keyId)) return "addressLine2";
+  if (/\baddress.?line.?1\b|\baddress.?1\b|\bline.?1\b|\baddr.?1\b/.test(keyId)) return "addressLine1";
+  if (/\baddress\b/.test(keyId)) return "addressLine1";
+
+  return null;
+}
+
 function matchNonNameField(meta: string, type: string, el: HTMLElement | null, rawHint: string = ""): string | null {
   const combinedMeta = `${meta} ${normalize(toHalfWidth(rawHint))}`;
   const rowContext = normalize(
@@ -1526,6 +1578,13 @@ function matchNonNameField(meta: string, type: string, el: HTMLElement | null, r
   const autocomplete = normalize(toHalfWidth(el?.getAttribute?.("autocomplete") || ""));
   const keyed = `${name} ${id} ${autocomplete}`;
   const keyId = `${name} ${id}`;
+
+  if (/\bkubun\b|\bkokushi\b|\bdegree\b|\bjsaxolschool_dcd_search\b|\bkoko_search\b|\bkoko_word\b|\bkoko_ken\b/.test(keyed)) {
+    return null;
+  }
+
+  const exactKeyedField = matchExactKeyedField(keyed, keyId);
+  if (exactKeyedField) return exactKeyedField;
 
   if (/(?:高等学校|高校).*(卒業年月|卒業年|graduation)/i.test(contextualMeta)) return "highSchoolGraduationDate";
   if (
@@ -1564,37 +1623,6 @@ function matchNonNameField(meta: string, type: string, el: HTMLElement | null, r
   if (/\baddress(?:\s|-)?level2\b/.test(autocomplete)) return "city";
   if (/\baddress(?:\s|-)?line1\b/.test(autocomplete)) return "addressLine1";
   if (/\baddress(?:\s|-)?line2\b/.test(autocomplete)) return "addressLine2";
-
-  if (/\bgkbn\b/.test(keyed)) return "educationType";
-  if (/\bgon\b/.test(keyed)) return "universityKanaInitial";
-  if (/\bdken\b/.test(keyed)) return "universityPrefecture";
-  if (/\bgakka\b|\bdepartment\b/.test(keyed)) return "department";
-  if (/\bbunri\b|\bhumanities.?science\b|\barts.?science\b/.test(keyed)) return "humanitiesScienceType";
-  if (/\bybirth\b|\bmbirth\b|\bdbirth\b/.test(keyed)) return "birthDate";
-  if (/\bsyear\b|\bsmonth\b|\bshikbn\b/.test(keyed)) return "graduationYear";
-  if (/\bschool_to_[ym]\b/.test(keyed)) return "graduationYear";
-  if (/\bschool_from_[ym]\b/.test(keyed)) return "latestAcademicAdmissionDate";
-  if (/\bgyubin\d*\b/.test(keyed)) return "postalCode";
-  if (/\byubing_[hl]\b/.test(keyed)) return "postalCode";
-  if (/\bgken\b/.test(keyed)) return "prefecture";
-  if (/\bkeng\b/.test(keyed)) return "prefecture";
-  if (/\bgadrs1\b/.test(keyed)) return "addressLine1";
-  if (/\bgadrs2\b/.test(keyed)) return "addressLine2";
-  if (/\bjushog1\b/.test(keyed)) return "city";
-  if (/\bjushog2\b/.test(keyed)) return "addressLine1";
-  if (/\bjushog3\b/.test(keyed)) return "addressLine2";
-  if (/\bgtel\d*\b/.test(keyed)) return "phone";
-  if (/\btelg_[hml]\b/.test(keyed)) return "phone";
-  if (/\binitial\b/.test(keyed)) return "universityKanaInitial";
-  if (/\bdcd\b|\bdname\b/.test(keyed)) return "university";
-  if (/\bbcd\b|\bbname\b/.test(keyed)) return "faculty";
-  if (/\bpaxcd\b|\bkname\b/.test(keyed)) return "department";
-  if (/\bdegree\b/.test(keyed)) return "degree";
-  if (/\bpostal\b|\bpost.?code\b|\bzip\b|郵便/.test(keyId)) return "postalCode";
-  if (/\bcity\b|\bmunicipality\b|市区町村|市区郡/.test(keyId)) return "city";
-  if (/\baddress.?line.?2\b|\baddress.?2\b|\bline.?2\b|\baddr.?2\b/.test(keyId)) return "addressLine2";
-  if (/\baddress.?line.?1\b|\baddress.?1\b|\bline.?1\b|\baddr.?1\b/.test(keyId)) return "addressLine1";
-  if (/\baddress\b/.test(keyId)) return "addressLine1";
 
   if (type === "email") return "email";
   if (type === "tel") return "phone";
@@ -1894,9 +1922,17 @@ function resolveAutofillValue(candidate: Candidate, profile: Profile): string | 
     rawValue = normalizeProfileUrl(rawValue);
   }
 
-  if (field === "graduationYear" || field === "latestAcademicAdmissionDate") {
+  if (
+    field === "graduationYear" ||
+    field === "latestAcademicAdmissionDate" ||
+    field === "highSchoolAdmissionDate" ||
+    field === "highSchoolGraduationDate"
+  ) {
     const parsed = parseYearMonth(rawValue);
     if (parsed) {
+      const keyHint = normalize(
+        toHalfWidth(`${candidate.el.getAttribute("name") || ""} ${candidate.el.id || ""} ${candidate.el.getAttribute("autocomplete") || ""}`)
+      );
       const hints = [
         candidate.meta,
         candidate.rawHint,
@@ -1909,12 +1945,22 @@ function resolveAutofillValue(candidate: Candidate, profile: Profile): string | 
         .map((x) => toHalfWidth(String(x || "")))
         .join(" ");
 
+      const asksMonthOnlyByKey =
+        /\bschool_(?:from|to)_m\b|\bkoko_(?:from|to)_m\b|\bbirth_m\b|\bsmonth\b|\bm(?:onth)?\b/.test(keyHint);
+      const asksYearOnlyByKey =
+        /\bschool_(?:from|to)_y\b|\bkoko_(?:from|to)_y\b|\bbirth_y\b|\bsyear\b|\by(?:ear)?\b/.test(keyHint);
       const asksYearMonth =
         field === "graduationYear"
           ? /(卒業年月|year.?month|graduation.?month)/i.test(hints)
-          : /(入学年月|year.?month|admission.?date|entrance.?date|enrollment)/i.test(hints);
-      const asksMonthOnly = /(月|month)/i.test(hints) && !asksYearMonth && !/(年|year)/i.test(hints);
-      const asksYearOnly = /(年|year)/i.test(hints) && !asksYearMonth && !/(月|month)/i.test(hints);
+          : field === "latestAcademicAdmissionDate"
+            ? /(入学年月|year.?month|admission.?date|entrance.?date|enrollment)/i.test(hints)
+            : field === "highSchoolAdmissionDate"
+              ? /((?:高等学校|高校).*(入学年月|入学年)|year.?month)/i.test(hints)
+              : /((?:高等学校|高校).*(卒業年月|卒業年)|year.?month|graduation.?month)/i.test(hints);
+      const asksMonthOnly =
+        asksMonthOnlyByKey || (/(月|month)/i.test(hints) && !asksYearMonth && !/(年|year)/i.test(hints));
+      const asksYearOnly =
+        asksYearOnlyByKey || (/(年|year)/i.test(hints) && !asksYearMonth && !/(月|month)/i.test(hints));
 
       if (asksMonthOnly) {
         rawValue = parsed.month;
@@ -2241,29 +2287,31 @@ function setRadioValue(
   }
 
   const exact = radios.find((radio) => {
+    const choiceLabel = normalize(getRadioChoiceLabel(radio));
     const meta = getInputLabelText(radio);
     const val = normalize(radio.value);
+    const choiceKana = normalizeKanaForMatch(choiceLabel);
     const metaKana = normalizeKanaForMatch(meta);
     const valKana = normalizeKanaForMatch(radio.value);
     return (
-      targetCandidates.some((target) => target === val || target === meta) ||
-      targetKanaCandidates.some((target) => target === valKana || target === metaKana)
+      targetCandidates.some((target) => target === val || target === choiceLabel || target === meta) ||
+      targetKanaCandidates.some((target) => target === valKana || target === choiceKana || target === metaKana)
     );
   });
 
   const fuzzy =
     exact ||
     radios.find((radio) => {
-      const meta = getInputLabelText(radio);
+      const choiceLabel = normalize(getRadioChoiceLabel(radio));
       const val = normalize(radio.value);
-      const metaKana = normalizeKanaForMatch(meta);
+      const choiceKana = normalizeKanaForMatch(choiceLabel);
       const valKana = normalizeKanaForMatch(radio.value);
       const textMatch = targetCandidates.some(
-        (target) => meta.includes(target) || (val && (val.includes(target) || target.includes(val)))
+        (target) => choiceLabel.includes(target) || (val && (val.includes(target) || target.includes(val)))
       );
       const kanaMatch = targetKanaCandidates.some(
         (target) =>
-          metaKana.includes(target) || (valKana && (valKana.includes(target) || target.includes(valKana)))
+          choiceKana.includes(target) || (valKana && (valKana.includes(target) || target.includes(valKana)))
       );
       return textMatch || kanaMatch;
     });
@@ -3386,10 +3434,27 @@ function fillAxolDirectFields(
   const telMid = getCandidatesByNameOrId(candidates, "telg_m");
   const telLow = getCandidatesByNameOrId(candidates, "telg_l");
   const sameAsCurrent = getCandidatesByNameOrId(candidates, "jushosame");
+  const schoolTypeRadios = getCandidatesByNameOrId(candidates, "kubun");
+  const ownershipRadios = getCandidatesByNameOrId(candidates, "kokushi");
+  const degreeRadios = getCandidatesByNameOrId(candidates, "degree");
+  const initialFields = getCandidatesByNameOrId(candidates, "initial");
+  const schoolSearchButtons = getCandidatesByNameOrId(candidates, "jsAxolSchool_dcd_search");
+  const schoolSelectFields = [...getCandidatesByNameOrId(candidates, "dcd"), ...getCandidatesByNameOrId(candidates, "dname")];
+  const facultyFields = [...getCandidatesByNameOrId(candidates, "bcd"), ...getCandidatesByNameOrId(candidates, "bname")];
+  const departmentFields = [...getCandidatesByNameOrId(candidates, "paxcd"), ...getCandidatesByNameOrId(candidates, "kname")];
   const graduationYearFields = getCandidatesByNameOrId(candidates, "school_to_Y");
   const graduationMonthFields = getCandidatesByNameOrId(candidates, "school_to_m");
   const admissionYearFields = getCandidatesByNameOrId(candidates, "school_from_Y");
   const admissionMonthFields = getCandidatesByNameOrId(candidates, "school_from_m");
+  const seminarFields = getCandidatesByNameOrId(candidates, "zemi");
+  const clubFields = getCandidatesByNameOrId(candidates, "club");
+  const highSchoolNameFields = getCandidatesByNameOrId(candidates, "koko_word");
+  const highSchoolSearchButtons = getCandidatesByNameOrId(candidates, "koko_search");
+  const highSchoolPrefectureFields = getCandidatesByNameOrId(candidates, "koko_ken");
+  const highSchoolAdmissionYearFields = getCandidatesByNameOrId(candidates, "koko_from_Y");
+  const highSchoolAdmissionMonthFields = getCandidatesByNameOrId(candidates, "koko_from_m");
+  const highSchoolGraduationYearFields = getCandidatesByNameOrId(candidates, "koko_to_Y");
+  const highSchoolGraduationMonthFields = getCandidatesByNameOrId(candidates, "koko_to_m");
 
   for (const candidate of lastNameKanji) {
     if (setFieldValue(candidate.el, "lastNameKanji", cleanProfileValue(profile.lastNameKanji), { overwrite })) {
@@ -3478,6 +3543,44 @@ function fillAxolDirectFields(
     }
   }
 
+  const hasAxolEducationType = Boolean(
+    cleanProfileValue(profile.educationType) ||
+      cleanProfileValue(profile.degree) ||
+      isYesValue(profile.latestAcademicOverseasSchool)
+  );
+  const schoolTypeLabel = hasAxolEducationType ? inferAxolSchoolTypeLabel(profile) : "";
+  const ownershipLabel = hasAxolEducationType ? inferAxolSchoolOwnershipLabel(profile) : "";
+  const degreeLabel = inferAxolDegreeLabel(profile);
+  const initial = hiraganaToKatakana(deriveUniversityKanaInitial(profile)).slice(0, 1);
+
+  if (schoolTypeRadios[0]?.el instanceof HTMLInputElement && schoolTypeLabel) {
+    if (setRadioValue(schoolTypeRadios[0].el, "educationType", schoolTypeLabel, { overwrite: true })) {
+      schoolTypeRadios.forEach((candidate) => handledElements.add(candidate.el));
+    }
+  }
+
+  if (ownershipRadios[0]?.el instanceof HTMLInputElement && ownershipLabel) {
+    if (setRadioValue(ownershipRadios[0].el, "educationType", ownershipLabel, { overwrite: true })) {
+      ownershipRadios.forEach((candidate) => handledElements.add(candidate.el));
+    }
+  }
+
+  if (
+    degreeRadios[0]?.el instanceof HTMLInputElement &&
+    schoolTypeLabel === "大学院" &&
+    degreeLabel
+  ) {
+    if (setRadioValue(degreeRadios[0].el, "degree", degreeLabel, { overwrite: true })) {
+      degreeRadios.forEach((candidate) => handledElements.add(candidate.el));
+    }
+  }
+
+  for (const candidate of initialFields) {
+    if (initial && setFieldValue(candidate.el, "universityKanaInitial", initial, { overwrite: true })) {
+      handledElements.add(candidate.el);
+    }
+  }
+
   const graduation = parseYearMonth(profile.graduationYear);
   if (graduation) {
     for (const candidate of graduationYearFields) {
@@ -3520,6 +3623,58 @@ function fillAxolDirectFields(
     }
   }
 
+  const highSchoolAdmission = parseYearMonth(profile.highSchoolAdmissionDate);
+  if (highSchoolAdmission) {
+    for (const candidate of highSchoolAdmissionYearFields) {
+      if (setFieldValue(candidate.el, "highSchoolAdmissionDate", highSchoolAdmission.year, { overwrite: true })) {
+        handledElements.add(candidate.el);
+      }
+    }
+    for (const candidate of highSchoolAdmissionMonthFields) {
+      if (
+        [highSchoolAdmission.month, highSchoolAdmission.monthRaw].some((value) =>
+          value ? setFieldValue(candidate.el, "highSchoolAdmissionDate", value, { overwrite: true }) : false
+        )
+      ) {
+        handledElements.add(candidate.el);
+      }
+    }
+  }
+
+  const highSchoolGraduation = parseYearMonth(profile.highSchoolGraduationDate);
+  if (highSchoolGraduation) {
+    for (const candidate of highSchoolGraduationYearFields) {
+      if (
+        setFieldValue(candidate.el, "highSchoolGraduationDate", highSchoolGraduation.year, {
+          overwrite: true
+        })
+      ) {
+        handledElements.add(candidate.el);
+      }
+    }
+    for (const candidate of highSchoolGraduationMonthFields) {
+      if (
+        [highSchoolGraduation.month, highSchoolGraduation.monthRaw].some((value) =>
+          value ? setFieldValue(candidate.el, "highSchoolGraduationDate", value, { overwrite: true }) : false
+        )
+      ) {
+        handledElements.add(candidate.el);
+      }
+    }
+  }
+
+  for (const candidate of seminarFields) {
+    if (setFieldValue(candidate.el, "seminarLaboratory", cleanProfileValue(profile.seminarLaboratory), { overwrite })) {
+      handledElements.add(candidate.el);
+    }
+  }
+
+  for (const candidate of clubFields) {
+    if (setFieldValue(candidate.el, "schoolClubActivity", cleanProfileValue(profile.schoolClubActivity), { overwrite })) {
+      handledElements.add(candidate.el);
+    }
+  }
+
   markCandidatesHandled(handledElements, [
     ...lastNameKanji,
     ...firstNameKanji,
@@ -3535,10 +3690,27 @@ function fillAxolDirectFields(
     ...telMid,
     ...telLow,
     ...sameAsCurrent,
+    ...schoolTypeRadios,
+    ...ownershipRadios,
+    ...degreeRadios,
+    ...initialFields,
+    ...schoolSearchButtons,
+    ...schoolSelectFields,
+    ...facultyFields,
+    ...departmentFields,
     ...graduationYearFields,
     ...graduationMonthFields,
     ...admissionYearFields,
-    ...admissionMonthFields
+    ...admissionMonthFields,
+    ...seminarFields,
+    ...clubFields,
+    ...highSchoolNameFields,
+    ...highSchoolSearchButtons,
+    ...highSchoolPrefectureFields,
+    ...highSchoolAdmissionYearFields,
+    ...highSchoolAdmissionMonthFields,
+    ...highSchoolGraduationYearFields,
+    ...highSchoolGraduationMonthFields
   ]);
 }
 
@@ -4014,11 +4186,6 @@ function fillGroupedFields(
   fillUniversityChoiceGroups(profile, overwrite, handledElements);
 }
 
-async function getSettings(): Promise<Settings> {
-  const stored = await storageArea.get([STORAGE_KEY]);
-  return (stored[STORAGE_KEY] as Settings) || { enabled: true, profile: {} };
-}
-
 function currentDomainKey(): string {
   return String(location.hostname || "").toLowerCase();
 }
@@ -4028,8 +4195,7 @@ function isCygnetManagedPage(): boolean {
 }
 
 async function getOverlayDomainStateMap(): Promise<Record<string, OverlayDomainState>> {
-  const stored = await storageArea.get([OVERLAY_DOMAIN_STATE_KEY]);
-  return (stored[OVERLAY_DOMAIN_STATE_KEY] as Record<string, OverlayDomainState>) || {};
+  return (await getStoredOverlayDomainStateMap()) as Record<string, OverlayDomainState>;
 }
 
 async function getOverlayStateForCurrentDomain(): Promise<OverlayDomainState> {
@@ -4040,10 +4206,7 @@ async function getOverlayStateForCurrentDomain(): Promise<OverlayDomainState> {
 async function updateOverlayStateForCurrentDomain(patch: Partial<OverlayDomainState>): Promise<void> {
   const domain = currentDomainKey();
   if (!domain) return;
-  const map = await getOverlayDomainStateMap();
-  const current = map[domain] || {};
-  map[domain] = { ...current, ...patch };
-  await storageArea.set({ [OVERLAY_DOMAIN_STATE_KEY]: map });
+  await updateStoredOverlayDomainState(domain, patch);
 }
 
 function joinNonEmpty(parts: (string | undefined | null)[], separator: string = " "): string {
@@ -5013,10 +5176,13 @@ function ensureInPageOverlay(): OverlayRefs | null {
               <span>Autofill enabled</span>
               <input type="checkbox" data-role="enabled-toggle" />
             </label>
-            <div class="mg-actions">
-              <button class="mg-btn" type="button" data-role="autofill">Autofill this page</button>
-              <button class="mg-btn secondary" type="button" data-role="report-compat">Copy support report</button>
-            </div>
+      <div class="mg-actions">
+        <button class="mg-btn" type="button" data-role="autofill">Autofill this page</button>
+        <button class="mg-btn secondary" type="button" data-role="report-compat">Copy support report</button>
+      </div>
+      <div class="mg-actions">
+        <button class="mg-btn secondary" type="button" data-role="open-dashboard">プロフィールを編集</button>
+      </div>
           </div>
           <div class="mg-tabs is-hidden" data-role="tabs">
             <button class="mg-tab is-active" type="button" data-role="tab-main" aria-pressed="true">メイン</button>
@@ -5043,6 +5209,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
   const enabledToggle = shadow.querySelector("[data-role='enabled-toggle']") as HTMLInputElement;
   const autofillBtn = shadow.querySelector("[data-role='autofill']") as HTMLElement;
   const reportIssueBtn = shadow.querySelector("[data-role='report-compat']") as HTMLButtonElement;
+  const openDashboardBtn = shadow.querySelector("[data-role='open-dashboard']") as HTMLButtonElement;
   const tabsWrap = shadow.querySelector("[data-role='tabs']") as HTMLElement;
   const tabMainBtn = shadow.querySelector("[data-role='tab-main']") as HTMLButtonElement;
   const tabAdditionalBtn = shadow.querySelector("[data-role='tab-additional']") as HTMLButtonElement;
@@ -5100,7 +5267,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
       credentialDrafts.clear();
       clearRevealedCredentialPasswords();
       overlayActiveTab = "main";
-      const settings = await getSettings();
+      const settings = await getStoredSettings();
       renderOverlayProfile(settings.profile || {});
       applyOverlayAuthUi({ authenticated: false, email: "" }, settings);
       setOverlayStatus("ログアウトしました");
@@ -5116,33 +5283,46 @@ function ensureInPageOverlay(): OverlayRefs | null {
       setOverlayStatus("Create account to use");
       return;
     }
-    const settings = await getSettings();
+    const settings = await getStoredSettings();
     const next = { ...settings, enabled: enabledToggle.checked };
-    await new Promise<void>((resolve) => {
-      storageArea.set({ [STORAGE_KEY]: next }, () => resolve());
-    });
+    await saveStoredSettings(next as Settings);
     setOverlayStatus(next.enabled ? "Autofill ON" : "Autofill OFF");
   });
 
   tabMainBtn.addEventListener("click", async () => {
     overlayActiveTab = "main";
     updateOverlayTabUi();
-    const settings = await getSettings();
+    const settings = await getStoredSettings();
     await renderOverlayByActiveTab(settings);
   });
 
   tabAdditionalBtn.addEventListener("click", async () => {
     overlayActiveTab = "additional";
     updateOverlayTabUi();
-    const settings = await getSettings();
+    const settings = await getStoredSettings();
     await renderOverlayByActiveTab(settings);
   });
 
   tabCredentialsBtn.addEventListener("click", async () => {
     overlayActiveTab = "credentials";
     updateOverlayTabUi();
-    const settings = await getSettings();
+    const settings = await getStoredSettings();
     await renderOverlayByActiveTab(settings);
+  });
+
+  openDashboardBtn.addEventListener("click", async () => {
+    try {
+      const response = (await sendRuntimeMessage({ type: "OPEN_WEB_DASHBOARD" })) as
+        | { ok?: boolean }
+        | undefined;
+      if (response?.ok) {
+        setOverlayStatus("プロフィール編集画面を開きました");
+      } else {
+        setOverlayStatus("プロフィール編集画面を開けませんでした");
+      }
+    } catch {
+      setOverlayStatus("プロフィール編集画面を開けませんでした");
+    }
   });
 
   autofillBtn.addEventListener("click", async () => {
@@ -5213,6 +5393,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
     enabledToggle,
     autofillBtn,
     reportIssueBtn,
+    openDashboardBtn,
     tabsWrap,
     tabMainBtn,
     tabAdditionalBtn,
@@ -5231,7 +5412,7 @@ async function refreshInPageOverlay(): Promise<void> {
   const refs = ensureInPageOverlay();
   if (!refs) return;
   authStateCache = null;
-  const settings = await getSettings();
+  const settings = await getStoredSettings();
   await getAuthState(true);
   await renderOverlayByActiveTab(settings);
 }
@@ -5239,7 +5420,7 @@ async function refreshInPageOverlay(): Promise<void> {
 function bindInPageOverlayStorageListener(): void {
   if (storageListenerBound) return;
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== "sync" && areaName !== "local") return;
+    if (areaName !== "local") return;
     if (areaName === "local" && changes.cygnetStateVersion) {
       refreshInPageOverlay().catch(() => {});
     }
@@ -5308,10 +5489,10 @@ async function autofill(options: { overwrite?: boolean } = {}): Promise<{ filled
     return { filled: 0, reason: "auth_required" };
   }
 
-  const settings = await getSettings();
-  if (!settings.enabled) {
-    return { filled: 0, reason: "disabled" };
-  }
+    const settings = await getStoredSettings();
+    if (!settings.enabled) {
+      return { filled: 0, reason: "disabled" };
+    }
 
   const profile = settings.profile || {};
   const providerId = detectSiteProviderId();
@@ -5324,6 +5505,7 @@ async function autofill(options: { overwrite?: boolean } = {}): Promise<{ filled
   let filled = applyStoredCredentialToAuthForms(matchedCredential, revealedPassword, overwrite);
   const handledElements = new Set<HTMLElement>();
   fillGroupedFields(providerId, candidates, profile, overwrite, handledElements);
+  await runProviderWorkflow(providerId, profile, overwrite, handledElements);
   await retrySplitBirthDateFields(profile, overwrite, handledElements);
 
   for (const candidate of candidates) {
