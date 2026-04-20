@@ -14,10 +14,11 @@ export default function NavDashboardLink() {
   return (
     <Link
       href="/dashboard"
-      className="text-sm text-brand-muted transition-colors hover:text-brand-ink"
+      className={`glass-nav-link inline-flex h-9 items-center whitespace-nowrap font-medium leading-none tracking-[-0.01em] ${
+        lang === "ja" ? "text-[14px] lg:text-[15px]" : "text-[15px] lg:text-base"
+      }`}
     >
       {COPY[lang]}
     </Link>
   );
 }
-

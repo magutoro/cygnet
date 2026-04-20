@@ -698,7 +698,7 @@ const ProfileEditor = forwardRef<ProfileEditorHandle, Props>(
       .filter((section) => section.fields.length > 0);
 
     return (
-      <div className="rounded-2xl border border-brand-line bg-white p-6 shadow-sm">
+      <div className={CARD_CLASSES}>
         <div className="mb-6 flex items-center justify-between gap-4">
           <h2 className="text-lg font-semibold text-brand-ink">{t.title}</h2>
           <button
@@ -718,7 +718,7 @@ const ProfileEditor = forwardRef<ProfileEditorHandle, Props>(
             className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
               activeTab === "main"
                 ? "border-brand bg-brand text-white"
-                : "border-brand-line bg-brand-bg/40 text-brand-ink hover:bg-brand-bg"
+                : "border-brand-line bg-white/55 text-brand-ink hover:bg-brand-bg/70"
             }`}
           >
             {t.mainTab}
@@ -729,7 +729,7 @@ const ProfileEditor = forwardRef<ProfileEditorHandle, Props>(
             className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
               activeTab === "additional"
                 ? "border-brand bg-brand text-white"
-                : "border-brand-line bg-brand-bg/40 text-brand-ink hover:bg-brand-bg"
+                : "border-brand-line bg-white/55 text-brand-ink hover:bg-brand-bg/70"
             }`}
           >
             {t.additionalTab}
@@ -737,17 +737,17 @@ const ProfileEditor = forwardRef<ProfileEditorHandle, Props>(
         </div>
 
         {status === "saved" && (
-          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700">
+          <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50/90 px-4 py-2 text-sm text-emerald-700">
             {t.saved}
           </div>
         )}
         {status === "error" && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50/90 px-4 py-2 text-sm text-red-700">
             {t.error}
           </div>
         )}
         {syncNotice && (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/90 px-4 py-2 text-sm text-amber-700">
             {syncNotice}
           </div>
         )}
@@ -926,8 +926,14 @@ function shouldRenderAdditionalField(fieldKey: ProfileKey, profile: Profile): bo
   return true;
 }
 
+const CARD_CLASSES =
+  "rounded-2xl border border-white/72 bg-white/70 p-6 shadow-[0_10px_30px_rgba(77,127,181,0.08)] backdrop-blur-md";
 const TEXT_INPUT_CLASSES =
-  "w-full rounded-lg border border-brand-line bg-brand-bg/40 px-3 py-2 text-sm text-brand-ink placeholder:text-brand-muted/50 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20";
+  "w-full rounded-lg border border-brand-line bg-white/58 px-3 py-2 text-sm text-brand-ink placeholder:text-brand-muted/50 transition-colors backdrop-blur-[2px] focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20";
+const PICKER_POPOVER_CLASSES =
+  "absolute left-0 z-20 mt-2 w-full max-w-[32rem] overflow-hidden rounded-[1.1rem] border border-white/82 bg-white/88 shadow-[0_18px_48px_rgba(20,35,60,0.14)] backdrop-blur-md";
+const SELECT_INPUT_CLASSES =
+  "w-full appearance-none rounded-lg border border-brand-line bg-white/58 px-3 py-2 pr-10 text-sm text-brand-ink transition-colors backdrop-blur-[2px] focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20";
 
 function InputField({
   label,
@@ -987,8 +993,10 @@ function CalendarButton({
       type="button"
       onClick={onClick}
       aria-label="Open date picker"
-      className={`absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md transition-colors ${
-        active ? "bg-brand-bg text-brand-ink" : "text-brand-muted/70 hover:bg-brand-bg hover:text-brand-ink"
+      className={`absolute right-2.5 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md transition-colors ${
+        active
+          ? "bg-brand-bg/90 text-brand-ink"
+          : "text-brand-muted/70 hover:bg-brand-bg/80 hover:text-brand-ink"
       }`}
     >
       <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={1.8}>
@@ -1063,7 +1071,7 @@ function MonthPickerField({
         <CalendarButton onClick={() => setOpen((prev) => !prev)} active={open} />
 
         {open && (
-          <div className="absolute left-0 z-20 mt-2 w-full max-w-[32rem] overflow-hidden rounded-[1.5rem] border border-brand-line bg-white shadow-[0_18px_48px_rgba(20,35,60,0.16)]">
+          <div className={PICKER_POPOVER_CLASSES}>
             <div className="flex items-center gap-3 bg-[#eef2f7] px-4 py-4">
               <button
                 type="button"
@@ -1076,7 +1084,7 @@ function MonthPickerField({
               <select
                 value={viewYear}
                 onChange={(e) => setViewYear(Number(e.target.value))}
-                className="min-w-0 flex-1 appearance-none bg-transparent text-center text-2xl font-semibold text-brand-ink focus:outline-none"
+                className="min-w-0 flex-1 appearance-none bg-transparent text-center text-xl font-semibold text-brand-ink focus:outline-none"
               >
                 {years.map((year) => (
                   <option key={year} value={year}>
@@ -1108,7 +1116,7 @@ function MonthPickerField({
                       setFocused(false);
                       setOpen(false);
                     }}
-                    className={`rounded-xl border px-3 py-3 text-lg font-medium transition-colors ${
+                    className={`rounded-xl border px-3 py-2.5 text-base font-medium transition-colors ${
                       active
                         ? "border-[#d9dde5] bg-[#eef0f4] text-brand-ink shadow-[inset_0_0_0_2px_rgba(255,255,255,0.85)]"
                         : "border-transparent bg-white text-brand-ink hover:bg-brand-bg"
@@ -1197,12 +1205,12 @@ function DatePickerField({
         <CalendarButton onClick={() => setOpen((prev) => !prev)} active={open} />
 
         {open && (
-          <div className="absolute left-0 z-20 mt-2 w-full max-w-[32rem] overflow-hidden rounded-[1.5rem] border border-brand-line bg-white shadow-[0_18px_48px_rgba(20,35,60,0.16)]">
+          <div className={PICKER_POPOVER_CLASSES}>
             <div className="flex items-center gap-2 bg-[#eef2f7] px-4 py-4">
               <select
                 value={viewMonth}
                 onChange={(e) => setViewMonth(Number(e.target.value))}
-                className="min-w-0 flex-1 appearance-none rounded-xl border border-transparent bg-white/70 px-3 py-2 text-base font-semibold text-brand-ink focus:border-brand-line focus:outline-none"
+                className="min-w-0 flex-1 appearance-none rounded-xl border border-transparent bg-white/75 px-3 py-2 text-sm font-semibold text-brand-ink focus:border-brand-line focus:outline-none"
               >
                 {Array.from({ length: 12 }, (_, index) => {
                   const month = index + 1;
@@ -1216,7 +1224,7 @@ function DatePickerField({
               <select
                 value={viewYear}
                 onChange={(e) => setViewYear(Number(e.target.value))}
-                className="min-w-0 flex-1 appearance-none rounded-xl border border-transparent bg-white/70 px-3 py-2 text-base font-semibold text-brand-ink focus:border-brand-line focus:outline-none"
+                className="min-w-0 flex-1 appearance-none rounded-xl border border-transparent bg-white/75 px-3 py-2 text-sm font-semibold text-brand-ink focus:border-brand-line focus:outline-none"
               >
                 {years.map((year) => (
                   <option key={year} value={year}>
@@ -1236,7 +1244,7 @@ function DatePickerField({
 
             <div className="grid grid-cols-7 gap-1 px-4 pb-4 pt-1">
               {Array.from({ length: startWeekday }).map((_, index) => (
-                <div key={`blank-${index}`} className="h-9" />
+                <div key={`blank-${index}`} className="h-8" />
               ))}
               {Array.from({ length: daysInMonth }, (_, index) => {
                 const day = index + 1;
@@ -1256,7 +1264,7 @@ function DatePickerField({
                       setFocused(false);
                       setOpen(false);
                     }}
-                    className={`h-10 rounded-xl text-sm font-medium transition-colors ${
+                    className={`h-9 rounded-lg text-sm font-medium transition-colors ${
                       active
                         ? "border border-[#d9dde5] bg-[#eef0f4] text-brand-ink shadow-[inset_0_0_0_2px_rgba(255,255,255,0.85)]"
                         : "border border-transparent text-brand-ink hover:bg-brand-bg"
@@ -1297,7 +1305,7 @@ function TextareaField({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-brand-line bg-brand-bg/40 px-3 py-2 text-sm text-brand-ink placeholder:text-brand-muted/50 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+        className={`${TEXT_INPUT_CLASSES} min-h-[7rem] resize-y`}
       />
     </label>
   );
@@ -1319,17 +1327,24 @@ function SelectField({
   return (
     <label className={`block ${full ? "sm:col-span-2" : ""}`}>
       <span className="mb-1 block text-xs font-medium text-brand-muted">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-brand-line bg-brand-bg/40 px-3 py-2 text-sm text-brand-ink transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={SELECT_INPUT_CLASSES}
+        >
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-brand-muted">
+          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+          </svg>
+        </div>
+      </div>
     </label>
   );
 }
@@ -1357,7 +1372,7 @@ function MultiSelectField({
   return (
     <div className={`block ${full ? "sm:col-span-2" : ""}`}>
       <span className="mb-1 block text-xs font-medium text-brand-muted">{label}</span>
-      <div className="max-h-56 space-y-2 overflow-auto rounded-lg border border-brand-line bg-brand-bg/40 p-3">
+      <div className="max-h-56 space-y-2 overflow-auto rounded-lg border border-brand-line bg-white/56 p-3 backdrop-blur-[2px]">
         {options.map((opt) => {
           const checked = selected.has(opt.value);
           return (

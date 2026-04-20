@@ -91,7 +91,6 @@ interface OverlayRefs {
   controlsWrap: HTMLElement;
   enabledToggle: HTMLInputElement;
   autofillBtn: HTMLElement;
-  reportIssueBtn: HTMLButtonElement;
   openDashboardBtn: HTMLButtonElement;
   tabsWrap: HTMLElement;
   tabMainBtn: HTMLButtonElement;
@@ -5178,7 +5177,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
             </label>
       <div class="mg-actions">
         <button class="mg-btn" type="button" data-role="autofill">Autofill this page</button>
-        <button class="mg-btn secondary" type="button" data-role="report-compat">Copy support report</button>
       </div>
       <div class="mg-actions">
         <button class="mg-btn secondary" type="button" data-role="open-dashboard">プロフィールを編集</button>
@@ -5208,7 +5206,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
   const controlsWrap = shadow.querySelector("[data-role='controls']") as HTMLElement;
   const enabledToggle = shadow.querySelector("[data-role='enabled-toggle']") as HTMLInputElement;
   const autofillBtn = shadow.querySelector("[data-role='autofill']") as HTMLElement;
-  const reportIssueBtn = shadow.querySelector("[data-role='report-compat']") as HTMLButtonElement;
   const openDashboardBtn = shadow.querySelector("[data-role='open-dashboard']") as HTMLButtonElement;
   const tabsWrap = shadow.querySelector("[data-role='tabs']") as HTMLElement;
   const tabMainBtn = shadow.querySelector("[data-role='tab-main']") as HTMLButtonElement;
@@ -5342,12 +5339,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
     setOverlayStatus(`${result.filled || 0} 項目を入力しました`);
   });
 
-  reportIssueBtn.addEventListener("click", async () => {
-    const report = buildCompatibilityReport();
-    const ok = await copyTextToClipboard(JSON.stringify(report, null, 2));
-    setOverlayStatus(ok ? "互換性レポートをコピーしました" : "レポートのコピーに失敗しました");
-  });
-
   let dragging = false;
   let dragOffset = 0;
   let dragStartY = 0;
@@ -5392,7 +5383,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
     controlsWrap,
     enabledToggle,
     autofillBtn,
-    reportIssueBtn,
     openDashboardBtn,
     tabsWrap,
     tabMainBtn,

@@ -5,17 +5,19 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-inter)", "var(--font-noto-jp)", "system-ui", "sans-serif"],
+        sans: ["var(--font-geist)", "var(--font-noto-jp)", "system-ui", "sans-serif"],
+        serif: ["var(--font-playfair)", "Georgia", "serif"],
+        mono: ["var(--font-geist-mono)", "ui-monospace", "monospace"],
       },
       colors: {
         brand: {
-          DEFAULT: "#5ba8e8",
-          strong: "#3c91d8",
-          ink: "#1c3551",
-          bg: "#edf6ff",
-          "bg-soft": "#f6fbff",
-          line: "#d8e9f9",
-          muted: "#5d7896",
+          DEFAULT: "#4e90d8",
+          strong: "#3f7fc6",
+          ink: "#142a44",
+          bg: "#edf8ff",
+          "bg-soft": "#f7fbff",
+          line: "#d8e8f7",
+          muted: "#5f7694",
         },
       },
     },

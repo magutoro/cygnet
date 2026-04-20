@@ -65,7 +65,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg">
+    <div className="page-shell">
       <div className="mx-auto max-w-6xl px-6 py-10">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-brand-ink">{t.dashboard}</h1>
@@ -91,8 +91,8 @@ export default async function DashboardPage() {
       </div>
 
       {isPreview && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/38 backdrop-blur-[1px] px-6">
-          <div className="w-full max-w-sm rounded-2xl border border-brand-line bg-white/86 p-6 text-center shadow-xl">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/24 backdrop-blur-[2px] px-6">
+          <div className="w-full max-w-sm rounded-2xl border border-white/80 bg-white/78 p-6 text-center shadow-[0_18px_48px_rgba(77,127,181,0.12)] backdrop-blur-md">
             <p className="text-sm font-semibold text-brand-ink">{t.login}</p>
             <a
               href="/auth/consent?next=/dashboard"

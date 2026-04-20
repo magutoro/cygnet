@@ -38,9 +38,13 @@ function getSenderOrigin(url: string | undefined): string | null {
   }
 }
 
+function getTabUrl(tab: chrome.tabs.Tab | undefined): string {
+  return String(tab?.url || tab?.pendingUrl || "").trim().toLowerCase();
+}
+
 function isUnsupportedUrl(url: string | undefined): boolean {
   const raw = String(url || "").trim().toLowerCase();
-  if (!raw) return true;
+  if (!raw) return false;
   return (
     raw.startsWith("chrome://") ||
     raw.startsWith("edge://") ||
@@ -96,7 +100,7 @@ async function injectContentScriptsIntoTab(tabId: number): Promise<void> {
 }
 
 async function openInPagePanelFromTab(tab: chrome.tabs.Tab): Promise<boolean> {
-  if (!tab?.id || isUnsupportedUrl(tab.url)) return false;
+  if (!tab?.id || isUnsupportedUrl(getTabUrl(tab))) return false;
   if (await tryShowLauncher(tab.id)) return true;
 
   // Tabs that were already open before extension update/load may not have the
@@ -109,6 +113,12 @@ async function openInPagePanelFromTab(tab: chrome.tabs.Tab): Promise<boolean> {
   }
 
   return false;
+}
+
+async function resolveActionTargetTab(tab: chrome.tabs.Tab | undefined): Promise<chrome.tabs.Tab | null> {
+  if (tab?.id) return tab;
+  const [activeTab] = await queryTabs({ active: true, currentWindow: true });
+  return activeTab || null;
 }
 
 async function setStateVersion(): Promise<void> {
@@ -145,12 +155,20 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.action.onClicked.addListener(async (tab) => {
-  if (isUnsupportedUrl(tab?.url)) {
+  const targetTab = await resolveActionTargetTab(tab);
+  const targetUrl = getTabUrl(targetTab || undefined);
+
+  if (!targetTab?.id) {
     await openWebDashboard().catch(() => {});
     return;
   }
 
-  const opened = await openInPagePanelFromTab(tab);
+  if (targetUrl && isUnsupportedUrl(targetUrl)) {
+    await openWebDashboard().catch(() => {});
+    return;
+  }
+
+  const opened = await openInPagePanelFromTab(targetTab);
   // Do not redirect to dashboard on normal pages if side panel launch failed.
   // This avoids unexpected navigation and keeps click behavior focused.
   if (!opened) return;

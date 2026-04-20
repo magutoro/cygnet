@@ -3,7 +3,7 @@ import { defineManifest } from "@crxjs/vite-plugin";
 export default defineManifest({
   manifest_version: 3,
   name: "Cygnet",
-  version: "0.1.0",
+  version: "0.1.1",
   description: "Japanese-focused job application autofill extension.",
   icons: {
     16: "icons/icon16.png",

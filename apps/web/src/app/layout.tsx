@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_JP } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_JP, Playfair_Display } from "next/font/google";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import AuthButton from "@/components/AuthButton";
@@ -17,9 +17,21 @@ import {
 import { LanguageProvider } from "@/components/LanguageProvider";
 import "./globals.css";
 
-const inter = Inter({
+const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-geist",
+  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
   display: "swap",
 });
 
@@ -58,24 +70,29 @@ export default async function RootLayout({
   const initialLang = await getInitialLanguage();
 
   return (
-    <html lang={initialLang} className={`${inter.variable} ${notoSansJP.variable}`}>
-      <body className="font-sans antialiased">
+    <html
+      lang={initialLang}
+      className={`${geist.variable} ${geistMono.variable} ${playfair.variable} ${notoSansJP.variable}`}
+    >
+      <body className="font-sans antialiased text-brand-ink">
         <LanguageProvider initialLang={initialLang}>
-          <nav className="sticky top-0 z-50 border-b border-brand-line/60 bg-brand-bg/80 backdrop-blur-lg">
-            <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-              <div className="flex items-center gap-6">
+          <nav className="glass-nav sticky top-0 z-50">
+            <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+              <div className="flex min-w-0 items-center gap-7 lg:gap-10">
                 <Link
                   href="/"
-                  className="text-xl font-bold tracking-tight text-brand-ink"
+                  className="inline-flex h-10 items-center text-[1.85rem] font-semibold leading-none tracking-[-0.045em] text-brand-ink"
                 >
                   Cygnet
                 </Link>
-                <NavDashboardLink />
-                <NavPrivacyLink />
-                <NavTermsLink />
-                <NavContactLink />
+                <div className="flex h-10 items-center gap-5 lg:gap-7">
+                  <NavDashboardLink />
+                  <NavPrivacyLink />
+                  <NavTermsLink />
+                  <NavContactLink />
+                </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex h-10 items-center gap-3">
                 <LanguageSwitcher />
                 <AuthButton />
               </div>

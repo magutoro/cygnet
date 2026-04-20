@@ -40,7 +40,7 @@ export default function AuthButton() {
 
   if (loading) {
     return (
-      <div className="h-9 w-24 animate-pulse rounded-lg bg-brand-line/50" />
+      <div className="h-10 w-40 animate-pulse rounded-lg bg-brand-line/50" />
     );
   }
 
@@ -48,7 +48,9 @@ export default function AuthButton() {
     return (
       <a
         href="/auth/consent?next=/dashboard"
-        className="inline-flex items-center gap-2 rounded-lg bg-brand-strong px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-ink"
+        className={`inline-flex h-10 items-center gap-2 rounded-lg bg-brand-strong font-medium leading-none text-white transition-colors hover:bg-brand-ink ${
+          lang === "ja" ? "px-3.5 text-[13px]" : "px-4 text-sm"
+        }`}
       >
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -62,17 +64,17 @@ export default function AuthButton() {
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="glass-panel-soft flex h-10 items-center gap-3 rounded-full px-3">
       <div className="flex items-center gap-2">
         {user.user_metadata?.avatar_url ? (
           <img
             src={user.user_metadata.avatar_url}
             alt=""
-            className="h-7 w-7 rounded-full"
+            className="h-8 w-8 rounded-full ring-1 ring-white/70"
             referrerPolicy="no-referrer"
           />
         ) : (
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-strong text-xs font-bold text-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-xs font-bold text-white shadow-[0_8px_18px_rgba(15,124,171,0.24)]">
             {(user.email?.[0] ?? "?").toUpperCase()}
           </div>
         )}
@@ -82,7 +84,7 @@ export default function AuthButton() {
       </div>
       <a
         href="/auth/logout"
-        className="rounded-lg border border-brand-line px-3 py-1.5 text-xs font-medium text-brand-muted transition-colors hover:border-brand hover:text-brand-ink"
+        className="glass-button-secondary h-8 px-3 text-xs font-medium leading-none"
       >
         {t.signOut}
       </a>

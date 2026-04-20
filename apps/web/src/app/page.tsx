@@ -1,7 +1,13 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import LandingDemo from "@/components/LandingDemo";
+import LandingPreloader from "@/components/LandingPreloader";
 import { useLanguage } from "@/components/LanguageProvider";
+
+const CHROME_WEB_STORE_URL =
+  "https://chromewebstore.google.com/detail/cygnet/glgmodddifcigjdkpjefebdkmpgabnnp";
 
 const COPY = {
   en: {
@@ -60,10 +66,16 @@ const COPY = {
     ctaTitle: "Ready to simplify shuukatsu?",
     ctaDesc: "Install Cygnet for free and never hand-type the same info again.",
     ctaButton: "Add to Chrome — it's free",
+    heroStats: [
+      { value: "Local Vault", label: "Saved credentials" },
+      { value: "10+", label: "Sites supported" },
+      { value: "1-Click", label: "Autofill" },
+    ],
     privacyPolicy: "Privacy Policy",
     termsOfService: "Terms of Service",
     contact: "Contact",
     rightsReserved: "All rights reserved.",
+    trustBadge: "Privacy & control",
   },
   ja: {
     heroBadge: "無料のChrome拡張機能",
@@ -121,10 +133,16 @@ const COPY = {
     ctaTitle: "就活入力をもっと速く",
     ctaDesc: "Cygnetを無料で使い始めましょう。",
     ctaButton: "Chromeに追加（無料）",
+    heroStats: [
+      { value: "ローカル保管", label: "保存済み認証情報" },
+      { value: "10+", label: "対応サイト" },
+      { value: "1クリック", label: "自動入力" },
+    ],
     privacyPolicy: "プライバシーポリシー",
     termsOfService: "利用規約",
     contact: "お問い合わせ",
     rightsReserved: "All rights reserved.",
+    trustBadge: "プライバシーとコントロール",
   },
 } as const;
 
@@ -170,183 +188,453 @@ const FEATURE_ICONS = [
   ),
 ];
 
+const PRELOADER_KEY = "cygnet:b4-home-preloader-seen";
+type BootState = "bootPending" | "preloader" | "ready";
+
 export default function HomePage() {
   const { lang } = useLanguage();
   const t = COPY[lang];
+  const isJapanese = lang === "ja";
+  const [bootState, setBootState] = useState<BootState>("bootPending");
+  const [demoReady, setDemoReady] = useState(false);
+  const scrollRestorationRef = useRef<History["scrollRestoration"] | null>(null);
+  const forcePreloaderRef = useRef(false);
+  const homeReady = bootState === "ready";
+  const showPreloader = bootState === "preloader";
+
+  const restoreScrollRestoration = useCallback(() => {
+    if (!("scrollRestoration" in window.history)) {
+      return;
+    }
+
+    if (scrollRestorationRef.current !== null) {
+      window.history.scrollRestoration = scrollRestorationRef.current;
+      scrollRestorationRef.current = null;
+    }
+  }, []);
+
+  const resetScrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
+
+  const scrollToHashTarget = useCallback(() => {
+    const hash = window.location.hash;
+    if (!hash) {
+      return;
+    }
+
+    const targetId = decodeURIComponent(hash.slice(1));
+    if (!targetId) {
+      return;
+    }
+
+    document.getElementById(targetId)?.scrollIntoView();
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const forcePreloader = params.get("preloader") === "1";
+    const seen = !forcePreloader && window.sessionStorage.getItem(PRELOADER_KEY) === "1";
+    const hasHash = window.location.hash.length > 1;
+    forcePreloaderRef.current = forcePreloader;
+
+    if (seen) {
+      setBootState("ready");
+      return;
+    }
+
+    if (!hasHash) {
+      if ("scrollRestoration" in window.history) {
+        scrollRestorationRef.current = window.history.scrollRestoration;
+        window.history.scrollRestoration = "manual";
+      }
+      resetScrollToTop();
+    }
+
+    setBootState("preloader");
+
+    return () => {
+      restoreScrollRestoration();
+    };
+  }, [resetScrollToTop, restoreScrollRestoration]);
+
+  useEffect(() => {
+    if (!homeReady) {
+      setDemoReady(false);
+      return;
+    }
+
+    const demoTimer = window.setTimeout(() => setDemoReady(true), 450);
+    const scrollTimer = window.setTimeout(() => {
+      scrollToHashTarget();
+      restoreScrollRestoration();
+    }, 80);
+
+    return () => {
+      window.clearTimeout(demoTimer);
+      window.clearTimeout(scrollTimer);
+    };
+  }, [homeReady, restoreScrollRestoration, scrollToHashTarget]);
+
+  const finishPreloader = () => {
+    window.sessionStorage.setItem(PRELOADER_KEY, "1");
+    if (forcePreloaderRef.current) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("preloader");
+      window.history.replaceState(window.history.state, "", url.toString());
+      forcePreloaderRef.current = false;
+    }
+    setBootState("ready");
+  };
+
+  const revealClass = homeReady
+    ? "translate-y-0 opacity-100"
+    : "translate-y-3 opacity-0";
+
+  const heroTitleClass = isJapanese
+    ? "max-w-[34rem] text-[2.95rem] font-bold leading-[1.14] tracking-[-0.05em] sm:text-[3.7rem] lg:text-[4.3rem]"
+    : "max-w-[38rem] text-5xl font-bold leading-[1.1] tracking-tight md:text-6xl";
+  const heroSubtitleClass = isJapanese
+    ? "mt-6 max-w-[29rem] text-[0.99rem] leading-[1.95] text-brand-muted sm:text-[1.05rem]"
+    : "mt-6 max-w-lg text-lg leading-relaxed text-brand-muted";
+  const heroPrimaryButtonClass = isJapanese
+    ? "inline-flex h-14 items-center justify-center gap-3 rounded-full bg-brand px-7 text-[0.98rem] font-semibold leading-none text-white shadow-[0_16px_32px_rgba(78,144,216,0.2)] transition-colors hover:bg-brand-strong"
+    : "inline-flex h-14 items-center justify-center gap-3 rounded-full bg-brand px-8 text-base font-semibold leading-none text-white shadow-[0_16px_32px_rgba(78,144,216,0.2)] transition-colors hover:bg-brand-strong";
+  const heroSecondaryButtonClass = isJapanese
+    ? "inline-flex h-14 items-center gap-2 px-0 text-[0.98rem] font-semibold leading-none text-brand-ink transition-colors hover:text-brand"
+    : "inline-flex h-14 items-center gap-2 px-0 text-base font-semibold leading-none text-brand-ink transition-colors hover:text-brand";
+  const heroStatsWrapClass = isJapanese
+    ? "mt-12 grid max-w-[35rem] grid-cols-3 gap-4 sm:gap-7"
+    : "mt-12 grid max-w-[34rem] grid-cols-3 gap-6 sm:flex sm:gap-12";
+  const heroStatValueClass = isJapanese
+    ? "text-[1.9rem] font-bold leading-[0.98] tracking-[-0.05em] text-brand-ink sm:text-[2.25rem]"
+    : "text-3xl font-bold leading-none tracking-tight text-brand-ink";
+  const heroStatLabelClass = isJapanese
+    ? "mt-2 text-[0.8rem] leading-[1.45] text-brand-muted sm:text-[0.86rem]"
+    : "mt-2 text-sm leading-[1.45] text-brand-muted";
+
+  if (bootState === "bootPending") {
+    return <div aria-hidden="true" className="page-shell" />;
+  }
 
   return (
-    <div className="min-h-screen">
-      <section className="relative overflow-hidden">
-        <div
-          className="pointer-events-none absolute inset-0 -z-10"
-          style={{
-            background:
-              "radial-gradient(circle at 20% 0%, #cde8ff 0%, transparent 50%), radial-gradient(circle at 80% 10%, #d8f0ff 0%, transparent 40%), linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%)",
-          }}
-        />
-        <div className="mx-auto max-w-4xl px-6 pb-24 pt-24 text-center sm:pt-32">
-          <p className="mb-4 inline-block rounded-full border border-brand-line bg-white/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-brand-strong">
-            {t.heroBadge}
-          </p>
-          <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-[1.15] tracking-tight text-brand-ink sm:text-5xl lg:text-6xl">
-            {t.heroTitle.replace(t.heroTitleEmphasis, "")}
-            <span className="bg-gradient-to-r from-brand to-brand-strong bg-clip-text text-transparent">
-              {t.heroTitleEmphasis}
-            </span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-brand-muted">
-            {t.heroSubtitle}
-          </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <a
-              href="#"
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-strong px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand/25 transition-all hover:bg-brand-ink hover:shadow-brand/40"
-            >
-              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-              </svg>
-              {t.addToChrome}
-            </a>
-            <a
-              href="#how-it-works"
-              className="inline-flex items-center gap-2 rounded-xl border border-brand-line bg-white px-8 py-3.5 text-sm font-semibold text-brand-ink transition-all hover:border-brand hover:shadow-md"
-            >
-              {t.howItWorksCta}
-              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
-              </svg>
-            </a>
-          </div>
-        </div>
-      </section>
+    <div className="page-shell">
+      {showPreloader ? <LandingPreloader lang={lang} onDone={finishPreloader} /> : null}
 
-      <section id="how-it-works" className="py-24">
-        <div className="mx-auto max-w-5xl px-6">
-          <p className="text-center text-xs font-semibold uppercase tracking-widest text-brand">
-            {t.howItWorksTag}
-          </p>
-          <h2 className="mt-3 text-center text-3xl font-bold tracking-tight text-brand-ink sm:text-4xl">
-            {t.howItWorksTitle}
-          </h2>
-          <div className="mt-16 grid gap-8 sm:grid-cols-3">
-            {t.steps.map((s, index) => (
-              <div key={s.num} className="relative text-center">
-                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand/20 to-brand-strong/20 text-brand-strong">
-                  {STEP_ICONS[index]}
-                </div>
-                <div className="mb-2 text-xs font-bold uppercase tracking-widest text-brand">
-                  Step {s.num}
-                </div>
-                <h3 className="text-lg font-semibold text-brand-ink">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-brand-muted">
-                  {s.desc}
+      <div className={`relative transition-opacity duration-500 ${homeReady ? "opacity-100" : "opacity-0"}`}>
+        <section className="relative overflow-hidden pb-24 pt-20 sm:pb-28 sm:pt-24 lg:pt-32">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className="liquid-drift-slow absolute -top-20 -left-12 h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.98),rgba(211,232,253,0.44)_30%,rgba(160,197,240,0.12)_56%,transparent_76%)] blur-3xl" />
+            <div className="liquid-drift-medium absolute top-10 -right-16 h-[32rem] w-[32rem] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.92),rgba(196,221,248,0.42)_30%,rgba(138,185,235,0.12)_58%,transparent_78%)] blur-3xl" />
+            <div className="liquid-drift-fast absolute bottom-[-8rem] left-1/3 h-[22rem] w-[22rem] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.9),rgba(218,236,255,0.26)_30%,rgba(150,196,241,0.08)_56%,transparent_74%)] blur-3xl" />
+            <div className="liquid-shimmer absolute top-20 left-1/4 h-64 w-[26rem] rounded-full bg-[linear-gradient(120deg,rgba(255,255,255,0),rgba(255,255,255,0.78),rgba(255,255,255,0))] opacity-30 blur-3xl" />
+          </div>
+
+          <div className="mx-auto max-w-7xl px-6">
+            <div className={`grid items-center gap-16 transition-all duration-700 lg:grid-cols-2 ${revealClass}`}>
+              <div className={isJapanese ? "max-w-[36rem]" : ""}>
+                <p className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-white/70 bg-white/60 px-4 py-2 text-[0.74rem] font-semibold uppercase leading-none tracking-[0.16em] text-brand-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.84)] backdrop-blur-xl">
+                  <ChromeMarkIcon className="h-3.5 w-3.5 shrink-0 text-brand" />
+                  {t.heroBadge}
                 </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      <section className="border-y border-brand-line/60 bg-white/50 py-24">
-        <div className="mx-auto max-w-5xl px-6">
-          <p className="text-center text-xs font-semibold uppercase tracking-widest text-brand">
-            {t.featuresTag}
-          </p>
-          <h2 className="mt-3 text-center text-3xl font-bold tracking-tight text-brand-ink sm:text-4xl">
-            {t.featuresTitle}
-          </h2>
-          <div className="mt-16 grid gap-6 sm:grid-cols-2">
-            {t.features.map((f, index) => (
-              <div
-                key={f.title}
-                className="group rounded-2xl border border-brand-line bg-white p-6 shadow-sm transition-all hover:border-brand/40 hover:shadow-md"
-              >
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-brand-bg text-brand-strong transition-colors group-hover:bg-brand-strong group-hover:text-white">
-                  {FEATURE_ICONS[index]}
-                </div>
-                <h3 className="text-base font-semibold text-brand-ink">{f.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-brand-muted">
-                  {f.desc}
+                <h1 className={`text-brand-ink ${heroTitleClass}`}>
+                  {renderHeroTitle(lang, t.heroTitle, t.heroTitleEmphasis)}
+                </h1>
+
+                <p className={heroSubtitleClass}>
+                  {t.heroSubtitle}
                 </p>
+
+                <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+                  <a
+                    href={CHROME_WEB_STORE_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={heroPrimaryButtonClass}
+                  >
+                    <ChromeMarkIcon className="h-5 w-5 shrink-0 text-white" />
+                    {t.ctaButton}
+                  </a>
+                  <a
+                    href="#how-it-works"
+                    className={heroSecondaryButtonClass}
+                  >
+                    {t.howItWorksCta}
+                    <ArrowRightIcon />
+                  </a>
+                </div>
+
+                <div className={heroStatsWrapClass}>
+                  {t.heroStats.map((stat) => (
+                    <div key={`${stat.value}-${stat.label}`}>
+                      <div className={heroStatValueClass}>
+                        {stat.value}
+                      </div>
+                      <div className={heroStatLabelClass}>
+                        {stat.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      <section className="py-24">
-        <div className="mx-auto max-w-3xl px-6 text-center">
-          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand/20 to-brand-strong/20 text-brand-strong">
-            <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
-            </svg>
-          </div>
-          <h2 className="text-3xl font-bold tracking-tight text-brand-ink sm:text-4xl">
-            {t.trustTitle}
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-brand-muted">
-            {t.trustDesc}
-          </p>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-8 text-sm text-brand-muted">
-            <div className="flex items-center gap-2">
-              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-brand-strong" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-              </svg>
-              {t.trustPoint1}
-            </div>
-            <div className="flex items-center gap-2">
-              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-brand-strong" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-              </svg>
-              {t.trustPoint2}
-            </div>
-            <div className="flex items-center gap-2">
-              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-brand-strong" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-              </svg>
-              {t.trustPoint3}
+              <div className="relative lg:pl-3">
+                <div className="relative aspect-[4/3] overflow-visible rounded-3xl border border-white/58 bg-white/36 p-8 shadow-[0_24px_68px_rgba(15,124,171,0.14)] backdrop-blur-2xl">
+                  <div className="liquid-shimmer pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.92),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0.08)_56%,transparent_78%)] opacity-80" />
+                  <div className="liquid-drift-medium pointer-events-none absolute top-10 -right-8 h-36 w-36 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.86),rgba(161,232,255,0.3)_42%,transparent_72%)] blur-2xl" />
+                  <div className="relative z-20 mx-auto max-w-[28.5rem]">
+                    <LandingDemo lang={lang} active={demoReady} />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="border-t border-brand-line/60 bg-gradient-to-b from-white/50 to-brand-bg py-24">
-        <div className="mx-auto max-w-2xl px-6 text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-brand-ink sm:text-4xl">
-            {t.ctaTitle}
-          </h2>
-          <p className="mt-4 text-lg text-brand-muted">{t.ctaDesc}</p>
-          <a
-            href="#"
-            className="mt-8 inline-flex items-center gap-2 rounded-xl bg-brand-strong px-10 py-4 text-sm font-semibold text-white shadow-lg shadow-brand/25 transition-all hover:bg-brand-ink hover:shadow-brand/40"
-          >
-            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-            </svg>
-            {t.ctaButton}
-          </a>
-        </div>
-      </section>
+        <section id="how-it-works" className="py-24 sm:py-28">
+          <div className="mx-auto max-w-7xl px-6">
+            <div className="mb-16 max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">{t.howItWorksTag}</p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-brand-ink sm:text-4xl lg:text-5xl">
+                {t.howItWorksTitle}
+              </h2>
+            </div>
 
-      <footer className="border-t border-brand-line/60 bg-white/40">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 py-10 sm:flex-row">
-          <div className="text-sm font-semibold text-brand-ink">Cygnet</div>
-          <div className="flex gap-6 text-sm text-brand-muted">
-            <Link href="/privacy" className="transition-colors hover:text-brand-ink">
-              {t.privacyPolicy}
-            </Link>
-            <Link href="/terms" className="transition-colors hover:text-brand-ink">
-              {t.termsOfService}
-            </Link>
-            <Link href="/contact" className="transition-colors hover:text-brand-ink">
-              {t.contact}
-            </Link>
+            <div className="glass-panel overflow-hidden rounded-[2rem] md:grid md:grid-cols-3">
+              {t.steps.map((step, index) => (
+                <div
+                  key={step.num}
+                  className={`relative p-8 sm:p-10 ${
+                    index < t.steps.length - 1 ? "border-b border-white/45 md:border-b-0 md:border-r" : ""
+                  } border-white/45`}
+                >
+                  <div className="absolute right-6 top-6 text-6xl font-semibold text-white/45">{step.num}</div>
+                  <div className="relative">
+                    <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand text-white shadow-[0_14px_30px_rgba(15,124,171,0.2)]">
+                      {STEP_ICONS[index]}
+                    </div>
+                    <h3 className="text-xl font-semibold text-brand-ink">{step.title}</h3>
+                    <p className="mt-3 text-sm leading-relaxed text-brand-muted">{step.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <p className="text-xs text-brand-muted">
-            &copy; {new Date().getFullYear()} Cygnet. {t.rightsReserved}
-          </p>
-        </div>
-      </footer>
+        </section>
+
+        <section className="py-24 sm:py-28">
+          <div className="mx-auto max-w-7xl px-6">
+            <div className="mb-16 text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">{t.featuresTag}</p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-brand-ink sm:text-4xl lg:text-5xl">
+                {renderFeaturesTitle(lang, t.featuresTitle)}
+              </h2>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="glass-panel rounded-[2rem] p-8 sm:p-10 lg:col-span-2">
+                <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.9fr)]">
+                  <div>
+                    <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/46 text-brand shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                      {FEATURE_ICONS[0]}
+                    </div>
+                    <h3 className="text-2xl font-bold text-brand-ink">{t.features[0].title}</h3>
+                    <p className="mt-3 max-w-2xl leading-relaxed text-brand-muted">{t.features[0].desc}</p>
+                  </div>
+                  <div className="glass-panel-soft rounded-[1.5rem] p-6">
+                    <div className="space-y-3">
+                      {(lang === "ja"
+                        ? ["氏名", "フリガナ", "住所", "学歴"]
+                        : ["Name", "Furigana", "Address", "Education"]
+                      ).map((item) => (
+                        <div key={item} className="flex items-center gap-3">
+                          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[rgba(72,182,152,0.92)] text-white">
+                            <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" stroke="currentColor" strokeWidth={2.4}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                            </svg>
+                          </div>
+                          <span className="text-sm text-brand-ink/80">{item}</span>
+                          <div className="h-2 flex-1 rounded-full bg-[rgba(150,220,255,0.7)]" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {t.features.slice(1).map((feature, index) => (
+                <div key={feature.title} className="glass-panel rounded-[1.75rem] p-8">
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/48 text-brand shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                    {FEATURE_ICONS[index + 1]}
+                  </div>
+                  <h3 className="text-lg font-semibold text-brand-ink">{feature.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-brand-muted">{feature.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-24 sm:py-28">
+          <div className="mx-auto max-w-7xl px-6">
+            <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="glass-panel rounded-[2rem] p-8 sm:p-10">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">{t.trustBadge}</p>
+                <h2 className="mt-3 text-3xl font-bold tracking-tight text-brand-ink sm:text-4xl">{t.trustTitle}</h2>
+                <p className="mt-5 max-w-3xl text-lg leading-relaxed text-brand-muted">{t.trustDesc}</p>
+                <div className="mt-8 grid gap-3">
+                  {[t.trustPoint1, t.trustPoint2, t.trustPoint3].map((item) => (
+                    <div key={item} className="glass-panel-soft flex items-center gap-3 rounded-2xl px-4 py-3 text-sm text-brand-ink">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white">
+                        <CheckIcon />
+                      </div>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="glass-panel-strong flex aspect-square items-center justify-center rounded-[2rem]">
+                <div className="glass-panel flex h-36 w-36 items-center justify-center rounded-[2rem]">
+                  <ShieldIcon />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-24 sm:py-28">
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="glass-panel-dark relative overflow-hidden rounded-[2rem] p-8 text-center sm:p-12">
+              <div className="liquid-shimmer pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.28),rgba(255,255,255,0.02)_46%,transparent_72%)]" />
+              <div className="liquid-drift-slow pointer-events-none absolute -top-10 right-10 h-32 w-32 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.7),rgba(255,255,255,0)_68%)] blur-2xl" />
+              <div className="relative">
+                <h2 className="text-3xl font-bold tracking-tight text-[rgba(245,253,255,0.98)] sm:text-4xl">
+                  {t.ctaTitle}
+                </h2>
+                <p className="mx-auto mt-4 max-w-2xl text-lg text-[rgba(245,253,255,0.82)]">{t.ctaDesc}</p>
+                <a
+                  href={CHROME_WEB_STORE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="glass-button-secondary mt-8 px-10 py-4 text-sm font-semibold"
+                >
+                  <DownloadIcon />
+                  {t.ctaButton}
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer className="border-t border-white/45 bg-white/28 backdrop-blur-xl">
+          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 py-10 sm:flex-row">
+            <div className="text-sm font-semibold text-brand-ink">Cygnet</div>
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-brand-muted">
+              <Link href="/privacy" className="glass-nav-link">
+                {t.privacyPolicy}
+              </Link>
+              <Link href="/terms" className="glass-nav-link">
+                {t.termsOfService}
+              </Link>
+              <Link href="/contact" className="glass-nav-link">
+                {t.contact}
+              </Link>
+            </div>
+            <p className="text-xs text-brand-muted">
+              &copy; {new Date().getFullYear()} Cygnet. {t.rightsReserved}
+            </p>
+          </div>
+        </footer>
+      </div>
     </div>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2.4}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-20 w-20 text-brand" stroke="currentColor" strokeWidth={1.4}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+    </svg>
+  );
+}
+
+function renderFeaturesTitle(lang: "en" | "ja", title: string) {
+  if (lang !== "en") {
+    return title;
+  }
+
+  return (
+    <>
+      Everything you need for <span className="font-serif italic text-brand">shuukatsu</span>
+    </>
+  );
+}
+
+function renderHeroTitle(lang: "en" | "ja", title: string, emphasis: string) {
+  const leading = title.replace(emphasis, "").trim();
+
+  if (lang === "en") {
+    return (
+      <>
+        <span className="block">{leading}</span>
+        <span className="mt-1 block font-serif italic text-brand-ink">{emphasis}</span>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <span className="block">{leading}</span>
+      <span className="mt-4 block text-[0.72em] leading-[1.16] tracking-[-0.02em] text-brand">{emphasis}</span>
+    </>
+  );
+}
+
+function ChromeMarkIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M10.88 21.94 15.46 14" />
+      <path d="M21.17 8H12" />
+      <path d="M3.95 6.06 8.54 14" />
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="4" />
+    </svg>
+  );
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-5-5 5 5-5 5" />
+    </svg>
   );
 }

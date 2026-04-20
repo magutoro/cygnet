@@ -71,11 +71,11 @@ export default async function AuthConsentPage({
   const next = sanitizeNextPath(params.next ?? null);
 
   return (
-    <main className="min-h-screen bg-brand-bg">
+    <main className="page-shell">
       <div className="mx-auto max-w-2xl px-6 py-14">
         <Link
           href={next}
-          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-strong transition-colors hover:text-brand-ink"
+          className="glass-button-secondary mb-6 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
         >
           <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
@@ -83,11 +83,11 @@ export default async function AuthConsentPage({
           {t.back}
         </Link>
 
-        <div className="rounded-2xl border border-brand-line bg-white p-8 shadow-sm">
+        <div className="glass-panel rounded-[2rem] p-8 shadow-none">
           <h1 className="text-3xl font-extrabold tracking-tight text-brand-ink">{t.title}</h1>
           <p className="mt-3 leading-relaxed text-brand-muted">{t.intro}</p>
 
-          <section className="mt-8 rounded-2xl border border-brand-line bg-brand-bg/50 p-5">
+          <section className="glass-panel-soft mt-8 rounded-[1.5rem] p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-brand">{t.cardTitle}</h2>
             <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed text-brand-muted">
               {t.bullets.map((bullet) => (
@@ -112,19 +112,19 @@ export default async function AuthConsentPage({
             <input type="hidden" name="next" value={next} />
             <input type="hidden" name="confirmed" value="1" />
 
-            <label className="flex items-start gap-3 rounded-xl border border-brand-line bg-white p-4 text-sm text-brand-ink">
+            <label className="glass-panel-soft flex items-start gap-3 rounded-[1.5rem] p-4 text-sm text-brand-ink">
               <input
                 type="checkbox"
                 name="acknowledged"
                 required
-                className="mt-0.5 h-4 w-4 rounded border-brand-line text-brand focus:ring-brand"
+                className="glass-checkbox mt-0.5"
               />
               <span>{t.checkbox}</span>
             </label>
 
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-lg bg-brand-strong px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-ink"
+              className="glass-button-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />

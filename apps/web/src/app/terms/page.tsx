@@ -132,11 +132,11 @@ export default async function TermsPage() {
   const t = COPY[lang];
 
   return (
-    <main className="min-h-screen bg-brand-bg">
+    <main className="page-shell">
       <div className="mx-auto max-w-3xl px-6 py-14">
         <Link
           href="/"
-          className="mb-6 inline-flex items-center gap-1 text-sm font-semibold text-brand-strong transition-colors hover:text-brand-ink"
+          className="glass-button-secondary mb-6 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
         >
           <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
@@ -144,7 +144,7 @@ export default async function TermsPage() {
           {t.backToWebsite}
         </Link>
 
-        <div className="rounded-3xl border border-brand-line bg-white p-8 shadow-sm sm:p-10">
+        <div className="glass-panel rounded-[2rem] p-8 shadow-none sm:p-10">
           <h1 className="text-3xl font-extrabold tracking-tight text-brand-ink sm:text-4xl">
             {t.title}
           </h1>
@@ -164,7 +164,7 @@ export default async function TermsPage() {
             ))}
           </div>
 
-          <div className="mt-10 rounded-2xl border border-brand-line bg-brand-bg/40 p-5 text-sm text-brand-muted">
+          <div className="glass-panel-soft mt-10 rounded-[1.5rem] p-5 text-sm text-brand-muted">
             <div className="grid gap-2 sm:grid-cols-[140px_1fr]">
               <span className="font-semibold text-brand-ink">{t.contactNameLabel}</span>
               <span>{t.contactNameValue}</span>

@@ -36,12 +36,12 @@ export default function LanguageSwitcher() {
         onClick={() => setOpen((prev) => !prev)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="inline-flex items-center gap-2 rounded-lg border border-brand-line bg-white px-3 py-2 text-xs font-semibold text-brand-muted transition-colors hover:border-brand hover:text-brand-ink"
+        className="glass-button-secondary inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-[15px] font-medium leading-none"
       >
         <svg
           viewBox="0 0 24 24"
           fill="none"
-          className="h-4 w-4"
+          className="h-4 w-4 shrink-0"
           stroke="currentColor"
           strokeWidth={2}
         >
@@ -55,7 +55,7 @@ export default function LanguageSwitcher() {
         <svg
           viewBox="0 0 24 24"
           fill="none"
-          className="h-3.5 w-3.5"
+          className="h-3.5 w-3.5 shrink-0"
           stroke="currentColor"
           strokeWidth={2}
         >
@@ -66,7 +66,7 @@ export default function LanguageSwitcher() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-50 mt-2 w-32 rounded-xl border border-brand-line bg-white p-1.5 shadow-lg"
+          className="glass-panel-strong absolute right-0 z-50 mt-2 w-32 rounded-2xl p-1.5"
         >
           <button
             type="button"
@@ -75,8 +75,8 @@ export default function LanguageSwitcher() {
             onClick={() => apply("en")}
             className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm ${
               lang === "en"
-                ? "bg-brand-bg font-semibold text-brand-ink"
-                : "text-brand-muted hover:bg-brand-bg/60"
+                ? "bg-white/60 font-semibold text-brand-ink"
+                : "text-brand-muted hover:bg-white/40"
             }`}
           >
             <span>EN</span>
@@ -89,8 +89,8 @@ export default function LanguageSwitcher() {
             onClick={() => apply("ja")}
             className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm ${
               lang === "ja"
-                ? "bg-brand-bg font-semibold text-brand-ink"
-                : "text-brand-muted hover:bg-brand-bg/60"
+                ? "bg-white/60 font-semibold text-brand-ink"
+                : "text-brand-muted hover:bg-white/40"
             }`}
           >
             <span>JP</span>
@@ -101,4 +101,3 @@ export default function LanguageSwitcher() {
     </div>
   );
 }
-

@@ -223,12 +223,12 @@ export default function ResumeManager({
   );
 
   return (
-    <div className="rounded-2xl border border-brand-line bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-white/72 bg-white/70 p-6 shadow-[0_10px_30px_rgba(77,127,181,0.08)] backdrop-blur-md">
       <h2 className="mb-2 text-lg font-semibold text-brand-ink">{t.title}</h2>
       <p className="mb-4 text-xs text-brand-muted">{t.replaceHint}</p>
 
       {/* Upload area */}
-      <label className="mb-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-brand-line bg-brand-bg/30 px-4 py-8 text-center transition-colors hover:border-brand hover:bg-brand-bg/60">
+      <label className="mb-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-brand-line bg-white/38 px-4 py-8 text-center transition-colors hover:border-brand hover:bg-white/54">
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -260,13 +260,13 @@ export default function ResumeManager({
       </label>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50/90 px-4 py-2 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {notice && (
-        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50/90 px-4 py-2 text-sm text-emerald-700">
           {notice}
         </div>
       )}
@@ -281,7 +281,7 @@ export default function ResumeManager({
           {resumes.map((r) => (
             <li
               key={r.id}
-              className="rounded-xl border border-brand-line bg-brand-bg/20 p-4"
+              className="rounded-xl border border-white/72 bg-white/48 p-4 backdrop-blur-[2px]"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
@@ -320,7 +320,7 @@ export default function ResumeManager({
                   type="button"
                   onClick={() => parseResume(r)}
                   disabled={parsing === r.id}
-                  className="rounded-lg border border-brand-line px-3 py-1.5 text-xs font-medium text-brand-muted transition-colors hover:border-brand hover:text-brand-ink disabled:opacity-50"
+                  className="rounded-lg border border-brand-line bg-white/68 px-3 py-1.5 text-xs font-medium text-brand-muted transition-colors hover:border-brand hover:text-brand-ink disabled:opacity-50"
                 >
                   {parsing === r.id ? t.parsing : t.parse}
                 </button>

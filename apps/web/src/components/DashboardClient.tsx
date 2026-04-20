@@ -110,7 +110,7 @@ export default function DashboardClient({
         />
       </div>
 
-      <div className="rounded-2xl border border-brand-line bg-white p-4">
+      <div className="rounded-2xl border border-white/72 bg-white/66 p-4 shadow-[0_10px_30px_rgba(77,127,181,0.08)] backdrop-blur-md">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-brand-ink">{t.bridgeTitle}</p>
@@ -124,7 +124,7 @@ export default function DashboardClient({
               syncSessionToExtension(false).catch(() => {});
             }}
             disabled={bridgeBusy}
-            className="rounded-lg border border-brand-line px-3 py-2 text-xs font-medium text-brand-muted transition-colors hover:border-brand hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-brand-line bg-white/70 px-3 py-2 text-xs font-medium text-brand-muted transition-colors hover:border-brand hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-60"
           >
             {bridgeBusy ? t.syncing : t.syncNow}
           </button>
