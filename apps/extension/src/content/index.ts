@@ -85,13 +85,15 @@ interface OverlayRefs {
   launcher: HTMLElement;
   hideLauncherBtn: HTMLElement;
   closeBtn: HTMLElement;
+  cancelBtn: HTMLButtonElement;
   authEmail: HTMLElement;
+  authBadge: HTMLElement;
   signInBtn: HTMLButtonElement;
   logoutBtn: HTMLButtonElement;
   controlsWrap: HTMLElement;
   enabledToggle: HTMLInputElement;
   autofillBtn: HTMLElement;
-  openDashboardBtn: HTMLButtonElement;
+  openDashboardBtns: HTMLButtonElement[];
   tabsWrap: HTMLElement;
   tabMainBtn: HTMLButtonElement;
   tabAdditionalBtn: HTMLButtonElement;
@@ -4695,7 +4697,7 @@ function renderCredentialPrompt(targetId: string | "add", mode: "reveal" | "save
   const input = document.createElement("input");
   input.className = "mg-cred-input";
   input.type = "password";
-  input.placeholder = credentialVaultState.hasVault ? "Passphrase" : "Create passphrase";
+  input.placeholder = credentialVaultState.hasVault ? "パスフレーズ" : "新しいパスフレーズ";
   input.value = draft.passphrase;
   input.addEventListener("input", () => updateCredentialDraft(targetId, { passphrase: input.value }));
 
@@ -4705,16 +4707,16 @@ function renderCredentialPrompt(targetId: string | "add", mode: "reveal" | "save
   confirm.textContent =
     mode === "reveal"
       ? credentialVaultState.hasVault
-        ? "Reveal"
-        : "Create"
+        ? "表示"
+        : "作成"
       : credentialVaultState.hasVault
-        ? "Save"
-        : "Create";
+        ? "保存"
+        : "作成";
 
   const cancel = document.createElement("button");
   cancel.type = "button";
   cancel.className = "mg-btn secondary mg-cred-mini-btn";
-  cancel.textContent = "Cancel";
+  cancel.textContent = "キャンセル";
 
   cancel.addEventListener("click", () => {
     credentialPromptId = null;
@@ -4760,7 +4762,7 @@ function renderCredentialSummaryRow(entry: CredentialSummary): HTMLDivElement {
 
     const companyInput = document.createElement("input");
     companyInput.className = "mg-cred-input";
-    companyInput.placeholder = "Company name";
+    companyInput.placeholder = "会社名";
     companyInput.value = draft.label;
     companyInput.addEventListener("input", () =>
       updateCredentialDraft(entry.id, { label: companyInput.value })
@@ -4768,7 +4770,7 @@ function renderCredentialSummaryRow(entry: CredentialSummary): HTMLDivElement {
 
     const usernameInput = document.createElement("input");
     usernameInput.className = "mg-cred-input";
-    usernameInput.placeholder = "Username";
+    usernameInput.placeholder = "ユーザー名";
     usernameInput.value = draft.username;
     usernameInput.addEventListener("input", () =>
       updateCredentialDraft(entry.id, { username: usernameInput.value })
@@ -4777,7 +4779,7 @@ function renderCredentialSummaryRow(entry: CredentialSummary): HTMLDivElement {
     const passwordInput = document.createElement("input");
     passwordInput.className = "mg-cred-input";
     passwordInput.type = "password";
-    passwordInput.placeholder = "Leave blank to keep password";
+    passwordInput.placeholder = "変更しない場合は空欄";
     passwordInput.value = draft.password;
     passwordInput.addEventListener("input", () =>
       updateCredentialDraft(entry.id, { password: passwordInput.value })
@@ -4788,11 +4790,11 @@ function renderCredentialSummaryRow(entry: CredentialSummary): HTMLDivElement {
     const saveButton = document.createElement("button");
     saveButton.type = "button";
     saveButton.className = "mg-btn mg-cred-mini-btn";
-    saveButton.textContent = "Save";
+    saveButton.textContent = "保存";
     const cancelButton = document.createElement("button");
     cancelButton.type = "button";
     cancelButton.className = "mg-btn secondary mg-cred-mini-btn";
-    cancelButton.textContent = "Cancel";
+    cancelButton.textContent = "キャンセル";
     actions.append(saveButton, cancelButton);
 
     saveButton.addEventListener("click", () => {
@@ -4816,15 +4818,15 @@ function renderCredentialSummaryRow(entry: CredentialSummary): HTMLDivElement {
   const info = document.createElement("div");
   info.className = "mg-cred-info";
   info.append(
-    createCredentialCopyCard("Company", entry.label || entry.host, "会社名をコピーしました"),
-    createCredentialCopyCard("Username", entry.username, "ユーザー名をコピーしました")
+    createCredentialCopyCard("会社名", entry.label || entry.host, "会社名をコピーしました"),
+    createCredentialCopyCard("ユーザー名", entry.username, "ユーザー名をコピーしました")
   );
 
   const passwordButton = document.createElement("button");
   passwordButton.type = "button";
   passwordButton.className = "mg-cred-password";
   const visiblePassword = revealedCredentialPasswords.get(entry.id);
-  passwordButton.textContent = visiblePassword || "Click to reveal";
+  passwordButton.textContent = visiblePassword || "クリックして表示";
   passwordButton.addEventListener("click", async () => {
     if (visiblePassword) {
       const ok = await copyTextToClipboard(visiblePassword);
@@ -4842,7 +4844,7 @@ function renderCredentialSummaryRow(entry: CredentialSummary): HTMLDivElement {
   const editButton = document.createElement("button");
   editButton.type = "button";
   editButton.className = "mg-btn secondary mg-cred-mini-btn";
-  editButton.textContent = "Edit";
+  editButton.textContent = "編集";
   editButton.addEventListener("click", () => {
     credentialEditingId = entry.id;
     credentialPromptId = null;
@@ -4858,7 +4860,7 @@ function renderCredentialSummaryRow(entry: CredentialSummary): HTMLDivElement {
   const deleteButton = document.createElement("button");
   deleteButton.type = "button";
   deleteButton.className = "mg-btn secondary mg-cred-mini-btn";
-  deleteButton.textContent = "Delete";
+  deleteButton.textContent = "削除";
   deleteButton.addEventListener("click", async () => {
     try {
       await deleteCredentialEntryFromRuntime(entry.id);
@@ -4896,7 +4898,7 @@ function renderCredentialComposer(): HTMLDivElement {
     const addButton = document.createElement("button");
     addButton.type = "button";
     addButton.className = "mg-btn secondary";
-    addButton.textContent = "Add login";
+    addButton.textContent = "ログイン情報を追加";
     addButton.addEventListener("click", () => {
       credentialEditingId = "add";
       credentialPromptId = null;
@@ -4924,13 +4926,13 @@ function renderCredentialComposer(): HTMLDivElement {
 
   const companyInput = document.createElement("input");
   companyInput.className = "mg-cred-input";
-  companyInput.placeholder = "Company name";
+  companyInput.placeholder = "会社名";
   companyInput.value = draft.label;
   companyInput.addEventListener("input", () => updateCredentialDraft("add", { label: companyInput.value }));
 
   const usernameInput = document.createElement("input");
   usernameInput.className = "mg-cred-input";
-  usernameInput.placeholder = "Username";
+  usernameInput.placeholder = "ユーザー名";
   usernameInput.value = draft.username;
   usernameInput.addEventListener("input", () =>
     updateCredentialDraft("add", { username: usernameInput.value })
@@ -4939,7 +4941,7 @@ function renderCredentialComposer(): HTMLDivElement {
   const passwordInput = document.createElement("input");
   passwordInput.className = "mg-cred-input";
   passwordInput.type = "password";
-  passwordInput.placeholder = "Password";
+  passwordInput.placeholder = "パスワード";
   passwordInput.value = draft.password;
   passwordInput.addEventListener("input", () =>
     updateCredentialDraft("add", { password: passwordInput.value })
@@ -4950,11 +4952,11 @@ function renderCredentialComposer(): HTMLDivElement {
   const saveButton = document.createElement("button");
   saveButton.type = "button";
   saveButton.className = "mg-btn mg-cred-mini-btn";
-  saveButton.textContent = "Save";
+  saveButton.textContent = "保存";
   const cancelButton = document.createElement("button");
   cancelButton.type = "button";
   cancelButton.className = "mg-btn secondary mg-cred-mini-btn";
-  cancelButton.textContent = "Cancel";
+  cancelButton.textContent = "キャンセル";
   actions.append(saveButton, cancelButton);
 
   saveButton.addEventListener("click", () => {
@@ -4990,13 +4992,13 @@ function renderCredentialSections(): void {
   header.className = "mg-cred-header";
   const title = document.createElement("h3");
   title.className = "mg-section-title";
-  title.textContent = "Saved logins";
+  title.textContent = "保存済みログイン情報";
   const headerActions = document.createElement("div");
   headerActions.className = "mg-cred-header-actions";
   const refreshButton = document.createElement("button");
   refreshButton.className = "mg-btn secondary";
   refreshButton.type = "button";
-  refreshButton.textContent = "Refresh";
+  refreshButton.textContent = "更新";
   refreshButton.addEventListener("click", async () => {
     await refreshCredentialData();
     renderCredentialSections();
@@ -5053,6 +5055,8 @@ function applyOverlayAuthUi(state: { authenticated: boolean; email: string }, se
   const { authenticated, email } = state;
 
   overlayRefs.authEmail.textContent = email || "";
+  overlayRefs.authBadge.textContent = authenticated ? "確認済み" : "未ログイン";
+  overlayRefs.authBadge.classList.toggle("is-authenticated", authenticated);
 
   overlayRefs.signInBtn.classList.toggle("is-hidden", authenticated);
   overlayRefs.logoutBtn.classList.toggle("is-hidden", !authenticated);
@@ -5081,72 +5085,82 @@ function ensureInPageOverlay(): OverlayRefs | null {
   shadow.innerHTML = `
     <style>
       .mg-root { position: fixed; inset: 0; pointer-events: none; z-index: 2147483646; font-family: "Inter", "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", sans-serif; }
-      .mg-panel { pointer-events: auto; position: fixed; top: 14px; right: 14px; width: min(448px, calc(100vw - 32px)); height: calc(100vh - 28px); background: linear-gradient(180deg, #f7fbff 0%, #edf6ff 100%); border: 1px solid rgba(216, 233, 249, 0.82); border-radius: 22px; box-shadow: -16px 0 34px rgba(67, 126, 178, 0.2); transform: translateX(calc(100% + 18px)); transition: transform .22s ease; display: flex; flex-direction: column; overflow: hidden; }
+      .mg-panel { pointer-events: auto; position: fixed; top: 12px; right: 12px; width: min(420px, calc(100vw - 24px)); height: calc(100vh - 24px); background: radial-gradient(circle at 0% 100%, rgba(226, 163, 255, 0.28) 0%, transparent 34%), radial-gradient(circle at 100% 0%, rgba(150, 170, 255, 0.2) 0%, transparent 36%), linear-gradient(180deg, rgba(255, 249, 254, 0.58) 0%, rgba(244, 232, 255, 0.44) 100%); border: 1px solid rgba(255, 255, 255, 0.36); border-radius: 24px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.52), inset 0 -1px 0 rgba(255,255,255,0.18), -18px 0 42px rgba(166, 137, 212, 0.2), 0 18px 42px rgba(140, 126, 180, 0.18); backdrop-filter: blur(28px) saturate(170%); -webkit-backdrop-filter: blur(28px) saturate(170%); transform: translateX(calc(100% + 18px)); transition: transform .22s ease; display: flex; flex-direction: column; overflow: hidden; }
       .mg-root.is-open .mg-panel { transform: translateX(0); }
       .mg-launcher-wrap { display: none; pointer-events: auto; position: fixed; right: 12px; width: 56px; height: 56px; }
       .mg-root.launcher-visible .mg-launcher-wrap { display: block; }
       .mg-root.is-open .mg-launcher-wrap { opacity: 0; transform: translateX(8px); pointer-events: none; transition: opacity .15s ease, transform .15s ease; }
-      .mg-launcher { width: 56px; height: 56px; border: 1px solid #c8e2fa; border-radius: 14px; background: linear-gradient(120deg, #5ba8e8 0%, #3c91d8 100%); color: #fff; font-size: 30px; font-weight: 800; line-height: 1; cursor: grab; box-shadow: 0 10px 22px rgba(73, 143, 200, 0.34); display: flex; align-items: center; justify-content: center; padding: 0; }
-      .mg-launcher img { width: 28px; height: 28px; object-fit: contain; pointer-events: none; user-select: none; filter: drop-shadow(0 0 6px rgba(183, 231, 255, 0.4)); }
+      .mg-launcher { width: 56px; height: 56px; border: 1px solid rgba(255,255,255,0.42); border-radius: 18px; background: linear-gradient(145deg, rgba(137, 118, 255, 0.94) 0%, rgba(84, 98, 255, 0.96) 100%); color: #fff; font-size: 30px; font-weight: 800; line-height: 1; cursor: grab; box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), 0 12px 24px rgba(90, 100, 207, 0.34); display: flex; align-items: center; justify-content: center; padding: 0; }
+      .mg-launcher img { width: 28px; height: 28px; object-fit: contain; pointer-events: none; user-select: none; filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.28)); }
       .mg-launcher:active { cursor: grabbing; }
-      .mg-launcher-hide { position: absolute; top: -8px; left: -8px; width: 22px; height: 22px; border: none; border-radius: 999px; background: #315a7f; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; opacity: 0; transform: scale(.9); transition: opacity .12s ease, transform .12s ease; }
+      .mg-launcher-hide { position: absolute; top: -8px; left: -8px; width: 22px; height: 22px; border: none; border-radius: 999px; background: #49426d; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; opacity: 0; transform: scale(.9); transition: opacity .12s ease, transform .12s ease; }
       .mg-launcher-wrap:hover .mg-launcher-hide { opacity: 1; transform: scale(1); }
-      .mg-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 18px 12px; border-bottom: 1px solid #d8e9f9; background: #ffffff; }
-      .mg-title { margin: 0; font-size: 24px; font-weight: 800; color: #1c3551; letter-spacing: -0.01em; }
-      .mg-header-actions { display: flex; gap: 8px; }
-      .mg-icon-btn { border: 1px solid #c8e2fa; background: #edf7ff; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; color: #2d6fa8; font-weight: 700; }
-      .mg-body { flex: 1; overflow: auto; padding: 12px 18px 18px; display: grid; align-content: start; gap: 10px; }
-      .mg-auth-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid rgba(216, 233, 249, 0.78); background: rgba(255, 255, 255, 0.95); border-radius: 14px; padding: 10px 12px; box-shadow: 0 8px 20px rgba(72, 131, 182, 0.08); }
-      .mg-auth-email { margin: 0; min-width: 0; font-size: 12px; color: #3f6387; line-height: 1.35; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .mg-header { padding: 18px 20px 14px; background: linear-gradient(180deg, rgba(255,255,255,0.34) 0%, rgba(255,249,253,0.18) 100%); border-bottom: 1px solid rgba(255,255,255,0.26); backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%); }
+      .mg-header-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .mg-title { margin: 0; font-size: 18px; font-weight: 760; color: rgba(37, 33, 59, 0.72); letter-spacing: -0.015em; }
+      .mg-icon-btn { border: none; background: transparent; border-radius: 999px; width: 28px; height: 28px; cursor: pointer; color: #30294b; font-size: 20px; line-height: 1; }
+      .mg-auth-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+      .mg-auth-meta { display: grid; gap: 6px; min-width: 0; }
+      .mg-auth-email-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+      .mg-auth-email { margin: 0; min-width: 0; font-size: 14px; color: #433b63; line-height: 1.35; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .mg-auth-badge { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; padding: 0 10px; border-radius: 999px; background: rgba(255,255,255,0.42); color: #59527a; font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid rgba(255,255,255,0.34); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4); }
+      .mg-auth-badge.is-authenticated { background: rgba(122, 110, 255, 0.14); color: #4d43d6; border-color: rgba(145, 132, 255, 0.26); }
       .mg-auth-actions { display: flex; gap: 8px; flex: 0 0 auto; }
-      .mg-auth-actions .mg-btn { min-height: 32px; padding: 7px 12px; border-radius: 10px; font-size: 11px; }
-      .mg-controls { display: grid; gap: 8px; }
-      .mg-actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
-      .mg-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-      .mg-tab { border: 1px solid #d8e9f9; border-radius: 999px; padding: 8px 10px; background: #ffffff; color: #315a7f; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s ease; text-align: center; min-width: 0; }
-      .mg-tab:hover { border-color: #9fcff2; color: #1c3551; }
-      .mg-tab.is-active { border-color: #3c91d8; background: #3c91d8; color: #ffffff; }
-      .mg-btn { flex: 1; border: 1px solid #c8e2fa; border-radius: 13px; padding: 10px 13px; cursor: pointer; font-weight: 700; color: #fff; background: linear-gradient(120deg, #5ba8e8 0%, #3c91d8 100%); box-shadow: 0 8px 16px rgba(73, 143, 200, 0.24); font-size: 12px; min-height: 40px; }
-      .mg-btn.secondary { background: #edf7ff; color: #2d6fa8; border: 1px solid #c8e2fa; box-shadow: none; }
-      .mg-toggle { display: flex; align-items: center; justify-content: space-between; border: 1px solid #d8e9f9; background: #ffffff; border-radius: 13px; padding: 8px 12px; font-size: 12px; color: #1c3551; font-weight: 700; min-height: 40px; }
-      .mg-toggle input { width: 16px; height: 16px; accent-color: #3c91d8; }
-      .mg-status { min-height: 1.25em; margin: 0; color: #3f6387; font-size: 12px; font-weight: 700; }
-      .mg-sections { display: grid; gap: 12px; }
-      .mg-help-inline { margin: 0 0 10px; color: #5d7896; font-size: 12px; line-height: 1.5; }
+      .mg-auth-actions .mg-btn { min-height: 36px; padding: 8px 12px; font-size: 12px; border-radius: 12px; }
+      .mg-body { flex: 1; overflow: auto; padding: 18px 20px 20px; display: grid; align-content: start; gap: 16px; }
+      .mg-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 6px; border-radius: 18px; background: rgba(255, 255, 255, 0.34); box-shadow: inset 0 1px 0 rgba(255,255,255,0.34), inset 0 0 0 1px rgba(239, 230, 255, 0.54); backdrop-filter: blur(14px) saturate(145%); -webkit-backdrop-filter: blur(14px) saturate(145%); }
+      .mg-tab { border: none; border-radius: 14px; min-height: 38px; padding: 8px 10px; background: transparent; color: #574f77; font-size: 12px; font-weight: 800; cursor: pointer; transition: all .16s ease; text-align: center; min-width: 0; }
+      .mg-tab:hover { color: #2e274a; }
+      .mg-tab.is-active { background: linear-gradient(180deg, rgba(255,255,255,0.82) 0%, rgba(255,250,255,0.62) 100%); color: #2e274a; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 8px 18px rgba(120, 102, 172, 0.14); }
+      .mg-controls { display: grid; gap: 10px; }
+      .mg-control-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px; border-radius: 18px; background: linear-gradient(180deg, rgba(231, 214, 255, 0.5) 0%, rgba(214, 198, 255, 0.32) 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.48), 0 12px 28px rgba(152, 129, 218, 0.16); border: 1px solid rgba(255,255,255,0.34); backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%); }
+      .mg-control-icon { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(145deg, rgba(137, 118, 255, 0.98) 0%, rgba(84, 98, 255, 0.98) 100%); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), 0 10px 18px rgba(90, 100, 207, 0.3); }
+      .mg-control-copy { display: grid; gap: 4px; min-width: 0; }
+      .mg-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #4f466d; font-weight: 700; }
+      .mg-toggle input { width: 16px; height: 16px; accent-color: #5665ff; }
+      .mg-btn { flex: 1; border: 1px solid rgba(170, 181, 255, 0.44); border-radius: 14px; padding: 10px 14px; cursor: pointer; font-weight: 800; color: #fff; background: linear-gradient(145deg, rgba(129, 112, 255, 0.98) 0%, rgba(84, 98, 255, 0.98) 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.26), 0 12px 22px rgba(90, 100, 207, 0.28); font-size: 12px; min-height: 42px; }
+      .mg-btn:hover { filter: brightness(1.02); }
+      .mg-btn.secondary { background: rgba(255,255,255,0.26); color: #2f2947; border: 1px solid rgba(255,255,255,0.32); box-shadow: inset 0 1px 0 rgba(255,255,255,0.38), 0 8px 18px rgba(146, 124, 203, 0.08); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); }
+      .mg-status { min-height: 1.3em; margin: -6px 2px 0; color: #6f668d; font-size: 12px; font-weight: 700; }
+      .mg-sections { display: grid; gap: 18px; }
+      .mg-help-inline { margin: 0 0 10px; color: #7a7198; font-size: 12px; line-height: 1.5; }
       .mg-cred-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
       .mg-cred-header .mg-section-title { margin: 0; }
       .mg-cred-header-actions { display: flex; gap: 8px; }
-      .mg-cred-list { display: grid; gap: 10px; }
-      .mg-cred-item { border: 1px solid #d8e9f9; border-radius: 14px; background: #fbfdff; padding: 10px; display: grid; gap: 8px; }
-      .mg-cred-info { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
-      .mg-cred-copy { border: 1px solid #d8e9f9; border-radius: 12px; background: #f8fcff; padding: 9px 10px; min-width: 0; min-height: 72px; height: 100%; display: grid; align-content: start; }
+      .mg-cred-list { display: grid; gap: 16px; }
+      .mg-cred-item { display: grid; gap: 10px; }
+      .mg-cred-info { display: grid; grid-template-columns: 1fr; gap: 12px; }
+      .mg-cred-copy { border: 1px solid rgba(255,255,255,0.3); border-radius: 14px; background: rgba(255, 255, 255, 0.22); padding: 12px 14px; min-width: 0; min-height: 74px; height: 100%; display: grid; align-content: start; box-shadow: inset 0 1px 0 rgba(255,255,255,0.38), 0 8px 18px rgba(170, 150, 214, 0.08); backdrop-filter: blur(14px) saturate(145%); -webkit-backdrop-filter: blur(14px) saturate(145%); }
       .mg-cred-copy.is-empty { opacity: 0.7; }
-      .mg-cred-copy .mg-copy-value { display: block; width: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mg-cred-copy .mg-copy-value { display: block; width: auto; white-space: pre-wrap; word-break: break-word; }
       .mg-cred-inline-actions { display: flex; align-items: stretch; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
-      .mg-cred-password { flex: 1 1 120px; text-align: left; border: 1px solid #c8e2fa; border-radius: 12px; background: #edf7ff; color: #2d6fa8; min-height: 36px; padding: 8px 12px; font-size: 12px; font-weight: 700; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .mg-cred-password.is-copied { background: #dcefff; }
-      .mg-cred-mini-btn { min-width: 62px !important; min-height: 34px; padding: 8px 10px; font-size: 11px; border-radius: 10px; box-shadow: none; flex: 0 0 auto; }
+      .mg-cred-password { flex: 1 1 140px; text-align: left; border: 1px solid rgba(170, 181, 255, 0.44); border-radius: 14px; background: linear-gradient(145deg, rgba(129, 112, 255, 0.98) 0%, rgba(84, 98, 255, 0.98) 100%); color: #fff; min-height: 42px; padding: 10px 14px; font-size: 12px; font-weight: 800; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), 0 10px 20px rgba(90, 100, 207, 0.22); }
+      .mg-cred-password.is-copied { filter: brightness(1.03); }
+      .mg-cred-mini-btn { min-width: 72px !important; min-height: 38px; padding: 9px 12px; font-size: 11px; border-radius: 12px; box-shadow: none; flex: 0 0 auto; }
       .mg-cred-empty { margin: 0; padding: 12px 10px; }
       .mg-cred-composer { margin-top: 12px; }
-      .mg-cred-editor { display: grid; gap: 8px; }
+      .mg-cred-editor { display: grid; gap: 12px; }
       .mg-cred-prompt { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
-      .mg-cred-input { width: 100%; border: 1px solid #d8e9f9; border-radius: 10px; padding: 10px; font-size: 12px; color: #1c3551; background: #f8fcff; }
-      .mg-cred-input:focus { outline: none; border-color: #76b8ea; box-shadow: 0 0 0 2px rgba(118, 184, 234, 0.16); background: #ffffff; }
-      .mg-section { background: #ffffff; border: 1px solid rgba(216, 233, 249, 0.78); border-radius: 14px; padding: 10px; box-shadow: 0 8px 20px rgba(72, 131, 182, 0.08); }
-      .mg-section-title { margin: 2px 2px 8px; font-size: 14px; color: #1c3551; font-weight: 700; }
-      .mg-grid { display: grid; gap: 8px; }
-      .mg-copy { text-align: left; border: 1px solid #d8e9f9; border-radius: 12px; background: #ffffff; padding: 10px 12px; display: grid; gap: 4px; min-height: 64px; }
-      .mg-copy:hover { border-color: #d8e9f9; background: #f8fcff; }
-      .mg-copy.is-empty { opacity: 0.7; background: #f2f8ff; }
-      .mg-copy-full { text-align: left; border: none; background: transparent; padding: 0; margin: 0; cursor: pointer; display: grid; gap: 4px; }
+      .mg-cred-input { width: 100%; border: 1px solid rgba(255,255,255,0.3); border-radius: 14px; padding: 13px 14px; font-size: 13px; color: #30294b; background: rgba(255, 255, 255, 0.22); box-shadow: inset 0 1px 0 rgba(255,255,255,0.38), 0 8px 18px rgba(170, 150, 214, 0.08); backdrop-filter: blur(12px) saturate(140%); -webkit-backdrop-filter: blur(12px) saturate(140%); }
+      .mg-cred-input:focus { outline: none; border-color: rgba(153, 142, 255, 0.52); box-shadow: 0 0 0 3px rgba(118, 126, 255, 0.1), inset 0 1px 0 rgba(255,255,255,0.5); background: rgba(255,255,255,0.42); }
+      .mg-section { display: grid; gap: 12px; }
+      .mg-section-title { margin: 0 0 2px; font-size: 14px; color: #2f2947; font-weight: 800; }
+      .mg-grid { display: grid; gap: 14px; }
+      .mg-copy { text-align: left; border: none; background: transparent; padding: 0; display: grid; gap: 0; min-height: 0; }
+      .mg-copy:hover { background: transparent; }
+      .mg-copy.is-empty { opacity: 0.84; }
+      .mg-copy-full { text-align: left; border: none; background: transparent; padding: 0; margin: 0; cursor: pointer; display: grid; gap: 6px; }
       .mg-copy-full:disabled { cursor: default; }
-      .mg-copy-full.is-copied .mg-copy-value { background: transparent; box-shadow: inset 0 -0.58em 0 #dcefff; }
-      .mg-copy-label { font-size: 11px; color: #5d7896; font-weight: 700; }
-      .mg-copy-value { font-size: 14px; color: #1c3551; white-space: pre-wrap; word-break: break-word; line-height: 1.38; display: inline; width: fit-content; box-decoration-break: clone; -webkit-box-decoration-break: clone; text-decoration: none; transition: color .18s ease, box-shadow .18s ease; }
-      .mg-copy-full:not(:disabled):hover .mg-copy-value { color: #14507d; text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1.5px; }
+      .mg-copy-full.is-copied .mg-copy-value { box-shadow: 0 0 0 2px rgba(118, 126, 255, 0.16); }
+      .mg-copy-label { font-size: 13px; color: #3e3659; font-weight: 800; }
+      .mg-copy-value { font-size: 14px; color: #40385d; white-space: pre-wrap; word-break: break-word; line-height: 1.45; display: block; width: 100%; border-radius: 14px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); padding: 14px 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.38), 0 8px 18px rgba(170, 150, 214, 0.08); text-decoration: none; transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease; backdrop-filter: blur(12px) saturate(140%); -webkit-backdrop-filter: blur(12px) saturate(140%); }
+      .mg-copy-full:not(:disabled):hover .mg-copy-value { border-color: rgba(153, 142, 255, 0.36); background: rgba(255,255,255,0.28); }
+      .mg-footer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 10px; padding: 16px 20px 20px; border-top: 1px solid rgba(255,255,255,0.28); background: linear-gradient(180deg, rgba(247, 234, 255, 0.24) 0%, rgba(250, 243, 255, 0.34) 100%); backdrop-filter: blur(16px) saturate(145%); -webkit-backdrop-filter: blur(16px) saturate(145%); }
       @media (max-width: 380px) {
-        .mg-cred-info,
-        .mg-actions { grid-template-columns: 1fr; }
+        .mg-panel { width: min(100vw - 16px, 420px); right: 8px; top: 8px; height: calc(100vh - 16px); }
+        .mg-auth-row, .mg-control-card, .mg-cred-prompt, .mg-footer { display: grid; grid-template-columns: 1fr; }
+        .mg-auth-actions { width: 100%; }
+        .mg-auth-actions .mg-btn, .mg-control-card .mg-btn, .mg-footer .mg-btn { width: 100%; }
       }
       .is-hidden { display: none !important; }
     </style>
@@ -5157,39 +5171,49 @@ function ensureInPageOverlay(): OverlayRefs | null {
       </div>
       <aside class="mg-panel" aria-label="Cygnet Profile Panel">
         <header class="mg-header">
-          <h2 class="mg-title">Cygnet Profile</h2>
-          <div class="mg-header-actions">
+          <div class="mg-header-top">
+            <h2 class="mg-title">アカウント設定</h2>
             <button class="mg-icon-btn" type="button" data-role="close" title="Close">×</button>
           </div>
-        </header>
-        <div class="mg-body" data-role="body">
           <section class="mg-auth-row">
-            <p class="mg-auth-email is-hidden" data-role="auth-email"></p>
+            <div class="mg-auth-meta">
+              <div class="mg-auth-email-row">
+                <p class="mg-auth-email is-hidden" data-role="auth-email"></p>
+                <span class="mg-auth-badge" data-role="auth-badge">未ログイン</span>
+              </div>
+            </div>
             <div class="mg-auth-actions">
-              <button class="mg-btn" type="button" data-role="sign-in">Log in</button>
-              <button class="mg-btn secondary is-hidden" type="button" data-role="logout">Log out</button>
+              <button class="mg-btn" type="button" data-role="sign-in">Googleでログイン</button>
+              <button class="mg-btn secondary is-hidden" type="button" data-role="logout">ログアウト</button>
+              <button class="mg-btn secondary" type="button" data-role="open-dashboard">プロフィール編集</button>
             </div>
           </section>
-          <div class="mg-controls is-hidden" data-role="controls">
-            <label class="mg-toggle">
-              <span>Autofill enabled</span>
-              <input type="checkbox" data-role="enabled-toggle" />
-            </label>
-      <div class="mg-actions">
-        <button class="mg-btn" type="button" data-role="autofill">Autofill this page</button>
-      </div>
-      <div class="mg-actions">
-        <button class="mg-btn secondary" type="button" data-role="open-dashboard">プロフィールを編集</button>
-      </div>
-          </div>
+        </header>
+        <div class="mg-body" data-role="body">
           <div class="mg-tabs is-hidden" data-role="tabs">
-            <button class="mg-tab is-active" type="button" data-role="tab-main" aria-pressed="true">メイン</button>
+            <button class="mg-tab is-active" type="button" data-role="tab-main" aria-pressed="true">プロフィール</button>
             <button class="mg-tab" type="button" data-role="tab-additional" aria-pressed="false">追加情報</button>
             <button class="mg-tab" type="button" data-role="tab-credentials" aria-pressed="false">ログイン情報</button>
+          </div>
+          <div class="mg-controls is-hidden" data-role="controls">
+            <div class="mg-control-card">
+              <div class="mg-control-icon" aria-hidden="true">✦</div>
+              <div class="mg-control-copy">
+                <label class="mg-toggle">
+                  <input type="checkbox" data-role="enabled-toggle" />
+                  <span>自動入力を使用</span>
+                </label>
+              </div>
+              <button class="mg-btn" type="button" data-role="autofill">Autofill</button>
+            </div>
           </div>
           <p class="mg-status" data-role="status"></p>
           <div class="mg-sections is-hidden" data-role="sections"></div>
         </div>
+        <footer class="mg-footer">
+          <button class="mg-btn secondary" type="button" data-role="cancel">キャンセル</button>
+          <button class="mg-btn" type="button" data-role="open-dashboard">プロフィールを編集</button>
+        </footer>
       </aside>
     </div>
   `;
@@ -5200,13 +5224,17 @@ function ensureInPageOverlay(): OverlayRefs | null {
   const launcherIcon = shadow.querySelector("[data-role='launcher-icon']") as HTMLImageElement;
   const hideLauncherBtn = shadow.querySelector("[data-role='hide-launcher']") as HTMLElement;
   const closeBtn = shadow.querySelector("[data-role='close']") as HTMLElement;
+  const cancelBtn = shadow.querySelector("[data-role='cancel']") as HTMLButtonElement;
   const authEmail = shadow.querySelector("[data-role='auth-email']") as HTMLElement;
+  const authBadge = shadow.querySelector("[data-role='auth-badge']") as HTMLElement;
   const signInBtn = shadow.querySelector("[data-role='sign-in']") as HTMLButtonElement;
   const logoutBtn = shadow.querySelector("[data-role='logout']") as HTMLButtonElement;
   const controlsWrap = shadow.querySelector("[data-role='controls']") as HTMLElement;
   const enabledToggle = shadow.querySelector("[data-role='enabled-toggle']") as HTMLInputElement;
   const autofillBtn = shadow.querySelector("[data-role='autofill']") as HTMLElement;
-  const openDashboardBtn = shadow.querySelector("[data-role='open-dashboard']") as HTMLButtonElement;
+  const openDashboardBtns = Array.from(
+    shadow.querySelectorAll("[data-role='open-dashboard']")
+  ) as HTMLButtonElement[];
   const tabsWrap = shadow.querySelector("[data-role='tabs']") as HTMLElement;
   const tabMainBtn = shadow.querySelector("[data-role='tab-main']") as HTMLButtonElement;
   const tabAdditionalBtn = shadow.querySelector("[data-role='tab-additional']") as HTMLButtonElement;
@@ -5231,6 +5259,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
     setLauncherVisible(false, { persist: true }).catch(() => {});
   });
   closeBtn.addEventListener("click", () => setOverlayOpen(false));
+  cancelBtn.addEventListener("click", () => setOverlayOpen(false));
 
   signInBtn.addEventListener("click", async () => {
     try {
@@ -5277,13 +5306,13 @@ function ensureInPageOverlay(): OverlayRefs | null {
     const state = await getAuthState(true);
     if (!state.authenticated) {
       enabledToggle.checked = false;
-      setOverlayStatus("Create account to use");
+      setOverlayStatus("先にログインしてください");
       return;
     }
     const settings = await getStoredSettings();
     const next = { ...settings, enabled: enabledToggle.checked };
     await saveStoredSettings(next as Settings);
-    setOverlayStatus(next.enabled ? "Autofill ON" : "Autofill OFF");
+    setOverlayStatus(next.enabled ? "自動入力をオンにしました" : "自動入力をオフにしました");
   });
 
   tabMainBtn.addEventListener("click", async () => {
@@ -5307,25 +5336,27 @@ function ensureInPageOverlay(): OverlayRefs | null {
     await renderOverlayByActiveTab(settings);
   });
 
-  openDashboardBtn.addEventListener("click", async () => {
-    try {
-      const response = (await sendRuntimeMessage({ type: "OPEN_WEB_DASHBOARD" })) as
-        | { ok?: boolean }
-        | undefined;
-      if (response?.ok) {
-        setOverlayStatus("プロフィール編集画面を開きました");
-      } else {
+  for (const openDashboardBtn of openDashboardBtns) {
+    openDashboardBtn.addEventListener("click", async () => {
+      try {
+        const response = (await sendRuntimeMessage({ type: "OPEN_WEB_DASHBOARD" })) as
+          | { ok?: boolean }
+          | undefined;
+        if (response?.ok) {
+          setOverlayStatus("プロフィール編集画面を開きました");
+        } else {
+          setOverlayStatus("プロフィール編集画面を開けませんでした");
+        }
+      } catch {
         setOverlayStatus("プロフィール編集画面を開けませんでした");
       }
-    } catch {
-      setOverlayStatus("プロフィール編集画面を開けませんでした");
-    }
-  });
+    });
+  }
 
   autofillBtn.addEventListener("click", async () => {
     const result = await autofill({ overwrite: true });
     if (result.reason === "auth_required") {
-      setOverlayStatus("Create account to use");
+      setOverlayStatus("先にログインしてください");
       return;
     }
     if (result.reason === "dashboard_excluded") {
@@ -5377,13 +5408,15 @@ function ensureInPageOverlay(): OverlayRefs | null {
     launcher,
     hideLauncherBtn,
     closeBtn,
+    cancelBtn,
     authEmail,
+    authBadge,
     signInBtn,
     logoutBtn,
     controlsWrap,
     enabledToggle,
     autofillBtn,
-    openDashboardBtn,
+    openDashboardBtns,
     tabsWrap,
     tabMainBtn,
     tabAdditionalBtn,
