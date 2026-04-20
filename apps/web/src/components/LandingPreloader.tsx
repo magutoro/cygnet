@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+const PRELOADER_WORD = "Cygnet".split("");
+
 export default function LandingPreloader({
   lang,
   onDone,
@@ -32,32 +34,31 @@ export default function LandingPreloader({
 
   return (
     <div
-      className={`fixed inset-0 z-[120] flex items-center justify-center bg-[#07131a] transition-opacity duration-700 ${
+      className={`fixed inset-0 z-[120] flex items-center justify-center bg-black transition-opacity duration-700 ${
         phase === "fadeout" ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >
-      <div
-        className="absolute inset-0 opacity-[0.04]"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.9) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.9) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
-        }}
-      />
-
       <div className="relative flex flex-col items-center gap-5 px-6 text-center">
-        <div className="relative overflow-hidden rounded-2xl border border-white/25 bg-white/5 px-8 py-5 shadow-[0_24px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+        <div className="relative overflow-hidden rounded-[1.15rem] border border-white/10 bg-white/[0.02] px-6 py-4 shadow-[0_14px_38px_rgba(0,0,0,0.28)] backdrop-blur-lg">
           <div className="flex items-center justify-center">
-            <span className="preloader-text inline-block overflow-hidden whitespace-nowrap font-mono text-2xl font-light tracking-[0.24em] text-white">
-              CYGNET
+            <span className="preloader-word inline-flex items-end whitespace-nowrap font-serif text-[1.7rem] italic tracking-[0.015em] text-white/95 sm:text-[1.9rem]">
+              {PRELOADER_WORD.map((letter, index) => (
+                <span
+                  key={`${letter}-${index}`}
+                  className="preloader-letter inline-block"
+                  style={{ animationDelay: `${0.22 + index * 0.11}s` }}
+                >
+                  {letter}
+                </span>
+              ))}
             </span>
-            <span className="preloader-cursor ml-1 inline-block h-6 w-[2px] bg-white" />
+            <span className="preloader-cursor ml-1 inline-block h-7 w-[1.5px] bg-white/90" />
           </div>
-          <div className="preloader-scan absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          <div className="preloader-scan absolute inset-0 bg-gradient-to-r from-transparent via-white/6 to-transparent" />
         </div>
 
         <p
-          className={`text-sm tracking-[0.16em] text-white/60 transition-all duration-700 ${
+          className={`font-sans text-[0.98rem] font-medium tracking-[0.08em] text-white opacity-95 transition-all duration-700 ${
             phase === "typing" ? "translate-y-3 opacity-0" : "translate-y-0 opacity-100"
           }`}
         >

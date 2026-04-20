@@ -408,6 +408,17 @@ body::after {
   }
 }
 
+@keyframes preloaderLetter {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes preloaderCursor {
   0%,
   100% {
@@ -527,6 +538,15 @@ body::after {
   overflow: hidden;
   white-space: nowrap;
   display: inline-block;
+}
+
+.preloader-word {
+  min-height: 1em;
+}
+
+.preloader-letter {
+  opacity: 0;
+  animation: preloaderLetter 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .preloader-cursor {
