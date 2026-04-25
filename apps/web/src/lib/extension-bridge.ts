@@ -1,6 +1,9 @@
 "use client";
 
-const EXTENSION_ID = String(process.env.NEXT_PUBLIC_EXTENSION_ID || "").trim();
+const CHROME_EXTENSION_ID = String(
+  process.env.NEXT_PUBLIC_CHROME_EXTENSION_ID || process.env.NEXT_PUBLIC_EXTENSION_ID || "",
+).trim();
+const SAFARI_EXTENSION_ID = String(process.env.NEXT_PUBLIC_SAFARI_EXTENSION_ID || "").trim();
 const WEB_BRIDGE_REQUEST_TYPE = "CYGNET_REQUEST_EXTENSION_ID";
 const WEB_BRIDGE_RESPONSE_TYPE = "CYGNET_EXTENSION_ID";
 let discoveredExtensionId = "";
@@ -20,15 +23,57 @@ type RuntimeLike = {
   lastError?: { message?: string };
 };
 
-type ChromeLike = {
+type RuntimeHost = {
   runtime?: RuntimeLike;
 };
 
-function getRuntime(): RuntimeLike | null {
-  const chromeLike = (globalThis as unknown as { chrome?: ChromeLike }).chrome;
-  const runtime = chromeLike?.runtime;
-  if (!runtime?.sendMessage) return null;
-  return runtime;
+type RuntimeKind = "chrome" | "safari" | "unknown";
+
+function isLikelySafariUserAgent(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const userAgent = navigator.userAgent;
+  return /Safari/i.test(userAgent) && !/(Chrome|Chromium|Edg|OPR)/i.test(userAgent);
+}
+
+function getRuntimeBinding(): { runtime: RuntimeLike; kind: RuntimeKind } | null {
+  const runtimeHosts = globalThis as unknown as {
+    chrome?: RuntimeHost;
+    browser?: RuntimeHost;
+  };
+
+  const browserRuntime = runtimeHosts.browser?.runtime;
+  if (browserRuntime?.sendMessage) {
+    return {
+      runtime: browserRuntime,
+      kind: isLikelySafariUserAgent() ? "safari" : "unknown",
+    };
+  }
+
+  const chromeRuntime = runtimeHosts.chrome?.runtime;
+  if (chromeRuntime?.sendMessage) {
+    return {
+      runtime: chromeRuntime,
+      kind: "chrome",
+    };
+  }
+
+  return null;
+}
+
+function getConfiguredExtensionId(kind: RuntimeKind): string {
+  if (kind === "safari") {
+    return SAFARI_EXTENSION_ID || CHROME_EXTENSION_ID;
+  }
+
+  if (kind === "chrome") {
+    return CHROME_EXTENSION_ID || SAFARI_EXTENSION_ID;
+  }
+
+  if (isLikelySafariUserAgent()) {
+    return SAFARI_EXTENSION_ID || CHROME_EXTENSION_ID;
+  }
+
+  return CHROME_EXTENSION_ID || SAFARI_EXTENSION_ID;
 }
 
 async function requestExtensionIdFromContentScript(timeoutMs = 800): Promise<string> {
@@ -66,9 +111,9 @@ async function requestExtensionIdFromContentScript(timeoutMs = 800): Promise<str
   });
 }
 
-async function resolveExtensionId(): Promise<string> {
+async function resolveExtensionId(kind: RuntimeKind): Promise<string> {
   const discovered = await requestExtensionIdFromContentScript();
-  return discovered || EXTENSION_ID;
+  return discovered || getConfiguredExtensionId(kind);
 }
 
 export type ExtensionSessionSyncResult =
@@ -80,7 +125,8 @@ export type ExtensionProfileRefreshResult =
   | { ok: false; error: string };
 
 async function sendExtensionRuntimeMessage(message: unknown): Promise<ExtensionBridgeResponse> {
-  const extensionId = await resolveExtensionId();
+  const runtimeBinding = getRuntimeBinding();
+  const extensionId = await resolveExtensionId(runtimeBinding?.kind || "unknown");
 
   if (!extensionId) {
     return {
@@ -89,17 +135,16 @@ async function sendExtensionRuntimeMessage(message: unknown): Promise<ExtensionB
     };
   }
 
-  const runtime = getRuntime();
-  if (!runtime) {
+  if (!runtimeBinding) {
     return {
       ok: false,
-      error: "chrome.runtime is unavailable (extension not installed or page not allowed)",
+      error: "browser runtime is unavailable (extension not installed or page not allowed)",
     };
   }
 
   return new Promise((resolve) => {
-    runtime.sendMessage(extensionId, message, (rawResponse) => {
-      const runtimeError = runtime.lastError?.message;
+    runtimeBinding.runtime.sendMessage(extensionId, message, (rawResponse) => {
+      const runtimeError = runtimeBinding.runtime.lastError?.message;
       if (runtimeError) {
         resolve({ ok: false, error: runtimeError });
         return;

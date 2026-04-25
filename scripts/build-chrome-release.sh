@@ -11,7 +11,7 @@ ZIP_PATH="$RELEASE_DIR/cygnet-chrome-extension-v$VERSION.zip"
 
 echo "Building @cygnet/extension..."
 cd "$ROOT_DIR"
-pnpm --filter @cygnet/extension build
+pnpm --filter @cygnet/extension build:chrome
 
 mkdir -p "$RELEASE_DIR"
 rm -f "$ZIP_PATH"

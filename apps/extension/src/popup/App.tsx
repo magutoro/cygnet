@@ -1,23 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { getSettings, saveSettings } from "../lib/storage.js";
 import { queryTabs, sendMessage } from "../lib/tabs.js";
-import { signInWithGoogle, signOut, getUser, waitForUser, onAuthStateChange } from "../lib/auth.js";
+import { startSignIn, signOut, getUser, waitForUser, onAuthStateChange } from "../lib/auth.js";
+import {
+  getSignInBusyLabel,
+  getSignInLabel,
+  getSignInOpenedStatus,
+  getSignInRequiredMessage,
+  isUnsupportedBrowserUrl,
+} from "../lib/browser.js";
 import { syncProfile } from "../lib/sync.js";
 import { openWebDashboard } from "../lib/web.js";
 import type { Settings, AutofillResult } from "@cygnet/shared";
 import type { User } from "@supabase/supabase-js";
-
-function isUnsupportedUrl(url: string | undefined): boolean {
-  const raw = String(url || "").trim().toLowerCase();
-  if (!raw) return true;
-  return (
-    raw.startsWith("chrome://") ||
-    raw.startsWith("edge://") ||
-    raw.startsWith("about:") ||
-    raw.startsWith("chrome-extension://") ||
-    raw.includes("chromewebstore.google.com")
-  );
-}
 
 export function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -64,7 +59,7 @@ export function App() {
 
   const showSidePanel = useCallback(async (silent = false) => {
     const [tab] = await queryTabs({ active: true, currentWindow: true });
-    if (!tab?.id || isUnsupportedUrl(tab.url)) {
+    if (!tab?.id || isUnsupportedBrowserUrl(tab.url)) {
       if (!silent) setStatus("このページではサイドポップを開けません");
       return;
     }
@@ -86,7 +81,11 @@ export function App() {
   const handleSignIn = useCallback(async () => {
     setAuthLoading(true);
     try {
-      await signInWithGoogle();
+      const signInMode = await startSignIn();
+      if (signInMode === "web") {
+        setStatus(getSignInOpenedStatus());
+        return;
+      }
       const u = await waitForUser();
       if (!u) {
         throw new Error("ログインは完了しましたが、拡張機能セッションを取得できませんでした");
@@ -95,14 +94,14 @@ export function App() {
       await syncProfile();
       const refreshed = await getSettings();
       setSettings(refreshed);
-      setStatus("ログインしました");
+      setStatus(getSignInOpenedStatus());
     } catch (err) {
       const message = err instanceof Error ? err.message : "ログインに失敗しました";
       setStatus(`ログイン失敗: ${message}`);
     } finally {
       setAuthLoading(false);
     }
-  }, [showSidePanel]);
+  }, []);
 
   const handleSignOut = useCallback(async () => {
     await signOut();
@@ -113,7 +112,7 @@ export function App() {
   const handleToggle = useCallback(async () => {
     if (!settings) return;
     if (!user) {
-      setStatus("先にGoogleでログインしてください");
+      setStatus(getSignInRequiredMessage());
       return;
     }
     const next = { ...settings, enabled: !settings.enabled };
@@ -124,12 +123,12 @@ export function App() {
 
   const handleFill = useCallback(async () => {
     if (!user) {
-      setStatus("先にGoogleでログインしてください");
+      setStatus(getSignInRequiredMessage());
       await openWebDashboard().catch(() => {});
       return;
     }
     const [tab] = await queryTabs({ active: true, currentWindow: true });
-    if (!tab?.id || isUnsupportedUrl(tab.url)) {
+    if (!tab?.id || isUnsupportedBrowserUrl(tab.url)) {
       setStatus("このページでは実行できません");
       return;
     }
@@ -137,7 +136,7 @@ export function App() {
       const response = (await sendMessage(tab.id, { type: "AUTOFILL_NOW" })) as AutofillResult | undefined;
       if (!response?.ok) {
         if (response?.error === "auth_required") {
-          setStatus("先にGoogleでログインしてください");
+          setStatus(getSignInRequiredMessage());
           return;
         }
         setStatus("入力に失敗しました");
@@ -189,7 +188,7 @@ export function App() {
             onClick={handleSignIn}
             disabled={authLoading}
           >
-            {authLoading ? "ログイン中..." : "Googleでログイン"}
+            {authLoading ? getSignInBusyLabel() : getSignInLabel()}
           </button>
         )}
       </div>
@@ -209,7 +208,7 @@ export function App() {
           </button>
         </>
       ) : (
-        <p className="status">ログインするとAutofillが使えます。</p>
+        <p className="status">{`${getSignInLabel()}するとAutofillが使えます。`}</p>
       )}
       <button type="button" className="secondary" onClick={handleOpenDashboard}>
         プロフィールを編集

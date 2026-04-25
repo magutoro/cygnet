@@ -1,6 +1,8 @@
 import { supabase } from "./supabase.js";
 import type { User } from "@supabase/supabase-js";
 import type { Session } from "@supabase/supabase-js";
+import { isSafariTarget } from "./browser.js";
+import { openWebLogin } from "./web.js";
 
 function parseAuthFragment(fragment: string): URLSearchParams {
   const raw = fragment.startsWith("#") ? fragment.slice(1) : fragment;
@@ -90,7 +92,7 @@ async function finalizeExtensionSession(responseUrl: string): Promise<void> {
   throw new Error(`No auth tokens found in callback. Expected redirect to: ${redirectUrl}`);
 }
 
-export async function signInWithGoogle() {
+async function signInWithGoogle() {
   const redirectUrl = chrome.identity.getRedirectURL();
   console.log("[Cygnet] Extension redirect URL:", redirectUrl);
 
@@ -122,6 +124,16 @@ export async function signInWithGoogle() {
 
   if (!responseUrl) throw new Error("Auth flow was cancelled");
   await finalizeExtensionSession(responseUrl);
+}
+
+export async function startSignIn(): Promise<"extension" | "web"> {
+  if (isSafariTarget()) {
+    await openWebLogin();
+    return "web";
+  }
+
+  await signInWithGoogle();
+  return "extension";
 }
 
 export async function signOut() {

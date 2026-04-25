@@ -1,0 +1,500 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		290E1FDBAFA9166D88EFE074 /* Cygnet Safari Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1AE241A8CF7896FC1633E09A /* Cygnet Safari Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		31ADFA548E5C44F6FF0C85A0 /* SafariExtensionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8938314831909A902B33D22E /* SafariExtensionState.swift */; };
+		3812E6B074D9F44C3812C767 /* SafariConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B316DB58D65FDCD9691C80 /* SafariConnector.swift */; };
+		64CBD421542D5D1A8B0FBC87 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBBFA89DE53DEFEAD0F29A68 /* SafariWebExtensionHandler.swift */; };
+		7EF0B05556A69D610EA79D11 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 071E69C9804AAEB965FD4FF4 /* ContentView.swift */; };
+		8E9F6527ACD813448334E0D5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6A433071AE64D6A296614B5C /* Assets.xcassets */; };
+		AC45048BAAFEA30D3F2C6606 /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584AC1BD8F5CB3514C7CDBB9 /* AppConstants.swift */; };
+		B4A1398C0A31A63BC9E19D1F /* CygnetSafariApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E986342E57271EF96AEC1E2E /* CygnetSafariApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		84ED2C0F785F5F6E4D2252F0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A47E904B773DBF6CD39D7470 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E24046C41FA75401E1BE9E7E;
+			remoteInfo = "Cygnet Safari Extension";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		4F6FF9E7C36632BF4356E733 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				290E1FDBAFA9166D88EFE074 /* Cygnet Safari Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		03AC51D5E952AAB41F601B60 /* ExtensionBundle */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ExtensionBundle; path = "Shared (Extension)/Resources/ExtensionBundle"; sourceTree = SOURCE_ROOT; };
+		071E69C9804AAEB965FD4FF4 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		1AE241A8CF7896FC1633E09A /* Cygnet Safari Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Cygnet Safari Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		584AC1BD8F5CB3514C7CDBB9 /* AppConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConstants.swift; sourceTree = "<group>"; };
+		65B316DB58D65FDCD9691C80 /* SafariConnector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariConnector.swift; sourceTree = "<group>"; };
+		6A433071AE64D6A296614B5C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		76FA3F87460C4D3E6C0B4D81 /* Cygnet Safari.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Cygnet Safari.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8938314831909A902B33D22E /* SafariExtensionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariExtensionState.swift; sourceTree = "<group>"; };
+		E986342E57271EF96AEC1E2E /* CygnetSafariApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CygnetSafariApp.swift; sourceTree = "<group>"; };
+		EBBFA89DE53DEFEAD0F29A68 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		1DC0719527C8808E12A34F76 /* Shared (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				EBBFA89DE53DEFEAD0F29A68 /* SafariWebExtensionHandler.swift */,
+			);
+			path = "Shared (Extension)";
+			sourceTree = "<group>";
+		};
+		2F4285B00015AAB748C0D6F2 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1AE241A8CF7896FC1633E09A /* Cygnet Safari Extension.appex */,
+				76FA3F87460C4D3E6C0B4D81 /* Cygnet Safari.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		62DB63D4D028ECBD4DA4C7E1 = {
+			isa = PBXGroup;
+			children = (
+				03AC51D5E952AAB41F601B60 /* ExtensionBundle */,
+				EAD62054036FA1F260AE0DD0 /* Shared (App) */,
+				1DC0719527C8808E12A34F76 /* Shared (Extension) */,
+				2F4285B00015AAB748C0D6F2 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EAD62054036FA1F260AE0DD0 /* Shared (App) */ = {
+			isa = PBXGroup;
+			children = (
+				584AC1BD8F5CB3514C7CDBB9 /* AppConstants.swift */,
+				6A433071AE64D6A296614B5C /* Assets.xcassets */,
+				071E69C9804AAEB965FD4FF4 /* ContentView.swift */,
+				E986342E57271EF96AEC1E2E /* CygnetSafariApp.swift */,
+				65B316DB58D65FDCD9691C80 /* SafariConnector.swift */,
+				8938314831909A902B33D22E /* SafariExtensionState.swift */,
+			);
+			path = "Shared (App)";
+			sourceTree = "<group>";
+		};
+		"TEMP_9BB6FD58-964B-4F27-9502-E3229080E553" /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8718036C19849775DFCF5FF8 /* Cygnet Safari */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0F0F7B655EC77CA152449346 /* Build configuration list for PBXNativeTarget "Cygnet Safari" */;
+			buildPhases = (
+				2ED44114BAEA6185CD224EA1 /* Sources */,
+				3F417B1057A23ADAE6DBD60A /* Resources */,
+				4F6FF9E7C36632BF4356E733 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B45FBE6F7903EEA9AC3FA85B /* PBXTargetDependency */,
+			);
+			name = "Cygnet Safari";
+			packageProductDependencies = (
+			);
+			productName = "Cygnet Safari";
+			productReference = 76FA3F87460C4D3E6C0B4D81 /* Cygnet Safari.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E24046C41FA75401E1BE9E7E /* Cygnet Safari Extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0D2DCB69FCAAB828C16D1491 /* Build configuration list for PBXNativeTarget "Cygnet Safari Extension" */;
+			buildPhases = (
+				D0AE992A53C8F2F0D2954582 /* Validate Safari Web Extension Bundle */,
+				AB7140AB030D3532E89392A8 /* Sources */,
+				72C6FFF6BB9885B52437B20C /* Sync Safari Web Extension Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Cygnet Safari Extension";
+			packageProductDependencies = (
+			);
+			productName = "Cygnet Safari Extension";
+			productReference = 1AE241A8CF7896FC1633E09A /* Cygnet Safari Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A47E904B773DBF6CD39D7470 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					8718036C19849775DFCF5FF8 = {
+						ProvisioningStyle = Automatic;
+					};
+					E24046C41FA75401E1BE9E7E = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 4A8C10DA36174BDE696BA07E /* Build configuration list for PBXProject "Cygnet Safari" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 62DB63D4D028ECBD4DA4C7E1;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 2F4285B00015AAB748C0D6F2 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8718036C19849775DFCF5FF8 /* Cygnet Safari */,
+				E24046C41FA75401E1BE9E7E /* Cygnet Safari Extension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		3F417B1057A23ADAE6DBD60A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8E9F6527ACD813448334E0D5 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		72C6FFF6BB9885B52437B20C /* Sync Safari Web Extension Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Sync Safari Web Extension Resources";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\nBUNDLE_DIR=\"${SRCROOT}/Shared (Extension)/Resources/ExtensionBundle\"\nDESTINATION_DIR=\"${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Resources\"\nmkdir -p \"${DESTINATION_DIR}\"\nrsync -a --delete \"${BUNDLE_DIR}/\" \"${DESTINATION_DIR}/\"\n";
+		};
+		D0AE992A53C8F2F0D2954582 /* Validate Safari Web Extension Bundle */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Validate Safari Web Extension Bundle";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\nBUNDLE_DIR=\"${SRCROOT}/Shared (Extension)/Resources/ExtensionBundle\"\nif [[ ! -f \"${BUNDLE_DIR}/manifest.json\" ]]; then\n  echo \"error: Safari web extension bundle not found. Run ./scripts/build-safari-web-extension.sh first.\"\n  exit 1\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2ED44114BAEA6185CD224EA1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AC45048BAAFEA30D3F2C6606 /* AppConstants.swift in Sources */,
+				7EF0B05556A69D610EA79D11 /* ContentView.swift in Sources */,
+				B4A1398C0A31A63BC9E19D1F /* CygnetSafariApp.swift in Sources */,
+				3812E6B074D9F44C3812C767 /* SafariConnector.swift in Sources */,
+				31ADFA548E5C44F6FF0C85A0 /* SafariExtensionState.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB7140AB030D3532E89392A8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				64CBD421542D5D1A8B0FBC87 /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B45FBE6F7903EEA9AC3FA85B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E24046C41FA75401E1BE9E7E /* Cygnet Safari Extension */;
+			targetProxy = 84ED2C0F785F5F6E4D2252F0 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0376F637F3A67F56BCADC255 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "Shared (App)/Generated/Cygnet Safari.entitlements";
+				COMBINE_HIDPI_IMAGES = YES;
+				EXTENSION_BUNDLE_IDENTIFIER = "$(CYGNET_BUNDLE_ID_PREFIX).safari.extension";
+				INFOPLIST_FILE = "Shared (App)/Generated/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CYGNET_BUNDLE_ID_PREFIX).safari";
+				PRODUCT_NAME = "Cygnet Safari";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		561C71EFF79C8A6601872D34 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				CYGNET_BUNDLE_ID_PREFIX = com.example.cygnet;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MARKETING_VERSION = 0.1.1;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		7BF87483FBC49E034C47C012 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Shared (Extension)/Generated/Cygnet Safari Extension.entitlements";
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = "Shared (Extension)/Generated/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CYGNET_BUNDLE_ID_PREFIX).safari.extension";
+				PRODUCT_NAME = "Cygnet Safari Extension";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		91FC74BAF7A7E2D1D2F86861 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Shared (Extension)/Generated/Cygnet Safari Extension.entitlements";
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = "Shared (Extension)/Generated/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CYGNET_BUNDLE_ID_PREFIX).safari.extension";
+				PRODUCT_NAME = "Cygnet Safari Extension";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		B5F3046DA55A8D77DA453CB5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "Shared (App)/Generated/Cygnet Safari.entitlements";
+				COMBINE_HIDPI_IMAGES = YES;
+				EXTENSION_BUNDLE_IDENTIFIER = "$(CYGNET_BUNDLE_ID_PREFIX).safari.extension";
+				INFOPLIST_FILE = "Shared (App)/Generated/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CYGNET_BUNDLE_ID_PREFIX).safari";
+				PRODUCT_NAME = "Cygnet Safari";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		D89C13A720782898AEDEC67E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				CYGNET_BUNDLE_ID_PREFIX = com.example.cygnet;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MARKETING_VERSION = 0.1.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0D2DCB69FCAAB828C16D1491 /* Build configuration list for PBXNativeTarget "Cygnet Safari Extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7BF87483FBC49E034C47C012 /* Debug */,
+				91FC74BAF7A7E2D1D2F86861 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		0F0F7B655EC77CA152449346 /* Build configuration list for PBXNativeTarget "Cygnet Safari" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B5F3046DA55A8D77DA453CB5 /* Debug */,
+				0376F637F3A67F56BCADC255 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4A8C10DA36174BDE696BA07E /* Build configuration list for PBXProject "Cygnet Safari" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				561C71EFF79C8A6601872D34 /* Debug */,
+				D89C13A720782898AEDEC67E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A47E904B773DBF6CD39D7470 /* Project object */;
+}

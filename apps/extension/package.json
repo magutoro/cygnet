@@ -1,13 +1,17 @@
 {
   "name": "@cygnet/extension",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite build --watch --mode development",
-    "build": "vite build",
+    "dev": "node ./scripts/run-vite-target.mjs dev chrome",
+    "dev:chrome": "node ./scripts/run-vite-target.mjs dev chrome",
+    "dev:safari": "node ./scripts/run-vite-target.mjs dev safari",
+    "build": "node ./scripts/run-vite-target.mjs build chrome",
+    "build:chrome": "node ./scripts/run-vite-target.mjs build chrome",
+    "build:safari": "node ./scripts/run-vite-target.mjs build safari",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist dist-safari"
   },
   "dependencies": {
     "@cygnet/shared": "workspace:*",

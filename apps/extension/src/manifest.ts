@@ -1,17 +1,27 @@
 import { defineManifest } from "@crxjs/vite-plugin";
 
+const browserTarget = process.env.CYGNET_BROWSER_TARGET === "safari" ? "safari" : "chrome";
+const icons = {
+  16: "icons/icon16.png",
+  32: "icons/icon32.png",
+  48: "icons/icon48.png",
+  64: "icons/icon64.png",
+  96: "icons/icon96.png",
+  128: "icons/icon128.png",
+  256: "icons/icon256.png",
+  512: "icons/icon512.png",
+} as const;
+
 export default defineManifest({
   manifest_version: 3,
   name: "Cygnet",
   version: "0.1.1",
   description: "Japanese-focused job application autofill extension.",
-  icons: {
-    16: "icons/icon16.png",
-    32: "icons/icon32.png",
-    48: "icons/icon48.png",
-    128: "icons/icon128.png",
-  },
-  permissions: ["storage", "activeTab", "scripting", "identity"],
+  icons,
+  permissions:
+    browserTarget === "safari"
+      ? ["storage", "activeTab", "scripting"]
+      : ["storage", "activeTab", "scripting", "identity"],
   host_permissions: ["<all_urls>"],
   background: {
     service_worker: "src/background/index.ts",
@@ -25,16 +35,11 @@ export default defineManifest({
     },
   ],
   action: {
-    default_icon: {
-      16: "icons/icon16.png",
-      32: "icons/icon32.png",
-      48: "icons/icon48.png",
-      128: "icons/icon128.png",
-    },
+    default_icon: icons,
   },
   web_accessible_resources: [
     {
-      resources: ["icons/icon16.png", "icons/icon32.png", "icons/icon48.png", "icons/icon128.png"],
+      resources: ["icons/launcher32.png"],
       matches: ["<all_urls>"],
     },
   ],

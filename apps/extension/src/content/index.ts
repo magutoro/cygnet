@@ -1,6 +1,13 @@
 /// <reference types="chrome" />
 
 import {
+  getSignInLabel,
+  getSignInOpenedStatus,
+  getSignInRequiredMessage,
+} from "../lib/browser.js";
+import { DEFAULT_PROFILE } from "@cygnet/shared";
+import type { Profile, Settings } from "@cygnet/shared";
+import {
   getSettings as getStoredSettings,
   saveSettings as saveStoredSettings,
   getOverlayDomainStateMap as getStoredOverlayDomainStateMap,
@@ -8,15 +15,6 @@ import {
 } from "../lib/storage.js";
 
 /* ── Types ── */
-
-interface Profile {
-  [key: string]: string | undefined;
-}
-
-interface Settings {
-  enabled: boolean;
-  profile: Profile;
-}
 
 interface ParsedBirthDate {
   year: string;
@@ -85,7 +83,6 @@ interface OverlayRefs {
   launcher: HTMLElement;
   hideLauncherBtn: HTMLElement;
   closeBtn: HTMLElement;
-  cancelBtn: HTMLButtonElement;
   authEmail: HTMLElement;
   authBadge: HTMLElement;
   signInBtn: HTMLButtonElement;
@@ -230,7 +227,7 @@ const WEB_BRIDGE_ORIGINS = new Set([
 ]);
 const WEB_BRIDGE_REQUEST_TYPE = "CYGNET_REQUEST_EXTENSION_ID";
 const WEB_BRIDGE_RESPONSE_TYPE = "CYGNET_EXTENSION_ID";
-const LAUNCHER_ICON_PATH = "icons/icon32.png";
+const LAUNCHER_ICON_PATH = "icons/launcher32.png";
 
 const GENDER_VALUE_ALIASES: Record<string, string[]> = {
   male: ["male", "man", "m", "男性", "男", "男性（男）", "男性（man）"],
@@ -3868,7 +3865,7 @@ function fillIwebsGraduationFields(
 
   if (!yearField && !monthField && !statusField) return;
 
-  const statusLabel = inferIwebsGraduationStatusLabel(profile.graduationYear);
+  const statusLabel = inferIwebsGraduationStatusLabel(profile.graduationYear || "");
   const forceOverwrite = true;
   const applyGraduationValues = (options: { silent?: boolean } = {}): void => {
     if (yearField?.el instanceof HTMLSelectElement) {
@@ -4239,7 +4236,7 @@ function resolveAdditionalSectionValue(profile: Profile, field: AdditionalSectio
   return mapOptionValue(rawValue, field.labels);
 }
 
-function buildMainProfileSections(profile: Profile = {}): ProfileSection[] {
+function buildMainProfileSections(profile: Profile = DEFAULT_PROFILE): ProfileSection[] {
   return [
     {
       title: "基本情報",
@@ -4299,7 +4296,7 @@ function buildMainProfileSections(profile: Profile = {}): ProfileSection[] {
   ];
 }
 
-function buildAdditionalProfileSections(profile: Profile = {}): ProfileSection[] {
+function buildAdditionalProfileSections(profile: Profile = DEFAULT_PROFILE): ProfileSection[] {
   return ADDITIONAL_PROFILE_SECTIONS.map((section) => ({
     title: section.title,
     items: section.fields.map((field) => ({
@@ -4309,7 +4306,7 @@ function buildAdditionalProfileSections(profile: Profile = {}): ProfileSection[]
   }));
 }
 
-function buildProfileSections(profile: Profile = {}, tab: OverlayProfileTab = "main"): ProfileSection[] {
+function buildProfileSections(profile: Profile = DEFAULT_PROFILE, tab: OverlayProfileTab = "main"): ProfileSection[] {
   if (tab === "additional") return buildAdditionalProfileSections(profile);
   return buildMainProfileSections(profile);
 }
@@ -4480,7 +4477,7 @@ function createProfileCopyCard(item: ProfileSectionItem): HTMLDivElement {
   return card;
 }
 
-function renderOverlayProfile(profile: Profile = {}): void {
+function renderOverlayProfile(profile: Profile = DEFAULT_PROFILE): void {
   if (!overlayRefs?.sections) return;
   overlayRefs.sections.innerHTML = "";
 
@@ -5155,12 +5152,11 @@ function ensureInPageOverlay(): OverlayRefs | null {
       .mg-copy-label { font-size: 13px; color: #3e3659; font-weight: 800; }
       .mg-copy-value { font-size: 14px; color: #40385d; white-space: pre-wrap; word-break: break-word; line-height: 1.45; display: block; width: 100%; border-radius: 14px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); padding: 14px 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.38), 0 8px 18px rgba(170, 150, 214, 0.08); text-decoration: none; transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease; backdrop-filter: blur(12px) saturate(140%); -webkit-backdrop-filter: blur(12px) saturate(140%); }
       .mg-copy-full:not(:disabled):hover .mg-copy-value { border-color: rgba(153, 142, 255, 0.36); background: rgba(255,255,255,0.28); }
-      .mg-footer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 10px; padding: 16px 20px 20px; border-top: 1px solid rgba(255,255,255,0.28); background: linear-gradient(180deg, rgba(247, 234, 255, 0.24) 0%, rgba(250, 243, 255, 0.34) 100%); backdrop-filter: blur(16px) saturate(145%); -webkit-backdrop-filter: blur(16px) saturate(145%); }
       @media (max-width: 380px) {
         .mg-panel { width: min(100vw - 16px, 420px); right: 8px; top: 8px; height: calc(100vh - 16px); }
-        .mg-auth-row, .mg-control-card, .mg-cred-prompt, .mg-footer { display: grid; grid-template-columns: 1fr; }
+        .mg-auth-row, .mg-control-card, .mg-cred-prompt { display: grid; grid-template-columns: 1fr; }
         .mg-auth-actions { width: 100%; }
-        .mg-auth-actions .mg-btn, .mg-control-card .mg-btn, .mg-footer .mg-btn { width: 100%; }
+        .mg-auth-actions .mg-btn, .mg-control-card .mg-btn { width: 100%; }
       }
       .is-hidden { display: none !important; }
     </style>
@@ -5183,7 +5179,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
               </div>
             </div>
             <div class="mg-auth-actions">
-              <button class="mg-btn" type="button" data-role="sign-in">Googleでログイン</button>
+              <button class="mg-btn" type="button" data-role="sign-in">${getSignInLabel()}</button>
               <button class="mg-btn secondary is-hidden" type="button" data-role="logout">ログアウト</button>
               <button class="mg-btn secondary" type="button" data-role="open-dashboard">プロフィール編集</button>
             </div>
@@ -5210,10 +5206,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
           <p class="mg-status" data-role="status"></p>
           <div class="mg-sections is-hidden" data-role="sections"></div>
         </div>
-        <footer class="mg-footer">
-          <button class="mg-btn secondary" type="button" data-role="cancel">キャンセル</button>
-          <button class="mg-btn" type="button" data-role="open-dashboard">プロフィールを編集</button>
-        </footer>
       </aside>
     </div>
   `;
@@ -5224,7 +5216,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
   const launcherIcon = shadow.querySelector("[data-role='launcher-icon']") as HTMLImageElement;
   const hideLauncherBtn = shadow.querySelector("[data-role='hide-launcher']") as HTMLElement;
   const closeBtn = shadow.querySelector("[data-role='close']") as HTMLElement;
-  const cancelBtn = shadow.querySelector("[data-role='cancel']") as HTMLButtonElement;
   const authEmail = shadow.querySelector("[data-role='auth-email']") as HTMLElement;
   const authBadge = shadow.querySelector("[data-role='auth-badge']") as HTMLElement;
   const signInBtn = shadow.querySelector("[data-role='sign-in']") as HTMLButtonElement;
@@ -5259,7 +5250,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
     setLauncherVisible(false, { persist: true }).catch(() => {});
   });
   closeBtn.addEventListener("click", () => setOverlayOpen(false));
-  cancelBtn.addEventListener("click", () => setOverlayOpen(false));
 
   signInBtn.addEventListener("click", async () => {
     try {
@@ -5267,7 +5257,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
         | { ok?: boolean }
         | undefined;
       if (response?.ok) {
-        setOverlayStatus("Webログインを開きました");
+        setOverlayStatus(getSignInOpenedStatus());
       } else {
         setOverlayStatus("Webログインを開けませんでした");
       }
@@ -5306,12 +5296,12 @@ function ensureInPageOverlay(): OverlayRefs | null {
     const state = await getAuthState(true);
     if (!state.authenticated) {
       enabledToggle.checked = false;
-      setOverlayStatus("先にログインしてください");
+      setOverlayStatus(getSignInRequiredMessage());
       return;
     }
     const settings = await getStoredSettings();
     const next = { ...settings, enabled: enabledToggle.checked };
-    await saveStoredSettings(next as Settings);
+    await saveStoredSettings(next);
     setOverlayStatus(next.enabled ? "自動入力をオンにしました" : "自動入力をオフにしました");
   });
 
@@ -5354,9 +5344,9 @@ function ensureInPageOverlay(): OverlayRefs | null {
   }
 
   autofillBtn.addEventListener("click", async () => {
-    const result = await autofill({ overwrite: true });
+    const result = await autofill({ overwrite: true, manual: true });
     if (result.reason === "auth_required") {
-      setOverlayStatus("先にログインしてください");
+      setOverlayStatus(getSignInRequiredMessage());
       return;
     }
     if (result.reason === "dashboard_excluded") {
@@ -5408,7 +5398,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
     launcher,
     hideLauncherBtn,
     closeBtn,
-    cancelBtn,
     authEmail,
     authBadge,
     signInBtn,
@@ -5501,8 +5490,8 @@ function applyStoredCredentialToAuthForms(
   return filled;
 }
 
-async function autofill(options: { overwrite?: boolean } = {}): Promise<{ filled: number; reason?: string }> {
-  const { overwrite = true } = options;
+async function autofill(options: { overwrite?: boolean; manual?: boolean } = {}): Promise<{ filled: number; reason?: string }> {
+  const { overwrite = true, manual = false } = options;
   if (isCygnetManagedPage()) {
     return { filled: 0, reason: "dashboard_excluded" };
   }
@@ -5513,7 +5502,7 @@ async function autofill(options: { overwrite?: boolean } = {}): Promise<{ filled
   }
 
     const settings = await getStoredSettings();
-    if (!settings.enabled) {
+    if (!manual && !settings.enabled) {
       return { filled: 0, reason: "disabled" };
     }
 
@@ -5647,7 +5636,7 @@ chrome.runtime.onMessage.addListener(
 
     if (msg?.type !== "AUTOFILL_NOW") return;
 
-    autofill({ overwrite: true })
+    autofill({ overwrite: true, manual: true })
       .then((result) => {
         if (result.reason === "auth_required") {
           sendResponse({ ok: false, error: "auth_required", result });

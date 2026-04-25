@@ -7,6 +7,9 @@
     "build": "turbo run build",
     "build:web": "turbo run build --filter=@cygnet/web",
     "build:ext": "turbo run build --filter=@cygnet/extension",
+    "build:ext:safari": "pnpm --filter @cygnet/extension build:safari",
+    "prepare:safari:webext": "./scripts/build-safari-web-extension.sh",
+    "archive:safari": "./scripts/archive-safari-macos.sh",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean"

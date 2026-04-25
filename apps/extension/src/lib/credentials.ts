@@ -185,7 +185,7 @@ function makeFormSignature(raw: string | undefined): string {
   return normalizeText(raw).toLowerCase().slice(0, 420);
 }
 
-function sanitizeCredentialValue(raw: string): string {
+function sanitizeCredentialValue(raw: string | null | undefined): string {
   return String(raw || "").trim().slice(0, 1000);
 }
 

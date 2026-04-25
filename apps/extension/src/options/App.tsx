@@ -9,7 +9,13 @@ import {
 } from "@cygnet/shared";
 import type { Profile, Settings } from "@cygnet/shared";
 import { getSettings, saveSettings } from "../lib/storage.js";
-import { signInWithGoogle, signOut, getUser } from "../lib/auth.js";
+import { startSignIn, signOut, getUser, waitForUser, onAuthStateChange } from "../lib/auth.js";
+import {
+  getSignInBusyLabel,
+  getSignInLabel,
+  getSignInOpenedStatus,
+  getSignInRequiredMessage,
+} from "../lib/browser.js";
 import { syncProfile, pushProfileToSupabase } from "../lib/sync.js";
 import { openWebDashboard } from "../lib/web.js";
 import type { User } from "@supabase/supabase-js";
@@ -483,21 +489,63 @@ export function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("main");
   const composingRef = useRef<{ lastKana: Record<string, string> }>({ lastKana: {} });
 
+  const refreshState = useCallback(async () => {
+    const [nextSettings, nextUser] = await Promise.all([getSettings(), getUser()]);
+    setSettings(nextSettings);
+    setUser(nextUser);
+    if (!nextUser) return;
+
+    await syncProfile().catch(() => {});
+    const refreshed = await getSettings();
+    setSettings(refreshed);
+  }, []);
+
   useEffect(() => {
-    getSettings().then(setSettings);
-    getUser().then((u) => {
-      setUser(u);
-      if (u) {
-        syncProfile().then(() => getSettings().then(setSettings));
+    refreshState().catch(() => {});
+    const unsubscribe = onAuthStateChange((nextUser) => {
+      setUser(nextUser);
+      if (nextUser) {
+        syncProfile().then(() => getSettings().then(setSettings)).catch(() => {});
       }
     });
-  }, []);
+
+    const storageListener = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
+      if (changes.settings && (areaName === "sync" || areaName === "local")) {
+        const next = changes.settings.newValue as Settings | undefined;
+        if (next) setSettings(next);
+      }
+      if (areaName === "local" && changes.cygnetStateVersion) {
+        refreshState().catch(() => {});
+      }
+    };
+
+    const runtimeListener = (msg: { type?: string }) => {
+      if (msg?.type === "CYGNET_REFRESH_STATE") {
+        refreshState().catch(() => {});
+      }
+    };
+
+    chrome.storage.onChanged.addListener(storageListener);
+    chrome.runtime.onMessage.addListener(runtimeListener);
+    return () => {
+      unsubscribe();
+      chrome.storage.onChanged.removeListener(storageListener);
+      chrome.runtime.onMessage.removeListener(runtimeListener);
+    };
+  }, [refreshState]);
 
   const handleSignIn = useCallback(async () => {
     setAuthLoading(true);
     try {
-      await signInWithGoogle();
-      const u = await getUser();
+      const signInMode = await startSignIn();
+      if (signInMode === "web") {
+        setStatus(getSignInOpenedStatus());
+        return;
+      }
+      const u = await waitForUser();
       if (!u) {
         throw new Error("ログインは完了しましたが、拡張機能セッションを取得できませんでした");
       }
@@ -505,7 +553,7 @@ export function App() {
       await syncProfile();
       const refreshed = await getSettings();
       setSettings(refreshed);
-      setStatus("ログインしました");
+      setStatus(getSignInOpenedStatus());
     } catch (err) {
       const message = err instanceof Error ? err.message : "ログインに失敗しました";
       setStatus(`ログイン失敗: ${message}`);
@@ -546,7 +594,7 @@ export function App() {
       e.preventDefault();
       if (!settings) return;
       if (!user) {
-        setStatus("先にGoogleでログインしてください");
+        setStatus(getSignInRequiredMessage());
         return;
       }
       const normalizedProfile = normalizeProfileLinks(settings.profile);
@@ -621,7 +669,7 @@ export function App() {
               </div>
             ) : (
               <button type="button" className="google-btn" onClick={handleSignIn} disabled={authLoading}>
-                {authLoading ? "ログイン中..." : "Googleでログイン"}
+                {authLoading ? getSignInBusyLabel() : getSignInLabel()}
               </button>
             )}
           </div>
