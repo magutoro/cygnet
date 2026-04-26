@@ -133,7 +133,7 @@ export default async function TermsPage() {
 
   return (
     <main className="page-shell">
-      <div className="mx-auto max-w-3xl px-6 py-14">
+      <div className="mx-auto max-w-5xl px-6 py-14 lg:px-8">
         <Link
           href="/"
           className="glass-button-secondary mb-6 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
@@ -144,8 +144,8 @@ export default async function TermsPage() {
           {t.backToWebsite}
         </Link>
 
-        <div className="glass-panel rounded-[2rem] p-8 shadow-none sm:p-10">
-          <h1 className="text-3xl font-extrabold tracking-tight text-brand-ink sm:text-4xl">
+        <article className="pt-4">
+          <h1 className="text-3xl font-extrabold text-brand-ink sm:text-4xl">
             {t.title}
           </h1>
           <p className="mt-3 text-sm font-medium text-brand-muted">{t.updated}</p>
@@ -164,7 +164,7 @@ export default async function TermsPage() {
             ))}
           </div>
 
-          <div className="glass-panel-soft mt-10 rounded-[1.5rem] p-5 text-sm text-brand-muted">
+          <div className="mt-10 border-t border-white/60 pt-6 text-sm text-brand-muted">
             <div className="grid gap-2 sm:grid-cols-[140px_1fr]">
               <span className="font-semibold text-brand-ink">{t.contactNameLabel}</span>
               <span>{t.contactNameValue}</span>
@@ -180,7 +180,7 @@ export default async function TermsPage() {
           </div>
 
           <p className="mt-8 text-xs text-brand-muted">{t.footer}</p>
-        </div>
+        </article>
       </div>
     </main>
   );

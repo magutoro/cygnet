@@ -58,7 +58,7 @@ export default async function ContactPage() {
             <p className="mt-2 text-sm text-brand-muted">{t.businessDesc}</p>
             <a
               href="mailto:c251771e@gmail.com?subject=Cygnet%20Business%20Inquiry"
-              className="glass-button-primary mt-5 inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold"
+              className="primary-cta-button mt-5"
             >
               {t.businessAction}
             </a>
@@ -70,7 +70,7 @@ export default async function ContactPage() {
             <div className="mt-5 flex flex-wrap gap-2">
               <a
                 href="mailto:c251771e@gmail.com?subject=Cygnet%20Bug%20Report"
-                className="glass-button-primary inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold"
+                className="primary-cta-button"
               >
                 {t.bugAction}
               </a>

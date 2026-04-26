@@ -5,146 +5,10 @@ import Link from "next/link";
 import LandingDemo from "@/components/LandingDemo";
 import LandingPreloader from "@/components/LandingPreloader";
 import { useLanguage } from "@/components/LanguageProvider";
+import { SITE_COPY } from "@/content/site-copy";
 
 const CHROME_WEB_STORE_URL =
   "https://chromewebstore.google.com/detail/cygnet/glgmodddifcigjdkpjefebdkmpgabnnp";
-
-const COPY = {
-  en: {
-    heroBadge: "Free Chrome Extension",
-    heroTitle: "Make Japanese job applications painless.",
-    heroTitleEmphasis: "painless.",
-    heroSubtitle:
-      "Autofill shuukatsu forms with your saved profile — name, address, education, career — accurately formatted and ready in one click.",
-    addToChrome: "Add to Chrome",
-    howItWorksCta: "See how it works",
-    howItWorksTag: "How it works",
-    howItWorksTitle: "Three steps, zero hassle",
-    steps: [
-      {
-        num: "1",
-        title: "Save your profile",
-        desc: "Enter your info once — name, address, education, career — and Cygnet remembers it.",
-      },
-      {
-        num: "2",
-        title: "Open a job site",
-        desc: "Navigate to any supported Japanese job application form — Rikunabi, MyNavi, and more.",
-      },
-      {
-        num: "3",
-        title: "Autofill instantly",
-        desc: "Click the Cygnet button and watch every field populate — correctly formatted, in seconds.",
-      },
-    ],
-    featuresTag: "Features",
-    featuresTitle: "Everything you need for shuukatsu",
-    features: [
-      {
-        title: "Autofill forms",
-        desc: "One click fills name, address, education, career — mapped to each site's specific field structure.",
-      },
-      {
-        title: "Furigana helper",
-        desc: "Automatically converts kanji names to hiragana and katakana readings — no more manual lookup.",
-      },
-      {
-        title: "Address formatting",
-        desc: "Postal code lookup, prefecture auto-selection, and proper Japanese address formatting built in.",
-      },
-      {
-        title: "Multi-site support",
-        desc: "Works across Rikunabi, MyNavi, and other major Japanese job platforms out of the box.",
-      },
-    ],
-    trustTitle: "Security and control by default",
-    trustDesc:
-      "Saved login passwords stay encrypted locally in the extension. If you sign in, your profile and resumes can sync through Cygnet's secured backend so they appear in the dashboard across devices.",
-    trustPoint1: "Saved passwords remain local-only",
-    trustPoint2: "Profile and resume sync is optional",
-    trustPoint3: "Autofill runs only when you choose to use it",
-    ctaTitle: "Ready to simplify shuukatsu?",
-    ctaDesc: "Install Cygnet for free and never hand-type the same info again.",
-    ctaButton: "Add to Chrome — it's free",
-    heroStats: [
-      { value: "Local Vault", label: "Saved credentials" },
-      { value: "10+", label: "Sites supported" },
-      { value: "1-Click", label: "Autofill" },
-    ],
-    privacyPolicy: "Privacy Policy",
-    termsOfService: "Terms of Service",
-    contact: "Contact",
-    rightsReserved: "All rights reserved.",
-    trustBadge: "Privacy & control",
-  },
-  ja: {
-    heroBadge: "無料のChrome拡張機能",
-    heroTitle: "日本語の就活エントリーを、もっとラクに。",
-    heroTitleEmphasis: "もっとラクに。",
-    heroSubtitle:
-      "名前・住所・学歴・職歴を保存しておけば、就活フォームへワンクリックで自動入力できます。",
-    addToChrome: "Chromeに追加",
-    howItWorksCta: "使い方を見る",
-    howItWorksTag: "使い方",
-    howItWorksTitle: "3ステップで入力完了",
-    steps: [
-      {
-        num: "1",
-        title: "プロフィールを保存",
-        desc: "名前、住所、学歴、職歴を一度入力すれば、Cygnetが記憶します。",
-      },
-      {
-        num: "2",
-        title: "応募フォームを開く",
-        desc: "対応している日本の求人応募フォームを開きます（リクナビ、マイナビなど）。",
-      },
-      {
-        num: "3",
-        title: "ワンクリックで自動入力",
-        desc: "Cygnetをクリックすると、必要な形式に合わせて一気に入力されます。",
-      },
-    ],
-    featuresTag: "機能",
-    featuresTitle: "就活に必要な機能をひとつに",
-    features: [
-      {
-        title: "フォーム自動入力",
-        desc: "サイトごとの入力欄構造に合わせて、プロフィール情報を自動で入力します。",
-      },
-      {
-        title: "ふりがな補助",
-        desc: "漢字氏名からひらがな・カタカナを補助変換し、入力の手間を減らします。",
-      },
-      {
-        title: "住所フォーマット対応",
-        desc: "郵便番号、都道府県、住所の形式を日本の応募フォーム向けに整えます。",
-      },
-      {
-        title: "主要サイト対応",
-        desc: "リクナビ、マイナビなど主要な日本の就活サイトで利用できます。",
-      },
-    ],
-    trustTitle: "セキュリティとコントロールを前提に",
-    trustDesc:
-      "保存済みログインパスワードは拡張機能内で暗号化されたままローカル保存されます。ログインして同期機能を使う場合のみ、プロフィールや履歴書が Cygnet の保護されたバックエンドを通じて端末間同期されます。",
-    trustPoint1: "保存済みパスワードはローカル保存のみ",
-    trustPoint2: "プロフィール・履歴書同期は任意",
-    trustPoint3: "自動入力はユーザー操作時のみ実行",
-    ctaTitle: "就活入力をもっと速く",
-    ctaDesc: "Cygnetを無料で使い始めましょう。",
-    ctaButton: "Chromeに追加（無料）",
-    heroStats: [
-      { value: "ローカル保管", label: "保存済み認証情報" },
-      { value: "10+", label: "対応サイト" },
-      { value: "1クリック", label: "自動入力" },
-    ],
-    privacyPolicy: "プライバシーポリシー",
-    termsOfService: "利用規約",
-    contact: "お問い合わせ",
-    rightsReserved: "All rights reserved.",
-    trustBadge: "プライバシーとコントロール",
-  },
-} as const;
 
 const STEP_ICONS = [
   (
@@ -183,7 +47,7 @@ const FEATURE_ICONS = [
   ),
   (
     <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 8.25 3.75H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z" />
     </svg>
   ),
 ];
@@ -193,7 +57,7 @@ type BootState = "bootPending" | "preloader" | "ready";
 
 export default function HomePage() {
   const { lang } = useLanguage();
-  const t = COPY[lang];
+  const t = SITE_COPY[lang].home;
   const isJapanese = lang === "ja";
   const [bootState, setBootState] = useState<BootState>("bootPending");
   const [demoReady, setDemoReady] = useState(false);
@@ -289,9 +153,7 @@ export default function HomePage() {
     setBootState("ready");
   };
 
-  const revealClass = homeReady
-    ? "translate-y-0 opacity-100"
-    : "translate-y-3 opacity-0";
+  const revealClass = homeReady ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0";
 
   const heroTitleClass = isJapanese
     ? "max-w-[34rem] text-[2.95rem] font-bold leading-[1.14] tracking-[-0.05em] sm:text-[3.7rem] lg:text-[4.3rem]"
@@ -299,9 +161,7 @@ export default function HomePage() {
   const heroSubtitleClass = isJapanese
     ? "mt-6 max-w-[29rem] text-[0.99rem] leading-[1.95] text-brand-muted sm:text-[1.05rem]"
     : "mt-6 max-w-lg text-lg leading-relaxed text-brand-muted";
-  const heroPrimaryButtonClass = isJapanese
-    ? "inline-flex h-14 items-center justify-center gap-3 rounded-full bg-brand px-7 text-[0.98rem] font-semibold leading-none text-white shadow-[0_16px_32px_rgba(78,144,216,0.2)] transition-colors hover:bg-brand-strong"
-    : "inline-flex h-14 items-center justify-center gap-3 rounded-full bg-brand px-8 text-base font-semibold leading-none text-white shadow-[0_16px_32px_rgba(78,144,216,0.2)] transition-colors hover:bg-brand-strong";
+  const heroPrimaryButtonClass = isJapanese ? "primary-cta-button" : "primary-cta-button px-8 text-base";
   const heroSecondaryButtonClass = isJapanese
     ? "inline-flex h-14 items-center gap-2 px-0 text-[0.98rem] font-semibold leading-none text-brand-ink transition-colors hover:text-brand"
     : "inline-flex h-14 items-center gap-2 px-0 text-base font-semibold leading-none text-brand-ink transition-colors hover:text-brand";
@@ -344,9 +204,7 @@ export default function HomePage() {
                   {renderHeroTitle(lang, t.heroTitle, t.heroTitleEmphasis)}
                 </h1>
 
-                <p className={heroSubtitleClass}>
-                  {t.heroSubtitle}
-                </p>
+                <p className={heroSubtitleClass}>{t.heroSubtitle}</p>
 
                 <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                   <a
@@ -358,24 +216,17 @@ export default function HomePage() {
                     <ChromeMarkIcon className="h-5 w-5 shrink-0 text-white" />
                     {t.ctaButton}
                   </a>
-                  <a
-                    href="#how-it-works"
-                    className={heroSecondaryButtonClass}
-                  >
+                  <Link href="/demo" className={heroSecondaryButtonClass}>
                     {t.howItWorksCta}
                     <ArrowRightIcon />
-                  </a>
+                  </Link>
                 </div>
 
                 <div className={heroStatsWrapClass}>
                   {t.heroStats.map((stat) => (
                     <div key={`${stat.value}-${stat.label}`}>
-                      <div className={heroStatValueClass}>
-                        {stat.value}
-                      </div>
-                      <div className={heroStatLabelClass}>
-                        {stat.label}
-                      </div>
+                      <div className={heroStatValueClass}>{stat.value}</div>
+                      <div className={heroStatLabelClass}>{stat.label}</div>
                     </div>
                   ))}
                 </div>
@@ -421,6 +272,12 @@ export default function HomePage() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-8 flex justify-start">
+              <Link href="/demo" className="glass-button-secondary px-6 py-3 text-sm font-semibold">
+                {t.fullDemoCta}
+              </Link>
             </div>
           </div>
         </section>
@@ -480,6 +337,39 @@ export default function HomePage() {
 
         <section className="py-24 sm:py-28">
           <div className="mx-auto max-w-7xl px-6">
+            <div className="mb-16 max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">{t.modesTag}</p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-brand-ink sm:text-4xl lg:text-5xl">
+                {t.modesTitle}
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-brand-muted">{t.modesIntro}</p>
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              {t.modes.map((mode, index) => (
+                <div key={mode.title} className="glass-panel rounded-[2rem] p-8">
+                  <div className="mb-5 inline-flex rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-brand">
+                    {index === 0 ? "Auto" : "Manual"}
+                  </div>
+                  <h3 className="text-2xl font-bold text-brand-ink">{mode.title}</h3>
+                  <p className="mt-4 text-sm leading-relaxed text-brand-muted">{mode.desc}</p>
+                  <div className="mt-6 grid gap-3">
+                    {[mode.point1, mode.point2].map((point) => (
+                      <div key={point} className="glass-panel-soft flex items-center gap-3 rounded-2xl px-4 py-3 text-sm text-brand-ink">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white">
+                          <CheckIcon />
+                        </div>
+                        <span>{point}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-24 sm:py-28">
+          <div className="mx-auto max-w-7xl px-6">
             <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="glass-panel rounded-[2rem] p-8 sm:p-10">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">{t.trustBadge}</p>
@@ -501,6 +391,31 @@ export default function HomePage() {
                 <div className="glass-panel flex h-36 w-36 items-center justify-center rounded-[2rem]">
                   <ShieldIcon />
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-24 sm:py-28">
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="glass-panel rounded-[2rem] p-8 sm:p-10">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">{t.faqTag}</p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-brand-ink sm:text-4xl">{t.faqTitle}</h2>
+              <p className="mt-4 max-w-3xl text-base leading-relaxed text-brand-muted">{t.faqIntro}</p>
+              <div className="mt-8 space-y-3">
+                {t.faqs.map((item) => (
+                  <details key={item.question} className="rounded-2xl border border-white/70 bg-white/46 px-5 py-4">
+                    <summary className="cursor-pointer list-none text-base font-semibold text-brand-ink">
+                      {item.question}
+                    </summary>
+                    <p className="mt-3 text-sm leading-relaxed text-brand-muted">{item.answer}</p>
+                  </details>
+                ))}
+              </div>
+              <div className="mt-8">
+                <Link href="/help" className="glass-button-secondary px-6 py-3 text-sm font-semibold">
+                  {t.faqHelpCta}
+                </Link>
               </div>
             </div>
           </div>
@@ -539,6 +454,9 @@ export default function HomePage() {
               </Link>
               <Link href="/terms" className="glass-nav-link">
                 {t.termsOfService}
+              </Link>
+              <Link href="/help" className="glass-nav-link">
+                {t.help}
               </Link>
               <Link href="/contact" className="glass-nav-link">
                 {t.contact}

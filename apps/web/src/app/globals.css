@@ -153,6 +153,32 @@ body::after {
     background: linear-gradient(180deg, rgba(63, 127, 198, 0.96), rgba(53, 112, 178, 0.96));
   }
 
+  .primary-cta-button {
+    display: inline-flex;
+    height: 3.5rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    border-radius: 9999px;
+    background: var(--primary);
+    padding-inline: 1.75rem;
+    color: white;
+    box-shadow: 0 16px 32px rgba(78, 144, 216, 0.2);
+    font-size: 0.98rem;
+    font-weight: 600;
+    line-height: 1;
+    transition:
+      background-color 180ms ease,
+      transform 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .primary-cta-button:hover {
+    background: var(--primary-strong);
+    transform: translateY(-1px);
+    box-shadow: 0 18px 38px rgba(63, 127, 198, 0.22);
+  }
+
   .glass-button-secondary {
     display: inline-flex;
     align-items: center;

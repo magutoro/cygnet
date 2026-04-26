@@ -8,6 +8,7 @@ import NavPrivacyLink from "@/components/NavPrivacyLink";
 import NavTermsLink from "@/components/NavTermsLink";
 import NavContactLink from "@/components/NavContactLink";
 import NavDashboardLink from "@/components/NavDashboardLink";
+import NavApplicationsLink from "@/components/NavApplicationsLink";
 import {
   LANGUAGE_COOKIE_KEY,
   detectLanguageFromAcceptLanguage,
@@ -87,6 +88,7 @@ export default async function RootLayout({
                 </Link>
                 <div className="flex h-10 items-center gap-5 lg:gap-7">
                   <NavDashboardLink />
+                  <NavApplicationsLink />
                   <NavPrivacyLink />
                   <NavTermsLink />
                   <NavContactLink />

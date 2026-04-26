@@ -27,6 +27,20 @@ export { hiraganaToKatakana, katakanaToHiragana, toHalfWidth, extractDigits, ext
 export { splitPostalDigits, formatPostalForDisplay, joinNonEmpty, normalizeProfileUrl } from "./utils/format.js";
 
 export type { DbProfile, DbResume } from "./types/database.js";
+export type { DbApplication } from "./types/database.js";
+
+export type {
+  Application,
+  ApplicationInput,
+  ApplicationStatus,
+} from "./types/applications.js";
+
+export {
+  APPLICATION_STATUS_ORDER,
+  DEFAULT_APPLICATION_INPUT,
+  dbApplicationToApplication,
+  applicationInputToDb,
+} from "./types/applications.js";
 
 export { profileToDb, dbToProfile } from "./utils/profile-convert.js";
 

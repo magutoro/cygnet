@@ -212,7 +212,7 @@ export default async function PrivacyPage() {
   return (
     <>
       <main className="page-shell">
-        <div className="mx-auto max-w-3xl px-6 py-14">
+        <div className="mx-auto max-w-5xl px-6 py-14 lg:px-8">
           <Link
             href="/"
             className="glass-button-secondary mb-6 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
@@ -223,8 +223,8 @@ export default async function PrivacyPage() {
             {t.backToWebsite}
           </Link>
 
-          <div className="glass-panel rounded-[2rem] p-8 shadow-none sm:p-10">
-            <h1 className="text-3xl font-extrabold tracking-tight text-brand-ink sm:text-4xl">
+          <article className="pt-4">
+            <h1 className="text-3xl font-extrabold text-brand-ink sm:text-4xl">
               {t.title}
             </h1>
             <p className="mt-2 text-sm text-brand-muted">{t.updated}</p>
@@ -248,7 +248,7 @@ export default async function PrivacyPage() {
               </section>
             ))}
 
-            <ul className="glass-panel-soft mt-8 list-disc space-y-2 rounded-[1.5rem] px-6 py-5 pl-10 text-brand-muted">
+            <ul className="mt-10 list-disc space-y-2 border-t border-white/60 pt-6 pl-6 text-brand-muted">
               <li>
                 {t.contactNameLabel}: {t.contactNameValue}
               </li>
@@ -273,7 +273,7 @@ export default async function PrivacyPage() {
                 </a>
               </li>
             </ul>
-          </div>
+          </article>
         </div>
       </main>
 

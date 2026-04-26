@@ -48,7 +48,7 @@ export default function AuthButton() {
     return (
       <a
         href="/auth/consent?next=/dashboard"
-        className={`inline-flex h-10 items-center gap-2 rounded-lg bg-brand-strong font-medium leading-none text-white transition-colors hover:bg-brand-ink ${
+        className={`inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-lg bg-brand-strong font-medium leading-none text-white transition-colors hover:bg-brand-ink ${
           lang === "ja" ? "px-3.5 text-[13px]" : "px-4 text-sm"
         }`}
       >

@@ -48,3 +48,21 @@ export interface DbResume {
   parsed_at: string | null;
   created_at: string;
 }
+
+export interface DbApplication {
+  id: string;
+  user_id: string;
+  company_name: string;
+  role_title: string;
+  source_site: string;
+  application_url: string;
+  status: "saved" | "applied" | "screening" | "interview" | "offer" | "rejected" | "withdrawn";
+  applied_at: string | null;
+  next_step_label: string;
+  next_step_at: string | null;
+  contact_name: string;
+  contact_email: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}

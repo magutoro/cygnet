@@ -16,9 +16,9 @@ function sanitizeNextPath(value: string | null): string {
 const COPY = {
   en: {
     back: "Back",
-    title: "Before you create your Cygnet account",
+    title: "Before you continue",
     intro:
-      "Please confirm that you understand how Cygnet handles account-backed data before continuing with Google sign-in.",
+      "Please review how synced profile and resume data may be handled before continuing with Google sign-in.",
     cardTitle: "What you are acknowledging",
     bullets: [
       "If you choose sync or upload features, your profile data and resumes may be stored in Cygnet's secured backend and processed by Cygnet and its service providers so they can appear in the web dashboard and sync across devices.",
@@ -36,9 +36,9 @@ const COPY = {
   },
   ja: {
     back: "戻る",
-    title: "Cygnet アカウント作成前の確認",
+    title: "Googleログイン前の確認",
     intro:
-      "Google ログインへ進む前に、Cygnet がアカウント連携データをどのように扱うかをご確認ください。",
+      "同期するプロフィール・履歴書データの扱いだけ、先にご確認ください。",
     cardTitle: "確認していただく内容",
     bullets: [
       "同期やアップロード機能を選択した場合、プロフィール情報や履歴書は、Web ダッシュボード表示や端末間同期のために、Cygnet およびそのサービス提供者によって処理・保存されることがあります。",
@@ -124,7 +124,9 @@ export default async function AuthConsentPage({
 
             <button
               type="submit"
-              className="glass-button-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold"
+              className={`inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-brand-strong font-medium leading-none text-white shadow-[0_10px_22px_rgba(77,127,181,0.18)] transition-colors hover:bg-brand-ink sm:w-auto ${
+                lang === "ja" ? "px-4 text-[14px]" : "px-4 text-sm"
+              }`}
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
