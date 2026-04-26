@@ -4,6 +4,7 @@ import { GOOGLE_WORKSPACE_SCOPES } from "@cygnet/shared";
 
 const GOOGLE_AUTH_BASE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const GOOGLE_TOKEN_REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 const GOOGLE_CALENDAR_EVENTS_URL =
   "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 const GMAIL_LABELS_URL = "https://gmail.googleapis.com/gmail/v1/users/me/labels";
@@ -17,6 +18,44 @@ export const GOOGLE_WORKSPACE_ALL_SCOPES = [
   GOOGLE_WORKSPACE_SCOPES.gmailReadonly,
   GOOGLE_WORKSPACE_SCOPES.gmailLabels,
 ];
+
+const GOOGLE_AUTH_BASE_SCOPES = ["openid", "email", "profile"];
+
+export function googleWorkspaceScopesFromAliases(value: string | null): string[] {
+  const aliases = String(value || "")
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+  const scopes = new Set<string>();
+
+  if (aliases.includes("calendar")) {
+    scopes.add(GOOGLE_WORKSPACE_SCOPES.calendarEvents);
+  }
+  if (aliases.includes("gmail")) {
+    scopes.add(GOOGLE_WORKSPACE_SCOPES.gmailReadonly);
+    scopes.add(GOOGLE_WORKSPACE_SCOPES.gmailLabels);
+  }
+
+  return Array.from(scopes);
+}
+
+export function googleWorkspaceAliasesFromScopes(scopes: string[]): string {
+  const aliases: string[] = [];
+  if (scopes.includes(GOOGLE_WORKSPACE_SCOPES.calendarEvents)) {
+    aliases.push("calendar");
+  }
+  if (
+    scopes.includes(GOOGLE_WORKSPACE_SCOPES.gmailReadonly) ||
+    scopes.includes(GOOGLE_WORKSPACE_SCOPES.gmailLabels)
+  ) {
+    aliases.push("gmail");
+  }
+  return aliases.join(",");
+}
+
+export function buildGoogleSignInScopes(extraScopes: string[]): string {
+  return Array.from(new Set([...GOOGLE_AUTH_BASE_SCOPES, ...extraScopes])).join(" ");
+}
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -168,6 +207,22 @@ export async function refreshGoogleWorkspaceAccessToken(refreshToken: string) {
     },
     body,
   });
+}
+
+export async function revokeGoogleWorkspaceToken(token: string): Promise<void> {
+  if (!token) return;
+
+  const response = await fetch(GOOGLE_TOKEN_REVOKE_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({ token }),
+  });
+
+  if (!response.ok && response.status !== 400) {
+    throw new Error(await parseGoogleError(response));
+  }
 }
 
 export function splitGrantedScopes(scopeValue: string): string[] {

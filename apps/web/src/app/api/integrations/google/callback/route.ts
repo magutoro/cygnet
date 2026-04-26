@@ -1,18 +1,12 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
-  decryptGoogleRefreshToken,
   exchangeGoogleWorkspaceCode,
-  getGoogleWorkspaceEmail,
-  GOOGLE_WORKSPACE_DEFAULT_LABEL,
+  GOOGLE_WORKSPACE_ALL_SCOPES,
   GOOGLE_WORKSPACE_STATE_COOKIE,
   splitGrantedScopes,
 } from "@/lib/google-workspace";
-import {
-  getGoogleWorkspaceIntegrationRow,
-  syncGmailForUser,
-  upsertGoogleWorkspaceIntegration,
-} from "@/lib/applications/gmail-sync";
+import { storeGoogleWorkspaceIntegrationFromOAuth } from "@/lib/google-workspace-auth";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
@@ -51,29 +45,19 @@ export async function GET(request: Request) {
 
   try {
     const tokens = await exchangeGoogleWorkspaceCode(code, origin);
-    const existing = await getGoogleWorkspaceIntegrationRow(supabase, user.id);
-    const finalRefreshToken =
-      tokens.refresh_token ||
-      (existing ? decryptGoogleRefreshToken(existing.refresh_token_encrypted) : "");
-    if (!finalRefreshToken) {
-      throw new Error("No Google refresh token was returned");
-    }
-
     const scopes = splitGrantedScopes(tokens.scope);
-    const email = await getGoogleWorkspaceEmail(tokens.access_token);
-    await upsertGoogleWorkspaceIntegration(supabase, user.id, {
-      googleEmail: email,
-      scopes,
-      labelName: existing?.label_name || GOOGLE_WORKSPACE_DEFAULT_LABEL,
-      refreshToken: finalRefreshToken,
+    const workspaceScopes = scopes.filter((scope) =>
+      GOOGLE_WORKSPACE_ALL_SCOPES.includes(
+        scope as (typeof GOOGLE_WORKSPACE_ALL_SCOPES)[number],
+      ),
+    );
+    await storeGoogleWorkspaceIntegrationFromOAuth({
+      supabase,
+      user,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token || "",
+      requestedScopes: workspaceScopes.length ? workspaceScopes : GOOGLE_WORKSPACE_ALL_SCOPES,
     });
-
-    if (scopes.some((scope) => scope.includes("gmail"))) {
-      const latest = await getGoogleWorkspaceIntegrationRow(supabase, user.id);
-      if (latest) {
-        await syncGmailForUser(supabase, user.id, latest);
-      }
-    }
 
     return NextResponse.redirect(new URL(parsedState.next || "/applications", origin));
   } catch (error) {

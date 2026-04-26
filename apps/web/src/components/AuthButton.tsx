@@ -8,10 +8,12 @@ import { useLanguage } from "@/components/LanguageProvider";
 const COPY = {
   en: {
     signIn: "Sign in with Google",
+    settings: "Settings",
     signOut: "Sign out",
   },
   ja: {
     signIn: "Googleでログイン",
+    settings: "設定",
     signOut: "ログアウト",
   },
 } as const;
@@ -82,6 +84,12 @@ export default function AuthButton() {
           {user.email}
         </span>
       </div>
+      <a
+        href="/settings"
+        className="glass-button-secondary h-8 px-3 text-xs font-medium leading-none"
+      >
+        {t.settings}
+      </a>
       <a
         href="/auth/logout"
         className="glass-button-secondary h-8 px-3 text-xs font-medium leading-none"

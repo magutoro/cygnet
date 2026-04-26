@@ -5,6 +5,7 @@ import {
   detectLanguageFromAcceptLanguage,
   normalizeLanguage,
 } from "@/lib/language";
+import { isGoogleWorkspaceOAuthEnabled } from "@/lib/google-workspace-enabled";
 
 function sanitizeNextPath(value: string | null): string {
   const candidate = String(value || "").trim();
@@ -16,40 +17,58 @@ function sanitizeNextPath(value: string | null): string {
 const COPY = {
   en: {
     back: "Back",
-    title: "Before you continue",
+    title: "Continue with Google",
     intro:
-      "Please review how synced profile and resume data may be handled before continuing with Google sign-in.",
-    cardTitle: "What you are acknowledging",
+      "Use Google to sign in to Cygnet. Calendar and Gmail sync are optional and can be managed later.",
+    cardTitle: "What Cygnet stores",
     bullets: [
-      "If you choose sync or upload features, your profile data and resumes may be stored in Cygnet's secured backend and processed by Cygnet and its service providers so they can appear in the web dashboard and sync across devices.",
-      "Cygnet staff may access synced profile or resume data only when needed for user-requested support, security or abuse investigation, or legal compliance.",
-      "Saved login passwords are different: they stay local in the extension, are protected with your local passphrase, and are not uploaded to Cygnet.",
+      "Dashboard profile, resumes, and applications can sync through Cygnet's secured backend.",
+      "Saved login passwords stay local-only in the extension and are not uploaded to Cygnet.",
+      "Human access is limited to support you request, security review, abuse investigation, or legal compliance.",
     ],
-    checkbox:
-      "I understand that if I choose sync or upload features, my profile or resume data may be stored and processed as described in the Privacy Policy, that human access is limited to user-requested support, security or abuse investigation, or legal compliance, and that saved login passwords stay local-only in the extension.",
-    legalIntro: "Please review the following before continuing:",
+    permissionsTitle: "Optional sync",
+    permissionsIntro:
+      "Basic sign-in works without these. Turn them on only if you want Cygnet to connect those Google features.",
+    calendarTitle: "Sync with Google Calendar",
+    calendarBody: "Add or update interview and follow-up events from your applications.",
+    gmailTitle: "Sync with Gmail",
+    gmailBody: "Sync only messages with the Cygnet label to update your application history.",
+    comingSoon: "Coming soon",
+    unavailable:
+      "Calendar/Gmail sync is paused for public users until Google verification is complete.",
+    legalIntro: "By continuing, you agree to Cygnet's",
     privacy: "Privacy Policy",
     terms: "Terms of Service",
+    and: "and",
     securityNote:
       "No method of transmission or storage is completely secure, and Cygnet cannot guarantee absolute security.",
     continue: "Continue with Google",
   },
   ja: {
     back: "戻る",
-    title: "Googleログイン前の確認",
+    title: "Googleで続行",
     intro:
-      "同期するプロフィール・履歴書データの扱いだけ、先にご確認ください。",
-    cardTitle: "確認していただく内容",
+      "Google で Cygnet にログインします。Calendar / Gmail 同期は任意で、あとから管理できます。",
+    cardTitle: "Cygnet が保存するもの",
     bullets: [
-      "同期やアップロード機能を選択した場合、プロフィール情報や履歴書は、Web ダッシュボード表示や端末間同期のために、Cygnet およびそのサービス提供者によって処理・保存されることがあります。",
-      "Cygnet 担当者が同期済みプロフィールまたは履歴書データへアクセスできるのは、ユーザーからのサポート依頼、セキュリティまたは不正利用の調査、法令対応が必要な場合に限られます。",
-      "保存済みログインのパスワードは別扱いです。これらは拡張機能内だけに保存され、ローカルのパスフレーズで保護され、Cygnet へアップロードされません。",
+      "プロフィール・履歴書・応募履歴は Cygnet の保護されたバックエンドで同期できます。",
+      "保存済みログインパスワードは拡張機能内のローカル保存のみで、Cygnet へアップロードされません。",
+      "人による閲覧は、サポート依頼、セキュリティ確認、不正利用調査、法令対応が必要な場合に限られます。",
     ],
-    checkbox:
-      "同期またはアップロード機能を選択した場合、プロフィール情報や履歴書がプライバシーポリシー記載のとおり保存・処理されること、人による閲覧はユーザーからのサポート依頼、セキュリティまたは不正利用の調査、法令対応に限られること、また保存済みログインパスワードは拡張機能内のローカル保存のみであることを理解しました。",
-    legalIntro: "続行前に以下をご確認ください:",
+    permissionsTitle: "任意の同期",
+    permissionsIntro:
+      "通常ログインには不要です。Google 機能を連携したい場合だけオンにしてください。",
+    calendarTitle: "Google Calendar と同期",
+    calendarBody: "応募履歴から面接・次回対応の予定を追加、更新できます。",
+    gmailTitle: "Gmail と同期",
+    gmailBody: "Cygnet ラベルが付いたメールだけを同期し、応募履歴を更新します。",
+    comingSoon: "準備中",
+    unavailable:
+      "Google の確認が完了するまで、公開環境では Calendar / Gmail 同期を停止しています。",
+    legalIntro: "続行すると Cygnet の",
     privacy: "プライバシーポリシー",
     terms: "利用規約",
+    and: "と",
     securityNote:
       "インターネット送信や電子保存に絶対的に安全な方法は存在せず、Cygnet は完全な安全性を保証できません。",
     continue: "Google で続行",
@@ -69,6 +88,7 @@ export default async function AuthConsentPage({
   const t = COPY[lang];
   const params = await searchParams;
   const next = sanitizeNextPath(params.next ?? null);
+  const workspaceOAuthEnabled = isGoogleWorkspaceOAuthEnabled();
 
   return (
     <main className="page-shell">
@@ -83,44 +103,105 @@ export default async function AuthConsentPage({
           {t.back}
         </Link>
 
-        <div className="glass-panel rounded-[2rem] p-8 shadow-none">
+        <div className="glass-panel rounded-[2rem] p-6 shadow-none sm:p-8">
           <h1 className="text-3xl font-extrabold tracking-tight text-brand-ink">{t.title}</h1>
           <p className="mt-3 leading-relaxed text-brand-muted">{t.intro}</p>
-
-          <section className="glass-panel-soft mt-8 rounded-[1.5rem] p-5">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-brand">{t.cardTitle}</h2>
-            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed text-brand-muted">
-              {t.bullets.map((bullet) => (
-                <li key={bullet}>{bullet}</li>
-              ))}
-            </ul>
-            <div className="mt-4 text-sm text-brand-muted">
-              <p>{t.legalIntro}</p>
-              <div className="mt-2 flex flex-wrap gap-4">
-                <Link href="/privacy" className="font-medium text-brand-strong hover:text-brand-ink">
-                  {t.privacy}
-                </Link>
-                <Link href="/terms" className="font-medium text-brand-strong hover:text-brand-ink">
-                  {t.terms}
-                </Link>
-              </div>
-              <p className="mt-3 text-xs leading-relaxed">{t.securityNote}</p>
-            </div>
-          </section>
 
           <form action="/auth/login" method="get" className="mt-8 space-y-5">
             <input type="hidden" name="next" value={next} />
             <input type="hidden" name="confirmed" value="1" />
 
-            <label className="glass-panel-soft flex items-start gap-3 rounded-[1.5rem] p-4 text-sm text-brand-ink">
-              <input
-                type="checkbox"
-                name="acknowledged"
-                required
-                className="glass-checkbox mt-0.5"
-              />
-              <span>{t.checkbox}</span>
-            </label>
+            <section className="rounded-[1.5rem] border border-white/70 bg-white/54 p-5">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-brand">
+                {t.permissionsTitle}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-brand-muted">
+                {t.permissionsIntro}
+              </p>
+              {!workspaceOAuthEnabled ? (
+                <p className="mt-3 rounded-2xl border border-[rgba(243,215,141,0.78)] bg-[rgba(255,247,214,0.72)] px-4 py-3 text-xs font-medium leading-relaxed text-[#8a5b12]">
+                  {t.unavailable}
+                </p>
+              ) : null}
+              <div className="mt-4 grid gap-3">
+                <label
+                  className={`glass-panel-soft flex items-start gap-3 rounded-2xl p-4 text-sm text-brand-ink ${
+                    workspaceOAuthEnabled ? "cursor-pointer" : "cursor-not-allowed opacity-70"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    name="workspaceCalendar"
+                    value="1"
+                    disabled={!workspaceOAuthEnabled}
+                    className="glass-checkbox mt-1"
+                  />
+                  <span>
+                    <span className="flex flex-wrap items-center gap-2 font-semibold">
+                      {t.calendarTitle}
+                      {!workspaceOAuthEnabled ? (
+                        <span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] text-brand-muted">
+                          {t.comingSoon}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="mt-1 block leading-relaxed text-brand-muted">
+                      {t.calendarBody}
+                    </span>
+                  </span>
+                </label>
+                <label
+                  className={`glass-panel-soft flex items-start gap-3 rounded-2xl p-4 text-sm text-brand-ink ${
+                    workspaceOAuthEnabled ? "cursor-pointer" : "cursor-not-allowed opacity-70"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    name="workspaceGmail"
+                    value="1"
+                    disabled={!workspaceOAuthEnabled}
+                    className="glass-checkbox mt-1"
+                  />
+                  <span>
+                    <span className="flex flex-wrap items-center gap-2 font-semibold">
+                      {t.gmailTitle}
+                      {!workspaceOAuthEnabled ? (
+                        <span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] text-brand-muted">
+                          {t.comingSoon}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="mt-1 block leading-relaxed text-brand-muted">
+                      {t.gmailBody}
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </section>
+
+            <details className="glass-panel-soft rounded-[1.5rem] p-4 text-sm text-brand-muted">
+              <summary className="cursor-pointer font-semibold text-brand-ink">
+                {t.cardTitle}
+              </summary>
+              <ul className="mt-4 list-disc space-y-2 pl-5 leading-relaxed">
+                {t.bullets.map((bullet) => (
+                  <li key={bullet}>{bullet}</li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs leading-relaxed">{t.securityNote}</p>
+            </details>
+
+            <p className="text-sm leading-relaxed text-brand-muted">
+              {t.legalIntro}{" "}
+              <Link href="/privacy" className="font-medium text-brand-strong hover:text-brand-ink">
+                {t.privacy}
+              </Link>{" "}
+              {t.and}{" "}
+              <Link href="/terms" className="font-medium text-brand-strong hover:text-brand-ink">
+                {t.terms}
+              </Link>
+              .
+            </p>
 
             <button
               type="submit"

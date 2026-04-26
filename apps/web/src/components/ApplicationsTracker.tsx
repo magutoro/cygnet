@@ -16,6 +16,9 @@ import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/components/LanguageProvider";
 import { SITE_COPY } from "@/content/site-copy";
 
+const WORKSPACE_OAUTH_ENABLED =
+  process.env.NEXT_PUBLIC_GOOGLE_WORKSPACE_OAUTH_ENABLED === "true";
+
 interface Props {
   initialApplications: Application[];
   initialIntegration: GoogleWorkspaceIntegrationSummary;
@@ -412,6 +415,10 @@ export default function ApplicationsTracker({
 
   async function handleSyncGmail(silent = false) {
     if (!integration.connected) {
+      if (!WORKSPACE_OAUTH_ENABLED) {
+        setStatusMessage(t.googleUnavailableDesc);
+        return;
+      }
       window.location.href = "/api/integrations/google/connect";
       return;
     }
@@ -462,6 +469,10 @@ export default function ApplicationsTracker({
   async function handleCalendarSync() {
     if (!selectedApplication) return;
     if (!integration.connected) {
+      if (!WORKSPACE_OAUTH_ENABLED) {
+        setStatusMessage(t.googleUnavailableDesc);
+        return;
+      }
       window.location.href = "/api/integrations/google/connect";
       return;
     }
@@ -659,7 +670,11 @@ export default function ApplicationsTracker({
               {t.googleTitle}
             </p>
             <p className="mt-2 text-sm leading-relaxed text-brand-muted">
-              {integration.connected ? t.googleConnectedDesc : t.googleDesc}
+              {integration.connected
+                ? t.googleConnectedDesc
+                : WORKSPACE_OAUTH_ENABLED
+                  ? t.googleDesc
+                  : t.googleUnavailableDesc}
             </p>
 
             <div className="mt-4 rounded-2xl border border-white/65 bg-white/52 p-4">
@@ -691,11 +706,19 @@ export default function ApplicationsTracker({
               <button
                 type="button"
                 onClick={() => {
-                  window.location.href = "/api/integrations/google/connect";
+                  if (!integration.connected && !WORKSPACE_OAUTH_ENABLED) return;
+                  window.location.href = integration.connected
+                    ? "/settings"
+                    : "/api/integrations/google/connect";
                 }}
-                className="primary-cta-button h-11 px-5 text-sm"
+                disabled={!integration.connected && !WORKSPACE_OAUTH_ENABLED}
+                className="primary-cta-button h-11 px-5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {integration.connected ? t.googleReconnect : t.googleConnect}
+                {integration.connected
+                  ? t.googleManage
+                  : WORKSPACE_OAUTH_ENABLED
+                    ? t.googleConnect
+                    : t.googleComingSoon}
               </button>
               <button
                 type="button"
@@ -914,10 +937,15 @@ export default function ApplicationsTracker({
                   onClick={() => {
                     handleCalendarSync().catch(() => {});
                   }}
-                  disabled={calendarBusyId === selectedApplication.id}
+                  disabled={
+                    calendarBusyId === selectedApplication.id ||
+                    (!integration.connected && !WORKSPACE_OAUTH_ENABLED)
+                  }
                   className="primary-cta-button h-11 px-5 text-sm disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {calendarBusyId === selectedApplication.id
+                  {!integration.connected && !WORKSPACE_OAUTH_ENABLED
+                    ? t.googleComingSoon
+                    : calendarBusyId === selectedApplication.id
                     ? t.calendarSyncing
                     : selectedApplication.calendarEventId
                       ? t.updateGoogleCalendar
