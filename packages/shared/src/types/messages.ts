@@ -6,6 +6,7 @@ import type {
   CredentialVaultState,
   CredentialSummary
 } from "./credentials.js";
+import type { Application } from "./applications.js";
 
 export type ExtensionMessage =
   | { type: "AUTOFILL_NOW" }
@@ -27,7 +28,15 @@ export type ExtensionMessage =
   | { type: "CREDENTIAL_UPSERT"; entry: CredentialUpsertInput }
   | { type: "CREDENTIAL_DELETE"; id: string }
   | { type: "CREDENTIAL_MATCH"; context: CredentialMatchContext }
-  | { type: "CREDENTIAL_CAPTURE"; payload: CredentialCapturePayload };
+  | { type: "CREDENTIAL_CAPTURE"; payload: CredentialCapturePayload }
+  | {
+      type: "APPLICATION_QUICK_ADD";
+      payload: {
+        companyName: string;
+        sourceSite: string;
+        applicationUrl: string;
+      };
+    };
 
 export interface AutofillResult {
   ok: boolean;
@@ -72,4 +81,10 @@ export interface ExtensionBridgeResponse {
   ok: boolean;
   error?: string;
   email?: string | null;
+}
+
+export interface ApplicationQuickAddResponse {
+  ok: boolean;
+  application?: Application;
+  error?: string;
 }

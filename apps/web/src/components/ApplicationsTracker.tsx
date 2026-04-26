@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   APPLICATION_STATUS_ORDER,
   DEFAULT_APPLICATION_INPUT,
@@ -10,6 +10,7 @@ import {
   type ApplicationInput,
   type ApplicationStatus,
   type DbApplication,
+  type GoogleWorkspaceIntegrationSummary,
 } from "@cygnet/shared";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -17,10 +18,19 @@ import { SITE_COPY } from "@/content/site-copy";
 
 interface Props {
   initialApplications: Application[];
+  initialIntegration: GoogleWorkspaceIntegrationSummary;
   userId: string;
 }
 
 type FilterValue = "all" | ApplicationStatus;
+
+interface CalendarDay {
+  key: string;
+  dayNumber: number;
+  inMonth: boolean;
+  isToday: boolean;
+  items: Application[];
+}
 
 function emptyDraft(): ApplicationInput {
   return { ...DEFAULT_APPLICATION_INPUT };
@@ -34,38 +44,177 @@ function sortApplications(items: Application[]) {
   });
 }
 
-export default function ApplicationsTracker({ initialApplications, userId }: Props) {
+function sortScheduleItems(items: Application[]) {
+  return [...items].sort((a, b) => {
+    const aKey = `${a.nextStepAt} ${a.nextStepStartTime || "99:99"}`;
+    const bKey = `${b.nextStepAt} ${b.nextStepStartTime || "99:99"}`;
+    return aKey.localeCompare(bKey);
+  });
+}
+
+function applicationToInput(application: Application): ApplicationInput {
+  return {
+    companyName: application.companyName,
+    roleTitle: application.roleTitle,
+    sourceSite: application.sourceSite,
+    applicationUrl: application.applicationUrl,
+    status: application.status,
+    appliedAt: application.appliedAt,
+    nextStepLabel: application.nextStepLabel,
+    nextStepAt: application.nextStepAt,
+    nextStepStartTime: application.nextStepStartTime,
+    nextStepEndTime: application.nextStepEndTime,
+    contactName: application.contactName,
+    contactEmail: application.contactEmail,
+    notes: application.notes,
+    captureSource: application.captureSource,
+    gmailThreadId: application.gmailThreadId,
+    gmailMessageId: application.gmailMessageId,
+    calendarProvider: application.calendarProvider,
+    calendarEventId: application.calendarEventId,
+    calendarEventUrl: application.calendarEventUrl,
+  };
+}
+
+function statusLabel(
+  status: ApplicationStatus,
+  labels: Readonly<Record<ApplicationStatus, string>>,
+) {
+  return labels[status];
+}
+
+function formatDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate(),
+  ).padStart(2, "0")}`;
+}
+
+function todayString() {
+  return formatDateKey(new Date());
+}
+
+function parseLocalDate(value: string): Date {
+  return new Date(`${value}T00:00:00`);
+}
+
+function monthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function dateFromMonthKey(key: string): Date {
+  const [year, month] = key.split("-").map(Number);
+  return new Date(year, month - 1, 1);
+}
+
+function getInitialSelectedDate(items: Application[]): string {
+  const today = todayString();
+  const scheduled = sortScheduleItems(items.filter((item) => item.nextStepAt));
+  if (scheduled.some((item) => item.nextStepAt === today)) return today;
+  const upcoming = scheduled.find((item) => item.nextStepAt >= today);
+  if (upcoming?.nextStepAt) return upcoming.nextStepAt;
+  return scheduled[0]?.nextStepAt || today;
+}
+
+function buildCalendarDays(
+  visibleMonth: Date,
+  scheduledMap: Map<string, Application[]>,
+): CalendarDay[] {
+  const firstOfMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1);
+  const start = new Date(firstOfMonth);
+  start.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
+
+  const today = todayString();
+  const days: CalendarDay[] = [];
+
+  for (let index = 0; index < 42; index += 1) {
+    const current = new Date(start);
+    current.setDate(start.getDate() + index);
+    const key = formatDateKey(current);
+    days.push({
+      key,
+      dayNumber: current.getDate(),
+      inMonth: current.getMonth() === visibleMonth.getMonth(),
+      isToday: key === today,
+      items: scheduledMap.get(key) ?? [],
+    });
+  }
+
+  return days;
+}
+
+function formatMonthLabel(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "long",
+  }).format(dateFromMonthKey(value));
+}
+
+function shiftMonth(value: string, delta: number) {
+  const next = dateFromMonthKey(value);
+  next.setMonth(next.getMonth() + delta);
+  return monthKey(next);
+}
+
+function formatScheduleTime(item: Application, locale: string): string {
+  if (!item.nextStepStartTime) return "";
+  if (!item.nextStepEndTime) return item.nextStepStartTime;
+  return `${item.nextStepStartTime} – ${item.nextStepEndTime}`;
+}
+
+function updateApplicationInList(items: Application[], next: Application) {
+  return sortApplications(items.map((item) => (item.id === next.id ? next : item)));
+}
+
+export default function ApplicationsTracker({
+  initialApplications,
+  initialIntegration,
+  userId,
+}: Props) {
   const { lang } = useLanguage();
+  const locale = lang === "ja" ? "ja-JP" : "en-US";
   const t = SITE_COPY[lang].applications;
-  const [applications, setApplications] = useState<Application[]>(() => sortApplications(initialApplications));
+
+  const [applications, setApplications] = useState<Application[]>(() =>
+    sortApplications(initialApplications),
+  );
+  const [integration, setIntegration] = useState<GoogleWorkspaceIntegrationSummary>(
+    initialIntegration,
+  );
   const [selectedId, setSelectedId] = useState<string | "new">(
     initialApplications[0]?.id ?? "new",
   );
   const [draft, setDraft] = useState<ApplicationInput>(() =>
-    initialApplications[0]
-      ? applicationToInput(initialApplications[0])
-      : emptyDraft(),
+    initialApplications[0] ? applicationToInput(initialApplications[0]) : emptyDraft(),
   );
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterValue>("all");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [deleteState, setDeleteState] = useState<"idle" | "deleting" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState("");
+  const [integrationBusy, setIntegrationBusy] = useState(false);
+  const [calendarBusyId, setCalendarBusyId] = useState("");
+  const [selectedDate, setSelectedDate] = useState(() => getInitialSelectedDate(initialApplications));
+  const [visibleMonth, setVisibleMonth] = useState(() =>
+    monthKey(parseLocalDate(getInitialSelectedDate(initialApplications))),
+  );
+  const autoSyncStartedRef = useRef(false);
 
   useEffect(() => {
-    setApplications(sortApplications(initialApplications));
-    if (initialApplications.length === 0) {
+    const nextApplications = sortApplications(initialApplications);
+    setApplications(nextApplications);
+    setIntegration(initialIntegration);
+    if (nextApplications.length === 0) {
       setSelectedId("new");
       setDraft(emptyDraft());
       return;
     }
 
     setSelectedId((current) =>
-      current !== "new" && initialApplications.some((item) => item.id === current)
+      current !== "new" && nextApplications.some((item) => item.id === current)
         ? current
-        : initialApplications[0].id,
+        : nextApplications[0].id,
     );
-  }, [initialApplications]);
+  }, [initialApplications, initialIntegration]);
 
   useEffect(() => {
     if (selectedId === "new") {
@@ -87,9 +236,7 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
         return false;
       }
 
-      if (!lowered) {
-        return true;
-      }
+      if (!lowered) return true;
 
       return [
         item.companyName,
@@ -104,25 +251,58 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
     });
   }, [applications, query, statusFilter]);
 
-  const summaryCounts = useMemo(() => {
-    return APPLICATION_STATUS_ORDER.reduce(
-      (acc, status) => {
-        acc[status] = applications.filter((item) => item.status === status).length;
-        return acc;
-      },
-      {} as Record<ApplicationStatus, number>,
-    );
-  }, [applications]);
+  const scheduledApplications = useMemo(
+    () =>
+      sortScheduleItems(
+        applications.filter((item) => item.nextStepAt && item.status !== "rejected" && item.status !== "withdrawn"),
+      ),
+    [applications],
+  );
+
+  const scheduledMap = useMemo(() => {
+    const map = new Map<string, Application[]>();
+    for (const item of scheduledApplications) {
+      if (!item.nextStepAt) continue;
+      const current = map.get(item.nextStepAt) ?? [];
+      current.push(item);
+      map.set(item.nextStepAt, sortScheduleItems(current));
+    }
+    return map;
+  }, [scheduledApplications]);
+
+  const calendarDays = useMemo(
+    () => buildCalendarDays(dateFromMonthKey(visibleMonth), scheduledMap),
+    [scheduledMap, visibleMonth],
+  );
+
+  const selectedDayApplications = useMemo(
+    () => scheduledMap.get(selectedDate) ?? [],
+    [scheduledMap, selectedDate],
+  );
+
+  const overdueApplications = useMemo(() => {
+    const today = todayString();
+    return scheduledApplications.filter((item) => item.nextStepAt < today).slice(0, 4);
+  }, [scheduledApplications]);
+
+  const upcomingApplications = useMemo(() => {
+    const today = todayString();
+    return scheduledApplications.filter((item) => item.nextStepAt >= today).slice(0, 4);
+  }, [scheduledApplications]);
 
   const selectedApplication =
     selectedId === "new"
       ? null
       : applications.find((item) => item.id === selectedId) ?? null;
 
+  useEffect(() => {
+    if (!integration.connected || !userId || autoSyncStartedRef.current) return;
+    autoSyncStartedRef.current = true;
+    handleSyncGmail(true).catch(() => {});
+  }, [integration.connected, userId]);
+
   async function handleSave() {
-    if (!userId) {
-      return;
-    }
+    if (!userId) return;
 
     setSaveState("saving");
     setStatusMessage("");
@@ -143,9 +323,10 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
         }
 
         const created = dbApplicationToApplication(data);
-        const next = sortApplications([created, ...applications]);
-        setApplications(next);
+        const nextApplications = sortApplications([created, ...applications]);
+        setApplications(nextApplications);
         setSelectedId(created.id);
+        setStatusMessage(t.created);
       } else {
         const { data, error } = await supabase
           .from("applications")
@@ -160,15 +341,13 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
         }
 
         const updated = dbApplicationToApplication(data);
-        const next = sortApplications(
-          applications.map((item) => (item.id === updated.id ? updated : item)),
-        );
-        setApplications(next);
+        const nextApplications = updateApplicationInList(applications, updated);
+        setApplications(nextApplications);
         setSelectedId(updated.id);
+        setStatusMessage(t.updated);
       }
 
       setSaveState("saved");
-      setStatusMessage(t.created);
     } catch (error) {
       console.error("Failed to save application", error);
       setSaveState("error");
@@ -177,19 +356,12 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
   }
 
   async function handleDelete() {
-    if (!userId || selectedId === "new") {
-      return;
-    }
+    if (!userId || selectedId === "new") return;
 
     const confirmed = window.confirm(
-      lang === "ja"
-        ? "この応募履歴を削除しますか？"
-        : "Delete this application entry?",
+      lang === "ja" ? "この応募履歴を削除しますか？" : "Delete this application entry?",
     );
-
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     setDeleteState("deleting");
     setStatusMessage("");
@@ -202,9 +374,7 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
         .eq("id", selectedId)
         .eq("user_id", userId);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       const remaining = applications.filter((item) => item.id !== selectedId);
       setApplications(sortApplications(remaining));
@@ -240,52 +410,309 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
     setDeleteState("idle");
   }
 
+  async function handleSyncGmail(silent = false) {
+    if (!integration.connected) {
+      window.location.href = "/api/integrations/google/connect";
+      return;
+    }
+
+    if (!silent) {
+      setIntegrationBusy(true);
+      setStatusMessage(t.gmailSyncing);
+    }
+
+    try {
+      const response = await fetch("/api/applications/gmail/sync", {
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        applications?: Application[];
+        integration?: GoogleWorkspaceIntegrationSummary;
+        importedCount?: number;
+        updatedCount?: number;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.ok || !payload.applications || !payload.integration) {
+        throw new Error(payload.error || t.gmailSyncError);
+      }
+
+      setApplications(sortApplications(payload.applications));
+      setIntegration(payload.integration);
+      setStatusMessage(
+        t.gmailSyncResult
+          .replace("{imported}", String(payload.importedCount ?? 0))
+          .replace("{updated}", String(payload.updatedCount ?? 0)),
+      );
+    } catch (error) {
+      console.error("Failed to sync Gmail", error);
+      if (!silent) {
+        setStatusMessage(
+          `${t.gmailSyncError}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    } finally {
+      if (!silent) {
+        setIntegrationBusy(false);
+      }
+    }
+  }
+
+  async function handleCalendarSync() {
+    if (!selectedApplication) return;
+    if (!integration.connected) {
+      window.location.href = "/api/integrations/google/connect";
+      return;
+    }
+
+    setCalendarBusyId(selectedApplication.id);
+    setStatusMessage("");
+
+    try {
+      const response = await fetch(`/api/applications/${selectedApplication.id}/calendar`, {
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        application?: Application;
+        updated?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.application) {
+        throw new Error(payload.error || t.calendarError);
+      }
+
+      const nextApplications = updateApplicationInList(applications, payload.application);
+      setApplications(nextApplications);
+      if (selectedId === payload.application.id) {
+        setDraft(applicationToInput(payload.application));
+      }
+      setStatusMessage(payload.updated ? t.calendarUpdated : t.calendarSaved);
+    } catch (error) {
+      console.error("Failed to sync calendar event", error);
+      setStatusMessage(
+        `${t.calendarError}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      setCalendarBusyId("");
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <div className="glass-panel rounded-[1.75rem] p-6 sm:p-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
-              {t.summaryTitle}
-            </p>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-muted">
-              {t.summarySubtitle}
-            </p>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.72fr)]">
+        <div className="glass-panel rounded-[1.75rem] p-6 sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
+                {t.scheduleTitle}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-brand-muted">
+                {t.scheduleSubtitle}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setVisibleMonth((current) => shiftMonth(current, -1))}
+                className="glass-button-secondary h-10 px-4 text-sm font-medium"
+              >
+                {t.prevMonth}
+              </button>
+              <div className="rounded-xl border border-white/70 bg-white/58 px-4 py-2 text-sm font-semibold text-brand-ink">
+                {formatMonthLabel(visibleMonth, locale)}
+              </div>
+              <button
+                type="button"
+                onClick={() => setVisibleMonth((current) => shiftMonth(current, 1))}
+                className="glass-button-secondary h-10 px-4 text-sm font-medium"
+              >
+                {t.nextMonth}
+              </button>
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={startNew}
-            className="primary-cta-button h-11 px-5 text-sm"
-          >
-            {t.newButton}
-          </button>
+          <div className="mt-6 grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">
+            {t.weekdays.map((weekday) => (
+              <div key={weekday}>{weekday}</div>
+            ))}
+          </div>
+
+          <div className="mt-3 grid grid-cols-7 gap-2">
+            {calendarDays.map((day) => {
+              const active = day.key === selectedDate;
+              return (
+                <button
+                  key={day.key}
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate(day.key);
+                    setVisibleMonth(monthKey(parseLocalDate(day.key)));
+                  }}
+                  className={`min-h-[92px] rounded-2xl border p-3 text-left transition-all ${
+                    active
+                      ? "border-brand bg-white/88 shadow-[0_18px_38px_rgba(77,127,181,0.12)]"
+                      : day.inMonth
+                        ? "border-white/62 bg-white/50 hover:border-brand-line"
+                        : "border-white/40 bg-white/24 text-brand-muted/60"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`text-sm font-semibold ${
+                        day.isToday ? "text-brand" : "text-brand-ink"
+                      }`}
+                    >
+                      {day.dayNumber}
+                    </span>
+                    {day.items.length ? (
+                      <span className="rounded-full bg-brand/12 px-2 py-1 text-[11px] font-semibold text-brand">
+                        {day.items.length}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    {day.items.slice(0, 2).map((item) => (
+                      <div
+                        key={item.id}
+                        className="truncate rounded-full bg-brand-strong/10 px-2 py-1 text-[11px] font-medium text-brand-ink"
+                      >
+                        {item.companyName || item.nextStepLabel || "—"}
+                      </div>
+                    ))}
+                    {day.items.length > 2 ? (
+                      <div className="text-[11px] font-medium text-brand-muted">
+                        +{day.items.length - 2}
+                      </div>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {APPLICATION_STATUS_ORDER.map((status) => (
-            <button
-              key={status}
-              type="button"
-              onClick={() => setStatusFilter(status)}
-              className={`rounded-2xl border px-4 py-4 text-left transition-all ${
-                statusFilter === status
-                  ? "border-brand bg-brand/10 shadow-[0_12px_28px_rgba(77,127,181,0.12)]"
-                  : "border-white/60 bg-white/42 hover:border-brand-line"
-              }`}
-            >
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">
-                {statusLabel(status, t.statuses)}
+        <div className="space-y-6">
+          <div className="glass-panel rounded-[1.75rem] p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
+              {t.agendaTitle}
+            </p>
+            <div className="mt-4">
+              <div className="text-lg font-semibold text-brand-ink">
+                {new Intl.DateTimeFormat(locale, {
+                  month: "short",
+                  day: "numeric",
+                  weekday: "short",
+                }).format(parseLocalDate(selectedDate))}
               </div>
-              <div className="mt-2 text-3xl font-bold leading-none tracking-tight text-brand-ink">
-                {summaryCounts[status]}
+              <div className="mt-4 space-y-3">
+                {selectedDayApplications.length === 0 ? (
+                  <p className="text-sm text-brand-muted">{t.noAgenda}</p>
+                ) : (
+                  selectedDayApplications.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-white/60 bg-white/52 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-semibold text-brand-ink">
+                            {item.companyName || "—"}
+                          </div>
+                          <div className="mt-1 text-xs text-brand-muted">
+                            {item.nextStepLabel || item.roleTitle || "—"}
+                          </div>
+                        </div>
+                        {formatScheduleTime(item, locale) ? (
+                          <span className="rounded-full bg-brand/10 px-2 py-1 text-[11px] font-semibold text-brand">
+                            {formatScheduleTime(item, locale)}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            </button>
-          ))}
+            </div>
+          </div>
+
+          <div className="glass-panel rounded-[1.75rem] p-6">
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-1">
+              <StatusSection
+                title={t.upcomingTitle}
+                emptyLabel={t.noUpcoming}
+                items={upcomingApplications}
+                locale={locale}
+              />
+              <StatusSection
+                title={t.overdueTitle}
+                emptyLabel={t.noOverdue}
+                items={overdueApplications}
+                locale={locale}
+              />
+            </div>
+          </div>
+
+          <div className="glass-panel rounded-[1.75rem] p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
+              {t.googleTitle}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-brand-muted">
+              {integration.connected ? t.googleConnectedDesc : t.googleDesc}
+            </p>
+
+            <div className="mt-4 rounded-2xl border border-white/65 bg-white/52 p-4">
+              <div className="text-sm font-semibold text-brand-ink">
+                {integration.connected ? integration.googleEmail || t.googleConnected : t.googleNotConnected}
+              </div>
+              <div className="mt-1 text-xs text-brand-muted">
+                {t.googleLabelValue.replace("{label}", integration.labelName || "Cygnet")}
+              </div>
+              {integration.lastSyncedAt ? (
+                <div className="mt-1 text-xs text-brand-muted">
+                  {t.googleLastSynced.replace(
+                    "{date}",
+                    new Intl.DateTimeFormat(locale, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    }).format(new Date(integration.lastSyncedAt)),
+                  )}
+                </div>
+              ) : null}
+              {integration.lastSyncError ? (
+                <div className="mt-2 text-xs text-[#8a4960]">{integration.lastSyncError}</div>
+              ) : null}
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "/api/integrations/google/connect";
+                }}
+                className="primary-cta-button h-11 px-5 text-sm"
+              >
+                {integration.connected ? t.googleReconnect : t.googleConnect}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleSyncGmail(false).catch(() => {});
+                }}
+                disabled={!integration.connected || integrationBusy}
+                className="glass-button-secondary h-11 px-5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {integrationBusy ? t.gmailSyncing : t.googleSyncNow}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(340px,0.8fr)]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.82fr)]">
         <div className="glass-panel rounded-[1.75rem] p-6 sm:p-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-xl font-semibold text-brand-ink">{t.listTitle}</h2>
@@ -316,6 +743,13 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
               <div className="rounded-2xl border border-dashed border-brand-line bg-white/34 px-5 py-8 text-center">
                 <p className="text-lg font-semibold text-brand-ink">{t.emptyTitle}</p>
                 <p className="mt-2 text-sm leading-relaxed text-brand-muted">{t.emptyDesc}</p>
+                <button
+                  type="button"
+                  onClick={startNew}
+                  className="primary-cta-button mt-5 h-11 px-5 text-sm"
+                >
+                  {t.newButton}
+                </button>
               </div>
             ) : (
               filteredApplications.map((item) => {
@@ -333,9 +767,11 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <div className="text-lg font-semibold text-brand-ink">{item.companyName || "—"}</div>
+                        <div className="text-lg font-semibold text-brand-ink">
+                          {item.companyName || "—"}
+                        </div>
                         <div className="mt-1 text-sm text-brand-muted">
-                          {item.roleTitle || "—"}
+                          {item.roleTitle || item.nextStepLabel || "—"}
                         </div>
                       </div>
                       <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
@@ -344,7 +780,7 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
                     </div>
                     <div className="mt-4 grid gap-2 text-sm text-brand-muted sm:grid-cols-2">
                       <div>{item.sourceSite || "—"}</div>
-                      <div>{item.appliedAt || "—"}</div>
+                      <div>{item.nextStepAt || item.appliedAt || "—"}</div>
                       <div className="sm:col-span-2 line-clamp-2">{item.notes || "—"}</div>
                     </div>
                   </button>
@@ -355,13 +791,22 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
         </div>
 
         <div className="glass-panel rounded-[1.75rem] p-6 sm:p-8">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold text-brand-ink">
-              {selectedId === "new" ? t.createTitle : t.editTitle}
-            </h2>
-            {statusMessage ? (
-              <span className="text-xs font-medium text-brand-muted">{statusMessage}</span>
-            ) : null}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold text-brand-ink">
+                {selectedId === "new" ? t.createTitle : t.editTitle}
+              </h2>
+              {statusMessage ? (
+                <div className="mt-1 text-xs font-medium text-brand-muted">{statusMessage}</div>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={startNew}
+              className="glass-button-secondary h-11 px-4 text-sm font-medium"
+            >
+              {t.newButton}
+            </button>
           </div>
 
           <div className="mt-5 grid gap-4">
@@ -384,7 +829,9 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
               <Field
                 label={t.fields.status}
                 value={draft.status}
-                onChange={(value) => setDraft((prev) => ({ ...prev, status: value as ApplicationStatus }))}
+                onChange={(value) =>
+                  setDraft((prev) => ({ ...prev, status: value as ApplicationStatus }))
+                }
                 as="select"
               >
                 {APPLICATION_STATUS_ORDER.map((status) => (
@@ -414,6 +861,22 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
                 type="date"
               />
             </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label={t.fields.nextStepStartTime}
+                value={draft.nextStepStartTime}
+                onChange={(value) =>
+                  setDraft((prev) => ({ ...prev, nextStepStartTime: value }))
+                }
+                type="time"
+              />
+              <Field
+                label={t.fields.nextStepEndTime}
+                value={draft.nextStepEndTime}
+                onChange={(value) => setDraft((prev) => ({ ...prev, nextStepEndTime: value }))}
+                type="time"
+              />
+            </div>
             <Field
               label={t.fields.nextStepLabel}
               value={draft.nextStepLabel}
@@ -439,6 +902,36 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
               as="textarea"
             />
           </div>
+
+          {selectedApplication && selectedApplication.nextStepAt ? (
+            <div className="mt-5 rounded-2xl border border-white/65 bg-white/48 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">
+                {t.calendarActionsTitle}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCalendarSync().catch(() => {});
+                  }}
+                  disabled={calendarBusyId === selectedApplication.id}
+                  className="primary-cta-button h-11 px-5 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {calendarBusyId === selectedApplication.id
+                    ? t.calendarSyncing
+                    : selectedApplication.calendarEventId
+                      ? t.updateGoogleCalendar
+                      : t.addToGoogleCalendar}
+                </button>
+                <a
+                  href={`/api/applications/${selectedApplication.id}/ics`}
+                  className="glass-button-secondary inline-flex h-11 items-center px-5 text-sm font-medium"
+                >
+                  {t.downloadIcs}
+                </a>
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-6 flex flex-wrap gap-3">
             <button
@@ -477,27 +970,45 @@ export default function ApplicationsTracker({ initialApplications, userId }: Pro
   );
 }
 
-function applicationToInput(application: Application): ApplicationInput {
-  return {
-    companyName: application.companyName,
-    roleTitle: application.roleTitle,
-    sourceSite: application.sourceSite,
-    applicationUrl: application.applicationUrl,
-    status: application.status,
-    appliedAt: application.appliedAt,
-    nextStepLabel: application.nextStepLabel,
-    nextStepAt: application.nextStepAt,
-    contactName: application.contactName,
-    contactEmail: application.contactEmail,
-    notes: application.notes,
-  };
-}
-
-function statusLabel(
-  status: ApplicationStatus,
-  labels: Readonly<Record<ApplicationStatus, string>>,
-) {
-  return labels[status];
+function StatusSection({
+  title,
+  emptyLabel,
+  items,
+  locale,
+}: {
+  title: string;
+  emptyLabel: string;
+  items: Application[];
+  locale: string;
+}) {
+  return (
+    <div>
+      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">{title}</div>
+      <div className="mt-3 space-y-2">
+        {items.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-brand-line bg-white/32 px-4 py-5 text-sm text-brand-muted">
+            {emptyLabel}
+          </div>
+        ) : (
+          items.map((item) => (
+            <div key={item.id} className="rounded-2xl border border-white/65 bg-white/52 p-4">
+              <div className="text-sm font-semibold text-brand-ink">{item.companyName || "—"}</div>
+              <div className="mt-1 text-xs text-brand-muted">
+                {item.nextStepLabel || item.roleTitle || "—"}
+              </div>
+              <div className="mt-2 text-xs font-medium text-brand">
+                {new Intl.DateTimeFormat(locale, {
+                  month: "short",
+                  day: "numeric",
+                }).format(parseLocalDate(item.nextStepAt))}
+                {item.nextStepStartTime ? ` • ${formatScheduleTime(item, locale)}` : ""}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
 }
 
 function Field({
@@ -520,7 +1031,7 @@ function Field({
 
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-brand-muted">{label}</span>
+      <span className="mb-2 block text-sm font-medium text-brand-ink">{label}</span>
       {as === "textarea" ? (
         <textarea
           value={value}
@@ -538,9 +1049,9 @@ function Field({
         </select>
       ) : (
         <input
+          type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          type={type}
           className={`${baseClassName} h-11`}
         />
       )}

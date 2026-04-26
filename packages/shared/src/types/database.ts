@@ -60,9 +60,30 @@ export interface DbApplication {
   applied_at: string | null;
   next_step_label: string;
   next_step_at: string | null;
+  next_step_start_time: string | null;
+  next_step_end_time: string | null;
   contact_name: string;
   contact_email: string;
   notes: string;
+  capture_source: "manual" | "quick_add" | "gmail_sync";
+  gmail_thread_id: string | null;
+  gmail_message_id: string | null;
+  calendar_provider: "google" | null;
+  calendar_event_id: string | null;
+  calendar_event_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbGoogleWorkspaceIntegration {
+  id: string;
+  user_id: string;
+  google_email: string;
+  scopes: string[];
+  label_name: string;
+  refresh_token_encrypted: string;
+  last_synced_at: string | null;
+  last_sync_error: string;
   created_at: string;
   updated_at: string;
 }

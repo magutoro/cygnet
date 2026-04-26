@@ -9,6 +9,7 @@ export type {
   GetDefaultsResponse,
   GetAuthStateResponse,
   ExtensionBridgeResponse,
+  ApplicationQuickAddResponse,
   CredentialVaultStateResponse,
   CredentialListResponse,
   CredentialSummaryListResponse,
@@ -27,12 +28,14 @@ export { hiraganaToKatakana, katakanaToHiragana, toHalfWidth, extractDigits, ext
 export { splitPostalDigits, formatPostalForDisplay, joinNonEmpty, normalizeProfileUrl } from "./utils/format.js";
 
 export type { DbProfile, DbResume } from "./types/database.js";
-export type { DbApplication } from "./types/database.js";
+export type { DbApplication, DbGoogleWorkspaceIntegration } from "./types/database.js";
 
 export type {
   Application,
   ApplicationInput,
   ApplicationStatus,
+  ApplicationCaptureSource,
+  ApplicationCalendarProvider,
 } from "./types/applications.js";
 
 export {
@@ -41,6 +44,12 @@ export {
   dbApplicationToApplication,
   applicationInputToDb,
 } from "./types/applications.js";
+
+export type { GoogleWorkspaceIntegrationSummary } from "./types/google-workspace.js";
+export {
+  GOOGLE_WORKSPACE_SCOPES,
+  dbGoogleWorkspaceIntegrationToSummary,
+} from "./types/google-workspace.js";
 
 export { profileToDb, dbToProfile } from "./utils/profile-convert.js";
 

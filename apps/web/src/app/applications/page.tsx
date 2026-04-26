@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import {
+  dbGoogleWorkspaceIntegrationToSummary,
   dbApplicationToApplication,
   type DbApplication,
+  type DbGoogleWorkspaceIntegration,
 } from "@cygnet/shared";
 import { createClient } from "@/lib/supabase/server";
 import ApplicationsTracker from "@/components/ApplicationsTracker";
@@ -34,16 +36,25 @@ export default async function ApplicationsPage() {
   const isPreview = !user;
 
   let initialApplications = PREVIEW_APPLICATIONS;
+  let initialIntegration = dbGoogleWorkspaceIntegrationToSummary(null);
 
   if (user) {
-    const { data: rows } = await supabase
-      .from("applications")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("updated_at", { ascending: false })
-      .returns<DbApplication[]>();
+    const [{ data: rows }, { data: integrationRow }] = await Promise.all([
+      supabase
+        .from("applications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .returns<DbApplication[]>(),
+      supabase
+        .from("google_workspace_integrations")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle<DbGoogleWorkspaceIntegration>(),
+    ]);
 
     initialApplications = (rows ?? []).map(dbApplicationToApplication);
+    initialIntegration = dbGoogleWorkspaceIntegrationToSummary(integrationRow);
   }
 
   return (
@@ -66,6 +77,7 @@ export default async function ApplicationsPage() {
         >
           <ApplicationsTracker
             initialApplications={initialApplications}
+            initialIntegration={initialIntegration}
             userId={user?.id ?? ""}
           />
         </div>

@@ -85,7 +85,6 @@ interface OverlayRefs {
   launcher: HTMLElement;
   hideLauncherBtn: HTMLElement;
   closeBtn: HTMLElement;
-  cancelBtn: HTMLButtonElement;
   authEmail: HTMLElement;
   authBadge: HTMLElement;
   signInBtn: HTMLButtonElement;
@@ -93,6 +92,7 @@ interface OverlayRefs {
   controlsWrap: HTMLElement;
   enabledToggle: HTMLInputElement;
   autofillBtn: HTMLElement;
+  quickAddBtn: HTMLElement;
   openDashboardBtns: HTMLButtonElement[];
   tabsWrap: HTMLElement;
   tabMainBtn: HTMLButtonElement;
@@ -5070,6 +5070,16 @@ function applyOverlayAuthUi(state: { authenticated: boolean; email: string }, se
   updateOverlayTabUi();
 }
 
+function inferQuickAddCompanyName(pageTitle: string): string {
+  const cleaned = String(pageTitle || "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  return (cleaned.split(/[\-|｜|\/]/)[0]?.trim() || cleaned).slice(0, 120);
+}
+
+function inferQuickAddSourceSite(hostname: string): string {
+  return String(hostname || "").replace(/^www\./i, "").trim().slice(0, 120);
+}
+
 function ensureInPageOverlay(): OverlayRefs | null {
   if (window !== window.top || !document.body) return null;
   if (overlayRefs) return overlayRefs;
@@ -5116,6 +5126,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
       .mg-control-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px; border-radius: 18px; background: linear-gradient(180deg, rgba(231, 214, 255, 0.5) 0%, rgba(214, 198, 255, 0.32) 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.48), 0 12px 28px rgba(152, 129, 218, 0.16); border: 1px solid rgba(255,255,255,0.34); backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%); }
       .mg-control-icon { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(145deg, rgba(137, 118, 255, 0.98) 0%, rgba(84, 98, 255, 0.98) 100%); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), 0 10px 18px rgba(90, 100, 207, 0.3); }
       .mg-control-copy { display: grid; gap: 4px; min-width: 0; }
+      .mg-control-actions { display: grid; gap: 8px; min-width: 132px; }
       .mg-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #4f466d; font-weight: 700; }
       .mg-toggle input { width: 16px; height: 16px; accent-color: #5665ff; }
       .mg-btn { flex: 1; border: 1px solid rgba(170, 181, 255, 0.44); border-radius: 14px; padding: 10px 14px; cursor: pointer; font-weight: 800; color: #fff; background: linear-gradient(145deg, rgba(129, 112, 255, 0.98) 0%, rgba(84, 98, 255, 0.98) 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.26), 0 12px 22px rgba(90, 100, 207, 0.28); font-size: 12px; min-height: 42px; }
@@ -5155,12 +5166,11 @@ function ensureInPageOverlay(): OverlayRefs | null {
       .mg-copy-label { font-size: 13px; color: #3e3659; font-weight: 800; }
       .mg-copy-value { font-size: 14px; color: #40385d; white-space: pre-wrap; word-break: break-word; line-height: 1.45; display: block; width: 100%; border-radius: 14px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); padding: 14px 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.38), 0 8px 18px rgba(170, 150, 214, 0.08); text-decoration: none; transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease; backdrop-filter: blur(12px) saturate(140%); -webkit-backdrop-filter: blur(12px) saturate(140%); }
       .mg-copy-full:not(:disabled):hover .mg-copy-value { border-color: rgba(153, 142, 255, 0.36); background: rgba(255,255,255,0.28); }
-      .mg-footer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 10px; padding: 16px 20px 20px; border-top: 1px solid rgba(255,255,255,0.28); background: linear-gradient(180deg, rgba(247, 234, 255, 0.24) 0%, rgba(250, 243, 255, 0.34) 100%); backdrop-filter: blur(16px) saturate(145%); -webkit-backdrop-filter: blur(16px) saturate(145%); }
       @media (max-width: 380px) {
         .mg-panel { width: min(100vw - 16px, 420px); right: 8px; top: 8px; height: calc(100vh - 16px); }
-        .mg-auth-row, .mg-control-card, .mg-cred-prompt, .mg-footer { display: grid; grid-template-columns: 1fr; }
+        .mg-auth-row, .mg-control-card, .mg-cred-prompt { display: grid; grid-template-columns: 1fr; }
         .mg-auth-actions { width: 100%; }
-        .mg-auth-actions .mg-btn, .mg-control-card .mg-btn, .mg-footer .mg-btn { width: 100%; }
+        .mg-auth-actions .mg-btn, .mg-control-card .mg-btn { width: 100%; }
       }
       .is-hidden { display: none !important; }
     </style>
@@ -5204,16 +5214,15 @@ function ensureInPageOverlay(): OverlayRefs | null {
                   <span>自動入力を使用</span>
                 </label>
               </div>
-              <button class="mg-btn" type="button" data-role="autofill">Autofill</button>
+              <div class="mg-control-actions">
+                <button class="mg-btn" type="button" data-role="autofill">Autofill</button>
+                <button class="mg-btn secondary" type="button" data-role="quick-add-application">応募履歴に追加</button>
+              </div>
             </div>
           </div>
           <p class="mg-status" data-role="status"></p>
           <div class="mg-sections is-hidden" data-role="sections"></div>
         </div>
-        <footer class="mg-footer">
-          <button class="mg-btn secondary" type="button" data-role="cancel">キャンセル</button>
-          <button class="mg-btn" type="button" data-role="open-dashboard">プロフィールを編集</button>
-        </footer>
       </aside>
     </div>
   `;
@@ -5224,7 +5233,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
   const launcherIcon = shadow.querySelector("[data-role='launcher-icon']") as HTMLImageElement;
   const hideLauncherBtn = shadow.querySelector("[data-role='hide-launcher']") as HTMLElement;
   const closeBtn = shadow.querySelector("[data-role='close']") as HTMLElement;
-  const cancelBtn = shadow.querySelector("[data-role='cancel']") as HTMLButtonElement;
   const authEmail = shadow.querySelector("[data-role='auth-email']") as HTMLElement;
   const authBadge = shadow.querySelector("[data-role='auth-badge']") as HTMLElement;
   const signInBtn = shadow.querySelector("[data-role='sign-in']") as HTMLButtonElement;
@@ -5232,6 +5240,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
   const controlsWrap = shadow.querySelector("[data-role='controls']") as HTMLElement;
   const enabledToggle = shadow.querySelector("[data-role='enabled-toggle']") as HTMLInputElement;
   const autofillBtn = shadow.querySelector("[data-role='autofill']") as HTMLElement;
+  const quickAddBtn = shadow.querySelector("[data-role='quick-add-application']") as HTMLElement;
   const openDashboardBtns = Array.from(
     shadow.querySelectorAll("[data-role='open-dashboard']")
   ) as HTMLButtonElement[];
@@ -5259,7 +5268,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
     setLauncherVisible(false, { persist: true }).catch(() => {});
   });
   closeBtn.addEventListener("click", () => setOverlayOpen(false));
-  cancelBtn.addEventListener("click", () => setOverlayOpen(false));
 
   signInBtn.addEventListener("click", async () => {
     try {
@@ -5370,6 +5378,37 @@ function ensureInPageOverlay(): OverlayRefs | null {
     setOverlayStatus(`${result.filled || 0} 項目を入力しました`);
   });
 
+  quickAddBtn.addEventListener("click", async () => {
+    try {
+      const response = (await sendRuntimeMessage({
+        type: "APPLICATION_QUICK_ADD",
+        payload: {
+          companyName: inferQuickAddCompanyName(document.title),
+          sourceSite: inferQuickAddSourceSite(window.location.hostname),
+          applicationUrl: window.location.href,
+        },
+      })) as { ok?: boolean; error?: string; application?: { companyName?: string } } | undefined;
+
+      if (!response?.ok) {
+        if (response?.error === "auth_required") {
+          setOverlayStatus("応募履歴に追加するには先にログインしてください");
+          return;
+        }
+        setOverlayStatus("応募履歴に追加できませんでした");
+        return;
+      }
+
+      const companyName = String(response.application?.companyName || "").trim();
+      setOverlayStatus(
+        companyName
+          ? `応募履歴に追加しました: ${companyName}`
+          : "応募履歴に追加しました",
+      );
+    } catch {
+      setOverlayStatus("応募履歴に追加できませんでした");
+    }
+  });
+
   let dragging = false;
   let dragOffset = 0;
   let dragStartY = 0;
@@ -5408,7 +5447,6 @@ function ensureInPageOverlay(): OverlayRefs | null {
     launcher,
     hideLauncherBtn,
     closeBtn,
-    cancelBtn,
     authEmail,
     authBadge,
     signInBtn,
@@ -5416,6 +5454,7 @@ function ensureInPageOverlay(): OverlayRefs | null {
     controlsWrap,
     enabledToggle,
     autofillBtn,
+    quickAddBtn,
     openDashboardBtns,
     tabsWrap,
     tabMainBtn,

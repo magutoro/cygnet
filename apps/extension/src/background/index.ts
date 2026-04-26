@@ -1,4 +1,10 @@
-import { DEFAULT_PROFILE } from "@cygnet/shared";
+import {
+  DEFAULT_APPLICATION_INPUT,
+  DEFAULT_PROFILE,
+  applicationInputToDb,
+  dbApplicationToApplication,
+  type DbApplication,
+} from "@cygnet/shared";
 import { getSession, importSessionTokens } from "../lib/auth.js";
 import {
   captureCredentialFromForm,
@@ -215,6 +221,46 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "OPEN_WEB_DASHBOARD" || msg?.type === "OPEN_OPTIONS_PAGE") {
     openWebDashboard()
       .then(() => sendResponse({ ok: true }))
+      .catch((err) => sendResponse({ ok: false, error: String(err) }));
+    return true;
+  }
+
+  if (msg?.type === "APPLICATION_QUICK_ADD") {
+    getSession()
+      .then(async (session) => {
+        if (!session?.user) {
+          sendResponse({ ok: false, error: "auth_required" });
+          return;
+        }
+
+        const payload = applicationInputToDb({
+          ...DEFAULT_APPLICATION_INPUT,
+          companyName: String(msg.payload?.companyName || "").trim(),
+          sourceSite: String(msg.payload?.sourceSite || "").trim(),
+          applicationUrl: String(msg.payload?.applicationUrl || "").trim(),
+          status: "saved",
+          captureSource: "quick_add",
+        });
+
+        const { data, error } = await supabase
+          .from("applications")
+          .insert([{ user_id: session.user.id, ...payload }])
+          .select("*")
+          .single<DbApplication>();
+
+        if (error || !data) {
+          sendResponse({
+            ok: false,
+            error: error?.message || "quick_add_failed",
+          });
+          return;
+        }
+
+        sendResponse({
+          ok: true,
+          application: dbApplicationToApplication(data),
+        });
+      })
       .catch((err) => sendResponse({ ok: false, error: String(err) }));
     return true;
   }

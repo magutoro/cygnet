@@ -11,6 +11,8 @@ export const APPLICATION_STATUS_ORDER = [
 ] as const;
 
 export type ApplicationStatus = (typeof APPLICATION_STATUS_ORDER)[number];
+export type ApplicationCaptureSource = "manual" | "quick_add" | "gmail_sync";
+export type ApplicationCalendarProvider = "google";
 
 export interface ApplicationInput {
   companyName: string;
@@ -21,9 +23,17 @@ export interface ApplicationInput {
   appliedAt: string;
   nextStepLabel: string;
   nextStepAt: string;
+  nextStepStartTime: string;
+  nextStepEndTime: string;
   contactName: string;
   contactEmail: string;
   notes: string;
+  captureSource: ApplicationCaptureSource;
+  gmailThreadId: string;
+  gmailMessageId: string;
+  calendarProvider: ApplicationCalendarProvider | "";
+  calendarEventId: string;
+  calendarEventUrl: string;
 }
 
 export interface Application extends ApplicationInput {
@@ -42,9 +52,17 @@ export const DEFAULT_APPLICATION_INPUT: ApplicationInput = {
   appliedAt: "",
   nextStepLabel: "",
   nextStepAt: "",
+  nextStepStartTime: "",
+  nextStepEndTime: "",
   contactName: "",
   contactEmail: "",
   notes: "",
+  captureSource: "manual",
+  gmailThreadId: "",
+  gmailMessageId: "",
+  calendarProvider: "",
+  calendarEventId: "",
+  calendarEventUrl: "",
 };
 
 export function dbApplicationToApplication(row: DbApplication): Application {
@@ -59,9 +77,17 @@ export function dbApplicationToApplication(row: DbApplication): Application {
     appliedAt: row.applied_at ?? "",
     nextStepLabel: row.next_step_label,
     nextStepAt: row.next_step_at ?? "",
+    nextStepStartTime: row.next_step_start_time ?? "",
+    nextStepEndTime: row.next_step_end_time ?? "",
     contactName: row.contact_name,
     contactEmail: row.contact_email,
     notes: row.notes,
+    captureSource: row.capture_source,
+    gmailThreadId: row.gmail_thread_id ?? "",
+    gmailMessageId: row.gmail_message_id ?? "",
+    calendarProvider: row.calendar_provider ?? "",
+    calendarEventId: row.calendar_event_id ?? "",
+    calendarEventUrl: row.calendar_event_url ?? "",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -77,8 +103,16 @@ export function applicationInputToDb(input: ApplicationInput) {
     applied_at: input.appliedAt || null,
     next_step_label: input.nextStepLabel.trim(),
     next_step_at: input.nextStepAt || null,
+    next_step_start_time: input.nextStepStartTime || null,
+    next_step_end_time: input.nextStepEndTime || null,
     contact_name: input.contactName.trim(),
     contact_email: input.contactEmail.trim(),
     notes: input.notes.trim(),
+    capture_source: input.captureSource,
+    gmail_thread_id: input.gmailThreadId.trim() || null,
+    gmail_message_id: input.gmailMessageId.trim() || null,
+    calendar_provider: input.calendarProvider || null,
+    calendar_event_id: input.calendarEventId.trim() || null,
+    calendar_event_url: input.calendarEventUrl.trim() || null,
   };
 }
