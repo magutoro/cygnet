@@ -1,6 +1,6 @@
 # Cygnet
 
-Autofill Japanese job application forms with your saved profile. A browser extension and web dashboard built for foreigners navigating shuukatsu and Japanese hiring portals.
+Autofill Japanese job application forms with your saved profile. A Chrome extension and web dashboard built for foreigners navigating shuukatsu and Japanese hiring portals.
 
 ## What it does
 
@@ -13,8 +13,7 @@ Sign in with Google to sync your profile across devices, manage resumes, and edi
 ```
 cygnet/
 ├── apps/
-│   ├── extension/       Chrome + Safari MV3 extension build (Vite + React + crxjs)
-│   ├── safari-macos/    macOS Safari wrapper app + Xcode project
+│   ├── extension/       Chrome MV3 extension (Vite + React + crxjs)
 │   └── web/             Website & dashboard (Next.js 15 + Tailwind CSS)
 ├── packages/
 │   └── shared/          Shared TypeScript types, utilities, and DB helpers
@@ -29,7 +28,6 @@ This is a PNPM monorepo orchestrated with Turborepo.
 
 - Node.js 20+
 - PNPM 9+
-- Full Xcode for archiving the Safari macOS app
 
 ## Getting started
 
@@ -48,8 +46,7 @@ Supabase and Google OAuth are already set up for this project. Ask a team member
 ```env
 NEXT_PUBLIC_SUPABASE_URL=<ask team>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<ask team>
-NEXT_PUBLIC_CHROME_EXTENSION_ID=<optional Chrome fallback extension id>
-NEXT_PUBLIC_SAFARI_EXTENSION_ID=<optional Safari extension id>
+NEXT_PUBLIC_EXTENSION_ID=<optional fallback extension id>
 OPENAI_API_KEY=sk-...  # optional, enables AI resume parsing
 ```
 
@@ -60,7 +57,6 @@ VITE_SUPABASE_URL=<ask team>
 VITE_SUPABASE_ANON_KEY=<ask team>
 VITE_GOOGLE_CLIENT_ID=<ask team>
 VITE_WEB_DASHBOARD_URL=http://localhost:3000/dashboard
-VITE_BROWSER_TARGET=chrome
 ```
 
 See `.env.example` for a combined reference.
@@ -76,9 +72,6 @@ pnpm dev:web        # http://localhost:3000
 
 # Build the Chrome extension
 pnpm build:ext
-
-# Build the Safari extension bundle and sync it into the macOS wrapper
-pnpm prepare:safari:webext
 ```
 
 ### 4. Load the Chrome extension
@@ -96,24 +89,9 @@ pnpm dev:ext
 
 Runs `vite build --watch` so changes rebuild automatically. Reload the extension in Chrome after each rebuild.
 
-### 6. Safari macOS packaging
-
-```bash
-# Build the Safari web extension bundle
-pnpm build:ext:safari
-
-# Sync the Safari bundle into the repo-tracked macOS wrapper
-pnpm prepare:safari:webext
-
-# Archive the macOS app (requires full Xcode)
-pnpm archive:safari
-```
-
-The Safari wrapper project lives in `apps/safari-macos/`.
-
 ## Features
 
-### Browser extension
+### Chrome extension
 
 - **One-click autofill** — fills forms from the side panel or with `Cmd+Shift+Y` / `Ctrl+Shift+Y`
 - **Smart field detection** — matches fields by name, id, label text, placeholder, autocomplete attributes, ARIA labels, and surrounding DOM structure
@@ -126,7 +104,6 @@ The Safari wrapper project lives in `apps/safari-macos/`.
 - **One-login bridge (localhost)** — if logged in on the web dashboard, sync that session into the extension
 - **Cloud sync** — push/pull profile between local storage and Supabase
 - **Offline-first** — works fully offline via `chrome.storage.sync`, cloud sync is optional
-- **Safari login bridge** — Safari opens the web dashboard for login and imports the session back into the extension
 
 ### Web dashboard
 
@@ -140,8 +117,7 @@ The Safari wrapper project lives in `apps/safari-macos/`.
 
 | Component | Technology |
 |-----------|------------|
-| Extension | Vite, React 19, TypeScript, @crxjs/vite-plugin, MV3 |
-| Safari wrapper | macOS app + Safari Web Extension target (Xcode) |
+| Extension | Vite, React 19, TypeScript, @crxjs/vite-plugin, Chrome MV3 |
 | Website | Next.js 15 (App Router), React 19, Tailwind CSS, TypeScript |
 | Auth | Supabase Auth with Google OAuth (web + extension) |
 | Database | Supabase (Postgres) with Row-Level Security |
@@ -157,12 +133,9 @@ The Safari wrapper project lives in `apps/safari-macos/`.
 |---------|-------------|
 | `pnpm build` | Build all packages |
 | `pnpm build:ext` | Build the Chrome extension |
-| `pnpm build:ext:safari` | Build the Safari web extension bundle |
 | `pnpm build:web` | Build the website |
 | `pnpm dev:web` | Start the website dev server |
 | `pnpm dev:ext` | Watch-build the extension |
-| `pnpm prepare:safari:webext` | Build Safari assets and sync them into the macOS wrapper |
-| `pnpm archive:safari` | Archive the Safari macOS app with Xcode |
 | `pnpm typecheck` | Run TypeScript checks across all packages |
 | `pnpm clean` | Remove all build artifacts |
 

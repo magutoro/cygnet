@@ -11,7 +11,6 @@ import {
   unlockCredentialVault,
   upsertCredentialEntry
 } from "../lib/credentials.js";
-import { isUnsupportedBrowserUrl } from "../lib/browser.js";
 import { ensureDefaults } from "../lib/storage.js";
 import { queryTabs, sendMessage, sendMessageIgnoringErrors } from "../lib/tabs.js";
 import { openWebDashboard, openWebLogin } from "../lib/web.js";
@@ -41,6 +40,18 @@ function getSenderOrigin(url: string | undefined): string | null {
 
 function getTabUrl(tab: chrome.tabs.Tab | undefined): string {
   return String(tab?.url || tab?.pendingUrl || "").trim().toLowerCase();
+}
+
+function isUnsupportedUrl(url: string | undefined): boolean {
+  const raw = String(url || "").trim().toLowerCase();
+  if (!raw) return false;
+  return (
+    raw.startsWith("chrome://") ||
+    raw.startsWith("edge://") ||
+    raw.startsWith("about:") ||
+    raw.startsWith("chrome-extension://") ||
+    raw.includes("chromewebstore.google.com")
+  );
 }
 
 function delay(ms: number): Promise<void> {
@@ -89,7 +100,7 @@ async function injectContentScriptsIntoTab(tabId: number): Promise<void> {
 }
 
 async function openInPagePanelFromTab(tab: chrome.tabs.Tab): Promise<boolean> {
-  if (!tab?.id || isUnsupportedBrowserUrl(getTabUrl(tab))) return false;
+  if (!tab?.id || isUnsupportedUrl(getTabUrl(tab))) return false;
   if (await tryShowLauncher(tab.id)) return true;
 
   // Tabs that were already open before extension update/load may not have the
@@ -128,7 +139,7 @@ function broadcastRuntimeRefresh(): void {
 async function broadcastRefreshToTabs(): Promise<void> {
   const tabs = await queryTabs({});
   for (const tab of tabs) {
-    if (!tab?.id || isUnsupportedBrowserUrl(tab.url)) continue;
+    if (!tab?.id || isUnsupportedUrl(tab.url)) continue;
     sendMessageIgnoringErrors(tab.id, { type: "CYGNET_REFRESH_STATE" });
   }
 }
@@ -152,7 +163,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     return;
   }
 
-  if (targetUrl && isUnsupportedBrowserUrl(targetUrl)) {
+  if (targetUrl && isUnsupportedUrl(targetUrl)) {
     await openWebDashboard().catch(() => {});
     return;
   }
