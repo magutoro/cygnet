@@ -21,7 +21,13 @@ export async function POST() {
   }
 
   try {
-    const result = await syncGmailForUser(supabase, user.id, integration);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const result = await syncGmailForUser(supabase, user.id, integration, {
+      accessToken: session?.provider_token || "",
+      grantedScopes: integration.scopes,
+    });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     return NextResponse.json(

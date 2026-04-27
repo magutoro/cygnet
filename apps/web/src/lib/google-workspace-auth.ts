@@ -56,7 +56,10 @@ export async function storeGoogleWorkspaceIntegrationFromOAuth({
     const latest = await getGoogleWorkspaceIntegrationRow(supabase, user.id);
     if (latest) {
       try {
-        await syncGmailForUser(supabase, user.id, latest);
+        await syncGmailForUser(supabase, user.id, latest, {
+          accessToken,
+          grantedScopes: requestedScopes,
+        });
       } catch (error) {
         console.error("Initial Gmail sync failed after Workspace sign-in", error);
       }

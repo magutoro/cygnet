@@ -318,12 +318,21 @@ export async function syncGmailForUser(
   supabase: SupabaseClient,
   userId: string,
   integration: DbGoogleWorkspaceIntegration,
+  options: {
+    accessToken?: string;
+    grantedScopes?: string[];
+  } = {},
 ): Promise<GmailSyncResult> {
-  const refreshToken = decryptGoogleRefreshToken(integration.refresh_token_encrypted);
   try {
-    const refreshed = await refreshGoogleWorkspaceAccessToken(refreshToken);
-    const accessToken = refreshed.access_token;
-    const scopes = splitGrantedScopes(refreshed.scope || integration.scopes.join(" "));
+    let accessToken = String(options.accessToken || "").trim();
+    let scopes = options.grantedScopes?.length ? options.grantedScopes : integration.scopes;
+
+    if (!accessToken) {
+      const refreshToken = decryptGoogleRefreshToken(integration.refresh_token_encrypted);
+      const refreshed = await refreshGoogleWorkspaceAccessToken(refreshToken);
+      accessToken = refreshed.access_token;
+      scopes = splitGrantedScopes(refreshed.scope || integration.scopes.join(" "));
+    }
 
     if (!hasGoogleScope(scopes, GOOGLE_WORKSPACE_SCOPES.gmailReadonly)) {
       throw new Error("Gmail read scope is missing");
