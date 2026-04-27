@@ -1,6 +1,4 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { buildGoogleWorkspaceAuthorizeUrl, GOOGLE_WORKSPACE_STATE_COOKIE } from "@/lib/google-workspace";
 import { isGoogleWorkspaceOAuthEnabled } from "@/lib/google-workspace-enabled";
 import { createClient } from "@/lib/supabase/server";
 
@@ -22,23 +20,11 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`/auth/consent?next=${encodeURIComponent(next)}`, origin));
   }
 
-  const state = crypto.randomUUID();
-  const cookieStore = await cookies();
-  cookieStore.set(
-    GOOGLE_WORKSPACE_STATE_COOKIE,
-    JSON.stringify({
-      state,
-      userId: user.id,
-      next,
-    }),
-    {
-      httpOnly: true,
-      secure: origin.startsWith("https://"),
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 10,
-    },
-  );
+  const loginUrl = new URL("/auth/login", origin);
+  loginUrl.searchParams.set("next", next);
+  loginUrl.searchParams.set("confirmed", "1");
+  loginUrl.searchParams.set("workspaceCalendar", "1");
+  loginUrl.searchParams.set("workspaceGmail", "1");
 
-  return NextResponse.redirect(buildGoogleWorkspaceAuthorizeUrl(origin, state));
+  return NextResponse.redirect(loginUrl);
 }
