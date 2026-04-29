@@ -195,6 +195,7 @@ export default function ApplicationsTracker({
   const [deleteState, setDeleteState] = useState<"idle" | "deleting" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState("");
   const [integrationBusy, setIntegrationBusy] = useState(false);
+  const [autoCalendarBusy, setAutoCalendarBusy] = useState(false);
   const [calendarBusyId, setCalendarBusyId] = useState("");
   const [selectedDate, setSelectedDate] = useState(() => getInitialSelectedDate(initialApplications));
   const [visibleMonth, setVisibleMonth] = useState(() =>
@@ -438,6 +439,7 @@ export default function ApplicationsTracker({
         integration?: GoogleWorkspaceIntegrationSummary;
         importedCount?: number;
         updatedCount?: number;
+        calendarSyncedCount?: number;
         error?: string;
       };
 
@@ -450,7 +452,8 @@ export default function ApplicationsTracker({
       setStatusMessage(
         t.gmailSyncResult
           .replace("{imported}", String(payload.importedCount ?? 0))
-          .replace("{updated}", String(payload.updatedCount ?? 0)),
+          .replace("{updated}", String(payload.updatedCount ?? 0))
+          .replace("{calendar}", String(payload.calendarSyncedCount ?? 0)),
       );
     } catch (error) {
       console.error("Failed to sync Gmail", error);
@@ -463,6 +466,42 @@ export default function ApplicationsTracker({
       if (!silent) {
         setIntegrationBusy(false);
       }
+    }
+  }
+
+  async function handleAutoCalendarChange(enabled: boolean) {
+    if (!integration.connected) return;
+
+    setAutoCalendarBusy(true);
+    setStatusMessage(t.autoCalendarSaving);
+
+    try {
+      const response = await fetch("/api/integrations/google/auto-calendar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ enabled }),
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        integration?: GoogleWorkspaceIntegrationSummary;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.ok || !payload.integration) {
+        throw new Error(payload.error || t.autoCalendarError);
+      }
+
+      setIntegration(payload.integration);
+      setStatusMessage(t.autoCalendarSaved);
+    } catch (error) {
+      console.error("Failed to update auto calendar sync", error);
+      setStatusMessage(
+        `${t.autoCalendarError}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      setAutoCalendarBusy(false);
     }
   }
 
@@ -701,6 +740,30 @@ export default function ApplicationsTracker({
                 <div className="mt-2 text-xs text-[#8a4960]">{integration.lastSyncError}</div>
               ) : null}
             </div>
+
+            {integration.connected ? (
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/65 bg-white/46 p-4">
+                <input
+                  type="checkbox"
+                  checked={integration.autoCalendarSyncEnabled}
+                  onChange={(event) => {
+                    handleAutoCalendarChange(event.target.checked).catch(() => {});
+                  }}
+                  disabled={autoCalendarBusy}
+                  className="mt-1 h-4 w-4 rounded border-brand-line text-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-brand-ink">
+                    {t.autoCalendarToggle}
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-brand-muted">
+                    {integration.autoCalendarSyncEnabled
+                      ? t.autoCalendarOn
+                      : t.autoCalendarOff}
+                  </span>
+                </span>
+              </label>
+            ) : null}
 
             <div className="mt-4 flex flex-wrap gap-3">
               <button

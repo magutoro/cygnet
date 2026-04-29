@@ -11,6 +11,7 @@ export interface GoogleWorkspaceIntegrationSummary {
   googleEmail: string;
   scopes: string[];
   labelName: string;
+  autoCalendarSyncEnabled: boolean;
   lastSyncedAt: string;
   lastSyncError: string;
 }
@@ -23,6 +24,7 @@ export function dbGoogleWorkspaceIntegrationToSummary(
     googleEmail: row?.google_email ?? "",
     scopes: row?.scopes ?? [],
     labelName: row?.label_name ?? "Cygnet",
+    autoCalendarSyncEnabled: row?.auto_calendar_sync_enabled ?? true,
     lastSyncedAt: row?.last_synced_at ?? "",
     lastSyncError: row?.last_sync_error ?? "",
   };

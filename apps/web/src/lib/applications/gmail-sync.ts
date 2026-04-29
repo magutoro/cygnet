@@ -24,6 +24,7 @@ import {
   refreshGoogleWorkspaceAccessToken,
   splitGrantedScopes,
   encryptGoogleRefreshToken,
+  upsertGoogleCalendarEvent,
 } from "@/lib/google-workspace";
 
 const STATUS_PRIORITY: Record<ApplicationStatus, number> = APPLICATION_STATUS_ORDER.reduce(
@@ -45,6 +46,8 @@ export interface GmailSyncResult {
   integration: GoogleWorkspaceIntegrationSummary;
   importedCount: number;
   updatedCount: number;
+  calendarSyncedCount: number;
+  calendarSyncError?: string;
 }
 
 interface ParsedContact {
@@ -117,6 +120,33 @@ function inferDateFromMonthDay(month: number, day: number): string {
   return toDateString(year, month, day);
 }
 
+const ENGLISH_MONTHS: Record<string, number> = {
+  jan: 1,
+  january: 1,
+  feb: 2,
+  february: 2,
+  mar: 3,
+  march: 3,
+  apr: 4,
+  april: 4,
+  may: 5,
+  jun: 6,
+  june: 6,
+  jul: 7,
+  july: 7,
+  aug: 8,
+  august: 8,
+  sep: 9,
+  sept: 9,
+  september: 9,
+  oct: 10,
+  october: 10,
+  nov: 11,
+  november: 11,
+  dec: 12,
+  december: 12,
+};
+
 function extractDate(text: string): string {
   const isoMatch = text.match(/(20\d{2})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
   if (isoMatch) {
@@ -131,6 +161,26 @@ function extractDate(text: string): string {
   const slashMatch = text.match(/(\d{1,2})\/(\d{1,2})/);
   if (slashMatch) {
     return inferDateFromMonthDay(Number(slashMatch[1]), Number(slashMatch[2]));
+  }
+
+  const monthNameMatch = text.match(
+    /\b(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)?,?\s*(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,\s*(20\d{2}))?\b/i,
+  );
+  if (monthNameMatch) {
+    const month = ENGLISH_MONTHS[monthNameMatch[1].toLowerCase()];
+    const day = Number(monthNameMatch[2]);
+    const year = monthNameMatch[3] ? Number(monthNameMatch[3]) : null;
+    return year ? toDateString(year, month, day) : inferDateFromMonthDay(month, day);
+  }
+
+  const dayMonthNameMatch = text.match(
+    /\b(\d{1,2})(?:st|nd|rd|th)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\.|,)?(?:\s+(20\d{2}))?\b/i,
+  );
+  if (dayMonthNameMatch) {
+    const day = Number(dayMonthNameMatch[1]);
+    const month = ENGLISH_MONTHS[dayMonthNameMatch[2].toLowerCase()];
+    const year = dayMonthNameMatch[3] ? Number(dayMonthNameMatch[3]) : null;
+    return year ? toDateString(year, month, day) : inferDateFromMonthDay(month, day);
   }
 
   return "";
@@ -257,6 +307,32 @@ async function updateIntegrationStatus(
   if (error) throw error;
 }
 
+async function syncApplicationToGoogleCalendar(
+  supabase: SupabaseClient,
+  userId: string,
+  application: Application,
+  accessToken: string,
+): Promise<Application> {
+  const event = await upsertGoogleCalendarEvent(accessToken, application);
+  const { data, error } = await supabase
+    .from("applications")
+    .update({
+      calendar_provider: "google",
+      calendar_event_id: event.id,
+      calendar_event_url: event.htmlLink,
+    })
+    .eq("id", application.id)
+    .eq("user_id", userId)
+    .select("*")
+    .single<DbApplication>();
+
+  if (error || !data) {
+    throw error ?? new Error("calendar_update_failed");
+  }
+
+  return dbApplicationToApplication(data);
+}
+
 export async function upsertGoogleWorkspaceIntegration(
   supabase: SupabaseClient,
   userId: string,
@@ -349,6 +425,36 @@ export async function syncGmailForUser(
 
     let importedCount = 0;
     let updatedCount = 0;
+    let calendarSyncedCount = 0;
+    let calendarSyncError = "";
+    const shouldAutoSyncCalendar =
+      integration.auto_calendar_sync_enabled !== false &&
+      hasGoogleScope(scopes, GOOGLE_WORKSPACE_SCOPES.calendarEvents);
+
+    const maybeAutoSyncCalendar = async (application: Application): Promise<Application> => {
+      if (
+        !shouldAutoSyncCalendar ||
+        application.captureSource !== "gmail_sync" ||
+        !application.nextStepAt
+      ) {
+        return application;
+      }
+
+      try {
+        const synced = await syncApplicationToGoogleCalendar(
+          supabase,
+          userId,
+          application,
+          accessToken,
+        );
+        calendarSyncedCount += 1;
+        return synced;
+      } catch (error) {
+        calendarSyncError = error instanceof Error ? error.message : String(error);
+        console.error("Auto Google Calendar sync failed", error);
+        return application;
+      }
+    };
 
     for (const ref of refs) {
       const detail = await getGmailMessageDetail(accessToken, ref.id);
@@ -366,7 +472,8 @@ export async function syncGmailForUser(
           .single<DbApplication>();
 
         if (error) throw error;
-        byThreadId.set(detail.threadId, dbApplicationToApplication(data));
+        const synced = await maybeAutoSyncCalendar(dbApplicationToApplication(data));
+        byThreadId.set(detail.threadId, synced);
         updatedCount += 1;
         continue;
       }
@@ -378,7 +485,7 @@ export async function syncGmailForUser(
         .single<DbApplication>();
 
       if (error) throw error;
-      const created = dbApplicationToApplication(data);
+      const created = await maybeAutoSyncCalendar(dbApplicationToApplication(data));
       byThreadId.set(detail.threadId, created);
       importedCount += 1;
     }
@@ -390,7 +497,7 @@ export async function syncGmailForUser(
       label_name: label.name,
       refresh_token_encrypted: integration.refresh_token_encrypted,
       last_synced_at: new Date().toISOString(),
-      last_sync_error: "",
+      last_sync_error: calendarSyncError,
     });
 
     await updateIntegrationStatus(supabase, userId, {
@@ -398,7 +505,7 @@ export async function syncGmailForUser(
       scopes,
       label_name: label.name,
       last_synced_at: new Date().toISOString(),
-      last_sync_error: "",
+      last_sync_error: calendarSyncError,
     });
 
     const applications = await loadApplications(supabase, userId);
@@ -407,6 +514,8 @@ export async function syncGmailForUser(
       integration: safeSummary,
       importedCount,
       updatedCount,
+      calendarSyncedCount,
+      calendarSyncError: calendarSyncError || undefined,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

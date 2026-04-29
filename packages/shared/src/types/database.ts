@@ -82,6 +82,7 @@ export interface DbGoogleWorkspaceIntegration {
   scopes: string[];
   label_name: string;
   refresh_token_encrypted: string;
+  auto_calendar_sync_enabled: boolean;
   last_synced_at: string | null;
   last_sync_error: string;
   created_at: string;

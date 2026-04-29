@@ -132,6 +132,7 @@ export default function SettingsClient({
         googleEmail: "",
         scopes: [],
         labelName: "Cygnet",
+        autoCalendarSyncEnabled: true,
         lastSyncedAt: "",
         lastSyncError: "",
       });
