@@ -55,7 +55,7 @@ export default async function HelpPage() {
             <Link href="/contact" className="primary-cta-button px-6 text-sm">
               {t.contactCta}
             </Link>
-            <Link href="/demo" className="glass-button-secondary px-6 py-3 text-sm font-semibold">
+            <Link href="/how-it-works" className="glass-button-secondary px-6 py-3 text-sm font-semibold">
               {t.demoCta}
             </Link>
           </div>

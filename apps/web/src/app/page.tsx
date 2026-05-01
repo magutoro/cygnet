@@ -216,7 +216,7 @@ export default function HomePage() {
                     <ChromeMarkIcon className="h-5 w-5 shrink-0 text-white" />
                     {t.ctaButton}
                   </a>
-                  <Link href="/demo" className={heroSecondaryButtonClass}>
+                  <Link href="/how-it-works" className={heroSecondaryButtonClass}>
                     {t.howItWorksCta}
                     <ArrowRightIcon />
                   </Link>
@@ -275,7 +275,7 @@ export default function HomePage() {
             </div>
 
             <div className="mt-8 flex justify-start">
-              <Link href="/demo" className="glass-button-secondary px-6 py-3 text-sm font-semibold">
+              <Link href="/how-it-works" className="glass-button-secondary px-6 py-3 text-sm font-semibold">
                 {t.fullDemoCta}
               </Link>
             </div>
@@ -457,6 +457,9 @@ export default function HomePage() {
               </Link>
               <Link href="/help" className="glass-nav-link">
                 {t.help}
+              </Link>
+              <Link href="/how-it-works" className="glass-nav-link">
+                {t.howItWorksFooter}
               </Link>
               <Link href="/contact" className="glass-nav-link">
                 {t.contact}

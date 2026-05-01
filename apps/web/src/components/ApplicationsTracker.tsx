@@ -715,6 +715,9 @@ export default function ApplicationsTracker({
                   ? t.googleDesc
                   : t.googleUnavailableDesc}
             </p>
+            <div className="mt-4 rounded-2xl border border-white/65 bg-[rgba(255,255,255,0.46)] px-4 py-3 text-xs leading-relaxed text-brand-muted">
+              {t.googleFounderNote}
+            </div>
 
             <div className="mt-4 rounded-2xl border border-white/65 bg-white/52 p-4">
               <div className="text-sm font-semibold text-brand-ink">
