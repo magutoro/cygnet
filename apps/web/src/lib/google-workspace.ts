@@ -16,7 +16,6 @@ export const GOOGLE_WORKSPACE_DEFAULT_LABEL = "Cygnet";
 export const GOOGLE_WORKSPACE_ALL_SCOPES = [
   GOOGLE_WORKSPACE_SCOPES.calendarEvents,
   GOOGLE_WORKSPACE_SCOPES.gmailReadonly,
-  GOOGLE_WORKSPACE_SCOPES.gmailLabels,
 ];
 
 const GOOGLE_AUTH_BASE_SCOPES = ["openid", "email", "profile"];
@@ -33,7 +32,6 @@ export function googleWorkspaceScopesFromAliases(value: string | null): string[]
   }
   if (aliases.includes("gmail")) {
     scopes.add(GOOGLE_WORKSPACE_SCOPES.gmailReadonly);
-    scopes.add(GOOGLE_WORKSPACE_SCOPES.gmailLabels);
   }
 
   return Array.from(scopes);
@@ -280,13 +278,21 @@ export async function ensureGmailLabel(
 
 export async function listGmailMessages(
   accessToken: string,
-  labelId: string,
-  maxResults = 20,
+  options: {
+    labelId?: string;
+    query?: string;
+    maxResults?: number;
+  } = {},
 ): Promise<GmailMessageRef[]> {
   const params = new URLSearchParams({
-    labelIds: labelId,
-    maxResults: String(maxResults),
+    maxResults: String(options.maxResults ?? 20),
   });
+  if (options.labelId) {
+    params.set("labelIds", options.labelId);
+  }
+  if (options.query) {
+    params.set("q", options.query);
+  }
   const data = await googleJson<{ messages?: GmailMessageRef[] }>(
     `${GMAIL_MESSAGES_URL}?${params.toString()}`,
     {

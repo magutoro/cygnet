@@ -43,6 +43,24 @@ export interface Application extends ApplicationInput {
   updatedAt: string;
 }
 
+export type GmailSyncCandidateReviewStatus = "pending" | "approved" | "dismissed";
+
+export interface GmailSyncCandidate extends ApplicationInput {
+  id: string;
+  userId: string;
+  subject: string;
+  fromEmail: string;
+  fromName: string;
+  snippet: string;
+  confidence: number;
+  confidenceReasons: string[];
+  reviewStatus: GmailSyncCandidateReviewStatus;
+  approvedApplicationId: string;
+  detectedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const DEFAULT_APPLICATION_INPUT: ApplicationInput = {
   companyName: "",
   roleTitle: "",
@@ -114,5 +132,70 @@ export function applicationInputToDb(input: ApplicationInput) {
     calendar_provider: input.calendarProvider || null,
     calendar_event_id: input.calendarEventId.trim() || null,
     calendar_event_url: input.calendarEventUrl.trim() || null,
+  };
+}
+
+export function dbGmailSyncCandidateToCandidate(
+  row: import("./database.js").DbGmailSyncCandidate,
+): GmailSyncCandidate {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    subject: row.subject,
+    fromEmail: row.from_email,
+    fromName: row.from_name,
+    snippet: row.snippet,
+    companyName: row.company_name,
+    roleTitle: row.role_title,
+    sourceSite: row.source_site,
+    applicationUrl: "",
+    status: row.status,
+    appliedAt: "",
+    nextStepLabel: row.next_step_label,
+    nextStepAt: row.next_step_at ?? "",
+    nextStepStartTime: row.next_step_start_time ?? "",
+    nextStepEndTime: row.next_step_end_time ?? "",
+    contactName: row.contact_name,
+    contactEmail: row.contact_email,
+    notes: row.notes,
+    captureSource: "gmail_sync",
+    gmailThreadId: row.gmail_thread_id,
+    gmailMessageId: row.gmail_message_id,
+    calendarProvider: "",
+    calendarEventId: "",
+    calendarEventUrl: "",
+    confidence: row.confidence,
+    confidenceReasons: row.confidence_reasons,
+    reviewStatus: row.review_status,
+    approvedApplicationId: row.approved_application_id ?? "",
+    detectedAt: row.detected_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function gmailSyncCandidateToApplicationInput(
+  candidate: GmailSyncCandidate,
+): ApplicationInput {
+  return {
+    companyName: candidate.companyName,
+    roleTitle: candidate.roleTitle,
+    sourceSite: candidate.sourceSite,
+    applicationUrl: "",
+    status: candidate.status,
+    appliedAt: "",
+    nextStepLabel: candidate.nextStepLabel,
+    nextStepAt: candidate.nextStepAt,
+    nextStepStartTime: candidate.nextStepStartTime,
+    nextStepEndTime: candidate.nextStepEndTime,
+    contactName: candidate.contactName,
+    contactEmail: candidate.contactEmail,
+    notes: candidate.notes,
+    captureSource: "gmail_sync",
+    gmailThreadId: candidate.gmailThreadId,
+    gmailMessageId: candidate.gmailMessageId,
+    calendarProvider: "",
+    calendarEventId: "",
+    calendarEventUrl: "",
   };
 }

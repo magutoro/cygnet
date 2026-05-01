@@ -3,8 +3,11 @@ import { cookies, headers } from "next/headers";
 import {
   dbGoogleWorkspaceIntegrationToSummary,
   dbApplicationToApplication,
+  dbGmailSyncCandidateToCandidate,
   type DbApplication,
+  type DbGmailSyncCandidate,
   type DbGoogleWorkspaceIntegration,
+  type GmailSyncCandidate,
 } from "@cygnet/shared";
 import { createClient } from "@/lib/supabase/server";
 import ApplicationsTracker from "@/components/ApplicationsTracker";
@@ -36,16 +39,24 @@ export default async function ApplicationsPage() {
   const isPreview = !user;
 
   let initialApplications = PREVIEW_APPLICATIONS;
+  let initialGmailCandidates: GmailSyncCandidate[] = [];
   let initialIntegration = dbGoogleWorkspaceIntegrationToSummary(null);
 
   if (user) {
-    const [{ data: rows }, { data: integrationRow }] = await Promise.all([
+    const [{ data: rows }, { data: candidateRows }, { data: integrationRow }] = await Promise.all([
       supabase
         .from("applications")
         .select("*")
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false })
         .returns<DbApplication[]>(),
+      supabase
+        .from("gmail_sync_candidates")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("review_status", "pending")
+        .order("detected_at", { ascending: false })
+        .returns<DbGmailSyncCandidate[]>(),
       supabase
         .from("google_workspace_integrations")
         .select("*")
@@ -54,6 +65,7 @@ export default async function ApplicationsPage() {
     ]);
 
     initialApplications = (rows ?? []).map(dbApplicationToApplication);
+    initialGmailCandidates = (candidateRows ?? []).map(dbGmailSyncCandidateToCandidate);
     initialIntegration = dbGoogleWorkspaceIntegrationToSummary(integrationRow);
   }
 
@@ -77,6 +89,7 @@ export default async function ApplicationsPage() {
         >
           <ApplicationsTracker
             initialApplications={initialApplications}
+            initialGmailCandidates={initialGmailCandidates}
             initialIntegration={initialIntegration}
             userId={user?.id ?? ""}
           />

@@ -10,6 +10,7 @@ import {
   type ApplicationInput,
   type ApplicationStatus,
   type DbApplication,
+  type GmailSyncCandidate,
   type GoogleWorkspaceIntegrationSummary,
 } from "@cygnet/shared";
 import { createClient } from "@/lib/supabase/client";
@@ -21,6 +22,7 @@ const WORKSPACE_OAUTH_ENABLED =
 
 interface Props {
   initialApplications: Application[];
+  initialGmailCandidates: GmailSyncCandidate[];
   initialIntegration: GoogleWorkspaceIntegrationSummary;
   userId: string;
 }
@@ -170,6 +172,7 @@ function updateApplicationInList(items: Application[], next: Application) {
 
 export default function ApplicationsTracker({
   initialApplications,
+  initialGmailCandidates,
   initialIntegration,
   userId,
 }: Props) {
@@ -179,6 +182,9 @@ export default function ApplicationsTracker({
 
   const [applications, setApplications] = useState<Application[]>(() =>
     sortApplications(initialApplications),
+  );
+  const [gmailCandidates, setGmailCandidates] = useState<GmailSyncCandidate[]>(
+    initialGmailCandidates,
   );
   const [integration, setIntegration] = useState<GoogleWorkspaceIntegrationSummary>(
     initialIntegration,
@@ -197,6 +203,7 @@ export default function ApplicationsTracker({
   const [integrationBusy, setIntegrationBusy] = useState(false);
   const [autoCalendarBusy, setAutoCalendarBusy] = useState(false);
   const [calendarBusyId, setCalendarBusyId] = useState("");
+  const [candidateBusyId, setCandidateBusyId] = useState("");
   const [selectedDate, setSelectedDate] = useState(() => getInitialSelectedDate(initialApplications));
   const [visibleMonth, setVisibleMonth] = useState(() =>
     monthKey(parseLocalDate(getInitialSelectedDate(initialApplications))),
@@ -206,6 +213,7 @@ export default function ApplicationsTracker({
   useEffect(() => {
     const nextApplications = sortApplications(initialApplications);
     setApplications(nextApplications);
+    setGmailCandidates(initialGmailCandidates);
     setIntegration(initialIntegration);
     if (nextApplications.length === 0) {
       setSelectedId("new");
@@ -218,7 +226,7 @@ export default function ApplicationsTracker({
         ? current
         : nextApplications[0].id,
     );
-  }, [initialApplications, initialIntegration]);
+  }, [initialApplications, initialGmailCandidates, initialIntegration]);
 
   useEffect(() => {
     if (selectedId === "new") {
@@ -436,6 +444,7 @@ export default function ApplicationsTracker({
       const payload = (await response.json()) as {
         ok?: boolean;
         applications?: Application[];
+        candidates?: GmailSyncCandidate[];
         integration?: GoogleWorkspaceIntegrationSummary;
         importedCount?: number;
         updatedCount?: number;
@@ -448,6 +457,7 @@ export default function ApplicationsTracker({
       }
 
       setApplications(sortApplications(payload.applications));
+      setGmailCandidates(payload.candidates ?? []);
       setIntegration(payload.integration);
       setStatusMessage(
         t.gmailSyncResult
@@ -546,6 +556,81 @@ export default function ApplicationsTracker({
       );
     } finally {
       setCalendarBusyId("");
+    }
+  }
+
+  async function handleApproveCandidate(candidateId: string) {
+    setCandidateBusyId(candidateId);
+    setStatusMessage("");
+
+    try {
+      const response = await fetch(`/api/applications/gmail/candidates/${candidateId}/approve`, {
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        application?: Application;
+        candidates?: GmailSyncCandidate[];
+        calendarSynced?: boolean;
+        calendarSyncError?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.ok || !payload.application) {
+        throw new Error(payload.error || t.gmailCandidateApproveError);
+      }
+
+      const exists = applications.some((item) => item.id === payload.application?.id);
+      const nextApplications = exists
+        ? updateApplicationInList(applications, payload.application)
+        : sortApplications([payload.application, ...applications]);
+      setApplications(nextApplications);
+      setGmailCandidates(payload.candidates ?? []);
+      setSelectedId(payload.application.id);
+      setStatusMessage(
+        payload.calendarSynced
+          ? t.gmailCandidateApprovedWithCalendar
+          : payload.calendarSyncError
+            ? `${t.gmailCandidateApproved}: ${payload.calendarSyncError}`
+            : t.gmailCandidateApproved,
+      );
+    } catch (error) {
+      console.error("Failed to approve Gmail candidate", error);
+      setStatusMessage(
+        `${t.gmailCandidateApproveError}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      setCandidateBusyId("");
+    }
+  }
+
+  async function handleDismissCandidate(candidateId: string) {
+    setCandidateBusyId(candidateId);
+    setStatusMessage("");
+
+    try {
+      const response = await fetch(`/api/applications/gmail/candidates/${candidateId}/dismiss`, {
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        candidates?: GmailSyncCandidate[];
+        error?: string;
+      };
+
+      if (!response.ok || !payload.ok || !payload.candidates) {
+        throw new Error(payload.error || t.gmailCandidateDismissError);
+      }
+
+      setGmailCandidates(payload.candidates);
+      setStatusMessage(t.gmailCandidateDismissed);
+    } catch (error) {
+      console.error("Failed to dismiss Gmail candidate", error);
+      setStatusMessage(
+        `${t.gmailCandidateDismissError}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      setCandidateBusyId("");
     }
   }
 
@@ -800,6 +885,101 @@ export default function ApplicationsTracker({
           </div>
         </div>
       </div>
+
+      {gmailCandidates.length > 0 ? (
+        <div className="glass-panel rounded-[1.75rem] p-6 sm:p-8">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
+                {t.gmailReviewTitle}
+              </p>
+              <h2 className="mt-2 text-xl font-semibold text-brand-ink">
+                {t.gmailReviewHeading}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-muted">
+                {t.gmailReviewDesc}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                handleSyncGmail(false).catch(() => {});
+              }}
+              disabled={!integration.connected || integrationBusy}
+              className="glass-button-secondary h-11 px-5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {integrationBusy ? t.gmailSyncing : t.googleSyncNow}
+            </button>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            {gmailCandidates.map((candidate) => (
+              <div
+                key={candidate.id}
+                className="rounded-3xl border border-white/70 bg-white/56 p-5 shadow-[0_18px_44px_rgba(77,127,181,0.08)]"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-lg font-semibold text-brand-ink">
+                      {candidate.companyName || candidate.fromName || "—"}
+                    </div>
+                    <div className="mt-1 text-sm text-brand-muted">
+                      {candidate.nextStepLabel || candidate.subject || "—"}
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+                    {t.gmailConfidence.replace("{score}", String(candidate.confidence))}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-2 rounded-2xl border border-white/60 bg-white/48 p-4 text-sm text-brand-muted sm:grid-cols-2">
+                  <div>
+                    <span className="font-semibold text-brand-ink">{t.fields.nextStepAt}: </span>
+                    {candidate.nextStepAt || "—"}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-brand-ink">{t.fields.nextStepStartTime}: </span>
+                    {candidate.nextStepStartTime || "—"}
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="font-semibold text-brand-ink">{t.fields.contactEmail}: </span>
+                    {candidate.contactEmail || candidate.fromEmail || "—"}
+                  </div>
+                </div>
+
+                {candidate.snippet ? (
+                  <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-brand-muted">
+                    {candidate.snippet}
+                  </p>
+                ) : null}
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleApproveCandidate(candidate.id).catch(() => {});
+                    }}
+                    disabled={candidateBusyId === candidate.id}
+                    className="primary-cta-button h-11 px-5 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {candidateBusyId === candidate.id ? t.gmailCandidateWorking : t.gmailCandidateApprove}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDismissCandidate(candidate.id).catch(() => {});
+                    }}
+                    disabled={candidateBusyId === candidate.id}
+                    className="glass-button-secondary h-11 px-5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {t.gmailCandidateDismiss}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.82fr)]">
         <div className="glass-panel rounded-[1.75rem] p-6 sm:p-8">

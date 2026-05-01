@@ -4,11 +4,15 @@ import {
   DEFAULT_APPLICATION_INPUT,
   applicationInputToDb,
   dbApplicationToApplication,
+  dbGmailSyncCandidateToCandidate,
+  gmailSyncCandidateToApplicationInput,
   type Application,
   type ApplicationInput,
   type ApplicationStatus,
   type DbApplication,
+  type DbGmailSyncCandidate,
   type DbGoogleWorkspaceIntegration,
+  type GmailSyncCandidate,
   type GoogleWorkspaceIntegrationSummary,
   GOOGLE_WORKSPACE_SCOPES,
   dbGoogleWorkspaceIntegrationToSummary,
@@ -16,7 +20,6 @@ import {
 import {
   GOOGLE_WORKSPACE_DEFAULT_LABEL,
   decryptGoogleRefreshToken,
-  ensureGmailLabel,
   getGmailMessageDetail,
   getGoogleWorkspaceEmail,
   hasGoogleScope,
@@ -35,14 +38,32 @@ const STATUS_PRIORITY: Record<ApplicationStatus, number> = APPLICATION_STATUS_OR
   {} as Record<ApplicationStatus, number>,
 );
 
+const GMAIL_JOB_SEARCH_QUERY =
+  "newer_than:60d {面接 面談 日程 選考 説明会 内定 採用 インターン interview application schedule recruiting internship offer}";
+const GMAIL_SEARCH_LIMIT = 30;
+const GMAIL_DETECTION_MIN_CONFIDENCE = 45;
+
 const INTERVIEW_KEYWORDS = ["interview", "面接", "面談", "interview invitation", "面接日程"];
+const SCHEDULE_KEYWORDS = ["schedule", "日程", "日時", "説明会", "meeting", "面接", "面談"];
 const OFFER_KEYWORDS = ["offer", "内定", "採用決定"];
 const REJECTED_KEYWORDS = ["rejected", "見送り", "不採用", "選考結果", "regret"];
 const SCREENING_KEYWORDS = ["screening", "書類選考", "selection", "review"];
 const APPLIED_KEYWORDS = ["application received", "応募受付", "thanks for applying", "ご応募"];
+const RECRUITING_SENDER_KEYWORDS = [
+  "recruit",
+  "career",
+  "hr",
+  "talent",
+  "saiyo",
+  "jinji",
+  "採用",
+  "人事",
+];
+const NOISY_KEYWORDS = ["unsubscribe", "newsletter", "セール", "キャンペーン", "広告"];
 
 export interface GmailSyncResult {
   applications: Application[];
+  candidates: GmailSyncCandidate[];
   integration: GoogleWorkspaceIntegrationSummary;
   importedCount: number;
   updatedCount: number;
@@ -53,6 +74,16 @@ export interface GmailSyncResult {
 interface ParsedContact {
   name: string;
   email: string;
+}
+
+interface CandidateScore {
+  confidence: number;
+  reasons: string[];
+}
+
+function textIncludesAny(text: string, keywords: string[]): boolean {
+  const normalized = text.toLowerCase();
+  return keywords.some((keyword) => normalized.includes(keyword.toLowerCase()));
 }
 
 function inferStatus(text: string): ApplicationStatus {
@@ -236,13 +267,63 @@ function parseMessageToDraft(detail: {
     nextStepEndTime: end,
     contactName: contact.name,
     contactEmail: contact.email,
-    notes: "",
+    notes: detail.snippet.trim(),
     captureSource: "gmail_sync",
     gmailThreadId: detail.threadId,
     gmailMessageId: detail.id,
     calendarProvider: "",
     calendarEventId: "",
     calendarEventUrl: "",
+  };
+}
+
+function scoreGmailCandidate(detail: {
+  subject: string;
+  from: string;
+  snippet: string;
+  bodyText: string;
+}, draft: ApplicationInput): CandidateScore {
+  const combined = [detail.subject, detail.snippet, detail.bodyText].filter(Boolean).join("\n");
+  const senderText = detail.from.toLowerCase();
+  const reasons: string[] = [];
+  let confidence = 0;
+
+  if (textIncludesAny(combined, SCHEDULE_KEYWORDS)) {
+    confidence += 30;
+    reasons.push("schedule keyword");
+  }
+  if (textIncludesAny(combined, [...INTERVIEW_KEYWORDS, ...OFFER_KEYWORDS, ...SCREENING_KEYWORDS])) {
+    confidence += 20;
+    reasons.push("recruiting status keyword");
+  }
+  if (textIncludesAny(combined, APPLIED_KEYWORDS)) {
+    confidence += 10;
+    reasons.push("application keyword");
+  }
+  if (draft.nextStepAt) {
+    confidence += 25;
+    reasons.push("date found");
+  }
+  if (draft.nextStepStartTime) {
+    confidence += 10;
+    reasons.push("time found");
+  }
+  if (draft.companyName) {
+    confidence += 8;
+    reasons.push("company inferred");
+  }
+  if (textIncludesAny(senderText, RECRUITING_SENDER_KEYWORDS)) {
+    confidence += 10;
+    reasons.push("recruiting sender");
+  }
+  if (textIncludesAny(combined, NOISY_KEYWORDS)) {
+    confidence -= 25;
+    reasons.push("possible promotional email");
+  }
+
+  return {
+    confidence: Math.max(0, Math.min(100, confidence)),
+    reasons,
   };
 }
 
@@ -294,6 +375,22 @@ async function loadApplications(
   return (data ?? []).map(dbApplicationToApplication);
 }
 
+export async function loadPendingGmailCandidates(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<GmailSyncCandidate[]> {
+  const { data, error } = await supabase
+    .from("gmail_sync_candidates")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("review_status", "pending")
+    .order("detected_at", { ascending: false })
+    .returns<DbGmailSyncCandidate[]>();
+
+  if (error) throw error;
+  return (data ?? []).map(dbGmailSyncCandidateToCandidate);
+}
+
 async function updateIntegrationStatus(
   supabase: SupabaseClient,
   userId: string,
@@ -331,6 +428,69 @@ async function syncApplicationToGoogleCalendar(
   }
 
   return dbApplicationToApplication(data);
+}
+
+async function upsertPendingCandidate(
+  supabase: SupabaseClient,
+  userId: string,
+  detail: {
+    id: string;
+    threadId: string;
+    subject: string;
+    from: string;
+    snippet: string;
+  },
+  draft: ApplicationInput,
+  score: CandidateScore,
+): Promise<"created" | "updated" | "skipped"> {
+  const { data: existing, error: existingError } = await supabase
+    .from("gmail_sync_candidates")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("gmail_thread_id", detail.threadId)
+    .maybeSingle<DbGmailSyncCandidate>();
+
+  if (existingError) throw existingError;
+  if (existing && existing.review_status !== "pending") return "skipped";
+
+  const contact = parseContact(detail.from);
+  const payload = {
+    user_id: userId,
+    gmail_thread_id: detail.threadId,
+    gmail_message_id: detail.id,
+    subject: detail.subject.trim(),
+    from_email: contact.email,
+    from_name: contact.name,
+    snippet: detail.snippet.trim(),
+    company_name: draft.companyName,
+    role_title: draft.roleTitle,
+    source_site: draft.sourceSite,
+    status: draft.status,
+    next_step_label: draft.nextStepLabel,
+    next_step_at: draft.nextStepAt || null,
+    next_step_start_time: draft.nextStepStartTime || null,
+    next_step_end_time: draft.nextStepEndTime || null,
+    contact_name: draft.contactName,
+    contact_email: draft.contactEmail,
+    notes: draft.notes,
+    confidence: score.confidence,
+    confidence_reasons: score.reasons,
+    detected_at: new Date().toISOString(),
+  };
+
+  if (existing) {
+    const { error } = await supabase
+      .from("gmail_sync_candidates")
+      .update(payload)
+      .eq("id", existing.id)
+      .eq("user_id", userId);
+    if (error) throw error;
+    return "updated";
+  }
+
+  const { error } = await supabase.from("gmail_sync_candidates").insert([payload]);
+  if (error) throw error;
+  return "created";
 }
 
 export async function upsertGoogleWorkspaceIntegration(
@@ -414,10 +574,11 @@ export async function syncGmailForUser(
       throw new Error("Gmail read scope is missing");
     }
 
-    const googleEmail =
-      integration.google_email || (await getGoogleWorkspaceEmail(accessToken));
-    const label = await ensureGmailLabel(accessToken, integration.label_name || GOOGLE_WORKSPACE_DEFAULT_LABEL);
-    const refs = await listGmailMessages(accessToken, label.id, 20);
+    const googleEmail = integration.google_email || (await getGoogleWorkspaceEmail(accessToken));
+    const refs = await listGmailMessages(accessToken, {
+      query: GMAIL_JOB_SEARCH_QUERY,
+      maxResults: GMAIL_SEARCH_LIMIT,
+    });
     const currentApps = await loadApplications(supabase, userId);
     const byThreadId = new Map(
       currentApps.filter((item) => item.gmailThreadId).map((item) => [item.gmailThreadId, item]),
@@ -425,97 +586,52 @@ export async function syncGmailForUser(
 
     let importedCount = 0;
     let updatedCount = 0;
-    let calendarSyncedCount = 0;
-    let calendarSyncError = "";
-    const shouldAutoSyncCalendar =
-      integration.auto_calendar_sync_enabled !== false &&
-      hasGoogleScope(scopes, GOOGLE_WORKSPACE_SCOPES.calendarEvents);
-
-    const maybeAutoSyncCalendar = async (application: Application): Promise<Application> => {
-      if (
-        !shouldAutoSyncCalendar ||
-        application.captureSource !== "gmail_sync" ||
-        !application.nextStepAt
-      ) {
-        return application;
-      }
-
-      try {
-        const synced = await syncApplicationToGoogleCalendar(
-          supabase,
-          userId,
-          application,
-          accessToken,
-        );
-        calendarSyncedCount += 1;
-        return synced;
-      } catch (error) {
-        calendarSyncError = error instanceof Error ? error.message : String(error);
-        console.error("Auto Google Calendar sync failed", error);
-        return application;
-      }
-    };
 
     for (const ref of refs) {
+      if (byThreadId.has(ref.threadId)) continue;
+
       const detail = await getGmailMessageDetail(accessToken, ref.id);
       const incomingDraft = parseMessageToDraft(detail);
-      const existing = byThreadId.get(detail.threadId);
+      const score = scoreGmailCandidate(detail, incomingDraft);
 
-      if (existing) {
-        const merged = mergeDraft(existing, incomingDraft);
-        const { data, error } = await supabase
-          .from("applications")
-          .update(applicationInputToDb(merged))
-          .eq("id", existing.id)
-          .eq("user_id", userId)
-          .select("*")
-          .single<DbApplication>();
+      if (score.confidence < GMAIL_DETECTION_MIN_CONFIDENCE) continue;
 
-        if (error) throw error;
-        const synced = await maybeAutoSyncCalendar(dbApplicationToApplication(data));
-        byThreadId.set(detail.threadId, synced);
-        updatedCount += 1;
-        continue;
-      }
-
-      const { data, error } = await supabase
-        .from("applications")
-        .insert([{ user_id: userId, ...applicationInputToDb(incomingDraft) }])
-        .select("*")
-        .single<DbApplication>();
-
-      if (error) throw error;
-      const created = await maybeAutoSyncCalendar(dbApplicationToApplication(data));
-      byThreadId.set(detail.threadId, created);
-      importedCount += 1;
+      const result = await upsertPendingCandidate(supabase, userId, detail, incomingDraft, score);
+      if (result === "created") importedCount += 1;
+      if (result === "updated") updatedCount += 1;
     }
 
+    const syncedAt = new Date().toISOString();
     const safeSummary = dbGoogleWorkspaceIntegrationToSummary({
       ...integration,
       google_email: googleEmail,
       scopes,
-      label_name: label.name,
+      label_name: "Recent job emails",
       refresh_token_encrypted: integration.refresh_token_encrypted,
-      last_synced_at: new Date().toISOString(),
-      last_sync_error: calendarSyncError,
+      last_synced_at: syncedAt,
+      last_sync_error: "",
     });
 
     await updateIntegrationStatus(supabase, userId, {
       google_email: googleEmail,
       scopes,
-      label_name: label.name,
-      last_synced_at: new Date().toISOString(),
-      last_sync_error: calendarSyncError,
+      label_name: "Recent job emails",
+      last_synced_at: syncedAt,
+      last_sync_error: "",
     });
 
-    const applications = await loadApplications(supabase, userId);
+    const [applications, candidates] = await Promise.all([
+      loadApplications(supabase, userId),
+      loadPendingGmailCandidates(supabase, userId),
+    ]);
+
     return {
       applications,
+      candidates,
       integration: safeSummary,
       importedCount,
       updatedCount,
-      calendarSyncedCount,
-      calendarSyncError: calendarSyncError || undefined,
+      calendarSyncedCount: 0,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -524,4 +640,125 @@ export async function syncGmailForUser(
     });
     throw error;
   }
+}
+
+export async function approveGmailSyncCandidate(
+  supabase: SupabaseClient,
+  userId: string,
+  candidateId: string,
+  integration: DbGoogleWorkspaceIntegration | null,
+): Promise<{
+  application: Application;
+  candidates: GmailSyncCandidate[];
+  calendarSynced: boolean;
+  calendarSyncError?: string;
+}> {
+  const { data: candidateRow, error: candidateError } = await supabase
+    .from("gmail_sync_candidates")
+    .select("*")
+    .eq("id", candidateId)
+    .eq("user_id", userId)
+    .eq("review_status", "pending")
+    .maybeSingle<DbGmailSyncCandidate>();
+
+  if (candidateError) throw candidateError;
+  if (!candidateRow) throw new Error("candidate_not_found");
+
+  const candidate = dbGmailSyncCandidateToCandidate(candidateRow);
+  const { data: existingApplication } = await supabase
+    .from("applications")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("gmail_thread_id", candidate.gmailThreadId)
+    .maybeSingle<DbApplication>();
+
+  let application = existingApplication
+    ? dbApplicationToApplication(existingApplication)
+    : null;
+
+  if (!application) {
+    const input = gmailSyncCandidateToApplicationInput(candidate);
+    const { data, error } = await supabase
+      .from("applications")
+      .insert([{ user_id: userId, ...applicationInputToDb(input) }])
+      .select("*")
+      .single<DbApplication>();
+
+    if (error || !data) throw error ?? new Error("application_create_failed");
+    application = dbApplicationToApplication(data);
+  } else {
+    const merged = mergeDraft(application, gmailSyncCandidateToApplicationInput(candidate));
+    const { data, error } = await supabase
+      .from("applications")
+      .update(applicationInputToDb(merged))
+      .eq("id", application.id)
+      .eq("user_id", userId)
+      .select("*")
+      .single<DbApplication>();
+
+    if (error || !data) throw error ?? new Error("application_update_failed");
+    application = dbApplicationToApplication(data);
+  }
+
+  let calendarSynced = false;
+  let calendarSyncError = "";
+
+  if (
+    integration &&
+    integration.auto_calendar_sync_enabled !== false &&
+    integration.scopes.includes(GOOGLE_WORKSPACE_SCOPES.calendarEvents) &&
+    application.nextStepAt
+  ) {
+    try {
+      const refreshToken = decryptGoogleRefreshToken(integration.refresh_token_encrypted);
+      const refreshed = await refreshGoogleWorkspaceAccessToken(refreshToken);
+      application = await syncApplicationToGoogleCalendar(
+        supabase,
+        userId,
+        application,
+        refreshed.access_token,
+      );
+      calendarSynced = true;
+    } catch (error) {
+      calendarSyncError = error instanceof Error ? error.message : String(error);
+      console.error("Approved Gmail candidate Calendar sync failed", error);
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("gmail_sync_candidates")
+    .update({
+      review_status: "approved",
+      approved_application_id: application.id,
+    })
+    .eq("id", candidate.id)
+    .eq("user_id", userId);
+
+  if (updateError) throw updateError;
+
+  return {
+    application,
+    candidates: await loadPendingGmailCandidates(supabase, userId),
+    calendarSynced,
+    calendarSyncError: calendarSyncError || undefined,
+  };
+}
+
+export async function dismissGmailSyncCandidate(
+  supabase: SupabaseClient,
+  userId: string,
+  candidateId: string,
+): Promise<{ candidates: GmailSyncCandidate[] }> {
+  const { error } = await supabase
+    .from("gmail_sync_candidates")
+    .update({ review_status: "dismissed" })
+    .eq("id", candidateId)
+    .eq("user_id", userId)
+    .eq("review_status", "pending");
+
+  if (error) throw error;
+
+  return {
+    candidates: await loadPendingGmailCandidates(supabase, userId),
+  };
 }

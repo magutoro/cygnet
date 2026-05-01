@@ -464,6 +464,58 @@ body::after {
   }
 }
 
+@keyframes preloaderCircleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes preloaderCircleBreathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
+}
+
+@keyframes preloaderOrbitSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes preloaderPaperShift {
+  0%,
+  100% {
+    opacity: 0.48;
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    opacity: 0.72;
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@keyframes preloaderCornerBlink {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 0.36;
+  }
+}
+
 .form-field-fill-1 {
   animation: vbFieldFill 0.35s ease-out 0.2s both;
 }
@@ -581,4 +633,72 @@ body::after {
 
 .preloader-scan {
   animation: preloaderScan 1.6s ease-in-out 0.2s infinite;
+}
+
+.preloader-paper {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 28%),
+    radial-gradient(circle at 58% 58%, rgba(222, 235, 247, 0.18), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(246, 245, 241, 0.78));
+  animation: preloaderPaperShift 5.4s ease-in-out infinite;
+}
+
+.preloader-paper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  background-image:
+    linear-gradient(rgba(20, 42, 68, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 42, 68, 0.04) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+.preloader-circle-shell {
+  animation:
+    preloaderCircleIn 0.82s cubic-bezier(0.22, 1, 0.36, 1) both,
+    preloaderCircleBreathe 2.7s ease-in-out 0.85s infinite;
+}
+
+.preloader-circle-ring {
+  border: 1px solid rgba(20, 42, 68, 0.42);
+  box-shadow:
+    inset 0 0 32px rgba(255, 255, 255, 0.86),
+    0 20px 70px rgba(20, 42, 68, 0.07);
+}
+
+.preloader-circle-orbit {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 292deg,
+    rgba(20, 42, 68, 0.58) 318deg,
+    transparent 346deg,
+    transparent 360deg
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
+  animation: preloaderOrbitSpin 2.15s linear infinite;
+}
+
+.preloader-circle-glow {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0) 68%);
+}
+
+.preloader-corner {
+  position: absolute;
+  left: clamp(1.5rem, 4vw, 3.25rem);
+  z-index: 1;
+  font-size: 0.56rem;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(20, 42, 68, 0.62);
+  animation: preloaderCornerBlink 2.2s ease-in-out infinite;
+}
+
+.preloader-corner-top {
+  top: clamp(1.5rem, 7vh, 3.25rem);
+}
+
+.preloader-corner-bottom {
+  bottom: clamp(1.5rem, 7vh, 3.25rem);
 }

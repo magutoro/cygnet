@@ -11,7 +11,7 @@ export default function LandingPreloader({
   lang: "en" | "ja";
   onDone: () => void;
 }) {
-  const [phase, setPhase] = useState<"typing" | "subtitle" | "fadeout">("typing");
+  const [phase, setPhase] = useState<"mark" | "message" | "fadeout">("mark");
 
   useEffect(() => {
     const previousBodyOverflow = document.body.style.overflow;
@@ -19,14 +19,14 @@ export default function LandingPreloader({
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
 
-    const subtitleTimer = window.setTimeout(() => setPhase("subtitle"), 1400);
-    const fadeTimer = window.setTimeout(() => setPhase("fadeout"), 2800);
-    const doneTimer = window.setTimeout(() => onDone(), 3500);
+    const messageTimer = window.setTimeout(() => setPhase("message"), 1200);
+    const fadeTimer = window.setTimeout(() => setPhase("fadeout"), 2700);
+    const doneTimer = window.setTimeout(() => onDone(), 3400);
 
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
-      window.clearTimeout(subtitleTimer);
+      window.clearTimeout(messageTimer);
       window.clearTimeout(fadeTimer);
       window.clearTimeout(doneTimer);
     };
@@ -34,32 +34,42 @@ export default function LandingPreloader({
 
   return (
     <div
-      className={`fixed inset-0 z-[120] flex items-center justify-center bg-black transition-opacity duration-700 ${
+      className={`fixed inset-0 z-[120] flex items-center justify-center overflow-hidden bg-[#faf9f5] text-brand-ink transition-opacity duration-700 ${
         phase === "fadeout" ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >
-      <div className="relative flex flex-col items-center gap-5 px-6 text-center">
-        <div className="relative overflow-hidden rounded-[1.15rem] border border-white/10 bg-white/[0.02] px-6 py-4 shadow-[0_14px_38px_rgba(0,0,0,0.28)] backdrop-blur-lg">
-          <div className="flex items-center justify-center">
-            <span className="preloader-word inline-flex items-end whitespace-nowrap font-sans text-[1.65rem] font-semibold tracking-[-0.045em] text-white/95 sm:text-[1.85rem]">
+      <div className="preloader-paper absolute inset-0" />
+      <div className="preloader-corner preloader-corner-top" aria-hidden="true">
+        C
+      </div>
+      <div className="preloader-corner preloader-corner-bottom" aria-hidden="true">
+        A
+      </div>
+
+      <div className="relative grid justify-items-center gap-7 px-6 text-center">
+        <div className="preloader-circle-shell relative h-36 w-36 sm:h-44 sm:w-44" aria-hidden="true">
+          <div className="preloader-circle-ring absolute inset-0 rounded-full" />
+          <div className="preloader-circle-orbit absolute inset-0 rounded-full" />
+          <div className="preloader-circle-glow absolute inset-4 rounded-full" />
+
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="preloader-word flex w-24 items-end justify-center whitespace-nowrap pl-[0.22em] font-sans text-[0.74rem] font-semibold uppercase tracking-[0.22em] text-brand-ink/70 sm:text-[0.8rem]">
               {PRELOADER_WORD.map((letter, index) => (
                 <span
                   key={`${letter}-${index}`}
                   className="preloader-letter inline-block"
-                  style={{ animationDelay: `${0.22 + index * 0.11}s` }}
+                  style={{ animationDelay: `${0.42 + index * 0.08}s` }}
                 >
                   {letter}
                 </span>
               ))}
             </span>
-            <span className="preloader-cursor ml-1 inline-block h-7 w-[1.5px] bg-white/90" />
           </div>
-          <div className="preloader-scan absolute inset-0 bg-gradient-to-r from-transparent via-white/6 to-transparent" />
         </div>
 
         <p
-          className={`font-sans text-[0.98rem] font-medium tracking-[0.08em] text-white opacity-95 transition-all duration-700 ${
-            phase === "typing" ? "translate-y-3 opacity-0" : "translate-y-0 opacity-100"
+          className={`w-72 max-w-[80vw] pl-[0.18em] text-center font-sans text-[0.72rem] font-medium uppercase tracking-[0.18em] text-brand-ink/55 transition-all duration-700 ${
+            phase === "mark" ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100"
           }`}
         >
           {lang === "ja" ? "自動入力を、もっと簡単に。" : "Autofill made easy."}

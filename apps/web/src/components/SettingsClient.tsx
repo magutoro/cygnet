@@ -12,13 +12,13 @@ const COPY = {
     signedInAs: "Signed in as",
     workspaceTitle: "Google access",
     workspaceDesc:
-      "Calendar and Gmail are optional and separate from basic Google sign-in. Disconnecting them keeps your Cygnet account but stops calendar actions and Gmail label sync.",
+      "Calendar and Gmail are optional and separate from basic Google sign-in. Disconnecting them keeps your Cygnet account but stops calendar actions and Gmail schedule detection.",
     connected: "Connected",
     notConnected: "Not connected",
     permissionOn: "On",
     permissionOff: "Off",
     calendar: "Google Calendar events",
-    gmail: "Gmail Cygnet label sync",
+    gmail: "Gmail schedule detection",
     lastSynced: "Last synced",
     neverSynced: "Not synced yet",
     manageHint:
@@ -42,13 +42,13 @@ const COPY = {
     signedInAs: "ログイン中",
     workspaceTitle: "Google 連携",
     workspaceDesc:
-      "Calendar と Gmail は任意で、通常の Google ログインとは別扱いです。解除しても Cygnet アカウントは残りますが、カレンダー追加と Gmail ラベル同期は停止します。",
+      "Calendar と Gmail は任意で、通常の Google ログインとは別扱いです。解除しても Cygnet アカウントは残りますが、カレンダー追加と Gmail 日程検出は停止します。",
     connected: "連携済み",
     notConnected: "未連携",
     permissionOn: "オン",
     permissionOff: "オフ",
     calendar: "Google Calendar の予定",
-    gmail: "Gmail の Cygnet ラベル同期",
+    gmail: "Gmail の日程検出",
     lastSynced: "最終同期",
     neverSynced: "まだ同期されていません",
     manageHint:

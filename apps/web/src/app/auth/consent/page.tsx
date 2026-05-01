@@ -32,7 +32,8 @@ const COPY = {
     calendarTitle: "Sync with Google Calendar",
     calendarBody: "Add or update interview and follow-up events from your applications.",
     gmailTitle: "Sync with Gmail",
-    gmailBody: "Sync only messages with the Cygnet label to update your application history.",
+    gmailBody:
+      "Search recent job-related Gmail messages to detect schedule candidates for your review.",
     comingSoon: "Coming soon",
     unavailable:
       "Calendar/Gmail sync is paused for public users until Google verification is complete.",
@@ -61,7 +62,8 @@ const COPY = {
     calendarTitle: "Google Calendar と同期",
     calendarBody: "応募履歴から面接・次回対応の予定を追加、更新できます。",
     gmailTitle: "Gmail と同期",
-    gmailBody: "Cygnet ラベルが付いたメールだけを同期し、応募履歴を更新します。",
+    gmailBody:
+      "最近の採用関連メールを検索し、確認用の日程候補を検出します。",
     comingSoon: "準備中",
     unavailable:
       "Google の確認が完了するまで、公開環境では Calendar / Gmail 同期を停止しています。",

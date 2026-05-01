@@ -75,6 +75,35 @@ export interface DbApplication {
   updated_at: string;
 }
 
+export interface DbGmailSyncCandidate {
+  id: string;
+  user_id: string;
+  gmail_thread_id: string;
+  gmail_message_id: string;
+  subject: string;
+  from_email: string;
+  from_name: string;
+  snippet: string;
+  company_name: string;
+  role_title: string;
+  source_site: string;
+  status: "saved" | "applied" | "screening" | "interview" | "offer" | "rejected" | "withdrawn";
+  next_step_label: string;
+  next_step_at: string | null;
+  next_step_start_time: string | null;
+  next_step_end_time: string | null;
+  contact_name: string;
+  contact_email: string;
+  notes: string;
+  confidence: number;
+  confidence_reasons: string[];
+  review_status: "pending" | "approved" | "dismissed";
+  approved_application_id: string | null;
+  detected_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DbGoogleWorkspaceIntegration {
   id: string;
   user_id: string;
