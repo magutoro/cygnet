@@ -41,7 +41,7 @@ export default function LandingPreloader({
       <div className="relative flex flex-col items-center gap-5 px-6 text-center">
         <div className="relative overflow-hidden rounded-[1.15rem] border border-white/10 bg-white/[0.02] px-6 py-4 shadow-[0_14px_38px_rgba(0,0,0,0.28)] backdrop-blur-lg">
           <div className="flex items-center justify-center">
-            <span className="preloader-word inline-flex items-end whitespace-nowrap font-serif text-[1.7rem] italic tracking-[0.015em] text-white/95 sm:text-[1.9rem]">
+            <span className="preloader-word inline-flex items-end whitespace-nowrap font-sans text-[1.65rem] font-semibold tracking-[-0.045em] text-white/95 sm:text-[1.85rem]">
               {PRELOADER_WORD.map((letter, index) => (
                 <span
                   key={`${letter}-${index}`}
@@ -62,7 +62,7 @@ export default function LandingPreloader({
             phase === "typing" ? "translate-y-3 opacity-0" : "translate-y-0 opacity-100"
           }`}
         >
-          {lang === "ja" ? "就活入力をもっとラクに。" : "autofill made easy."}
+          {lang === "ja" ? "自動入力を、もっと簡単に。" : "Autofill made easy."}
         </p>
       </div>
     </div>

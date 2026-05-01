@@ -4,49 +4,50 @@ export const SITE_COPY = {
   en: {
     home: {
       heroBadge: "Free Chrome Extension",
-      heroTitle: "Make Japanese job applications painless.",
-      heroTitleEmphasis: "painless.",
+      heroTitle: "Autofill Japanese job applications.",
+      heroTitleEmphasis: "",
       heroSubtitle:
-        "Autofill shuukatsu forms with your saved profile — name, address, education, career — accurately formatted and ready in one click.",
+        "Save your profile once. Cygnet fills name, furigana, address, school, and career fields when you apply.",
       addToChrome: "Add to Chrome",
-      howItWorksCta: "See how it works",
+      howItWorksCta: "See visual guide",
       howItWorksTag: "How it works",
-      howItWorksTitle: "Three steps, zero hassle",
+      howItWorksTitle: "Save once. Autofill when you apply.",
+      heroDemoLabels: ["Saved profile", "Detected form", "Autofilled fields"],
       steps: [
         {
           num: "1",
-          title: "Save your profile",
-          desc: "Enter your info once — name, address, education, career — and Cygnet remembers it.",
+          title: "Save profile",
+          desc: "Add the details you reuse on job applications.",
         },
         {
           num: "2",
-          title: "Open a job site",
-          desc: "Navigate to any supported Japanese job application form — Rikunabi, MyNavi, and more.",
+          title: "Open job form",
+          desc: "Go to a supported Japanese application page.",
         },
         {
           num: "3",
-          title: "Autofill instantly",
-          desc: "Choose Auto mode or click manually, and Cygnet fills the form in the right format.",
+          title: "Autofill and review",
+          desc: "Fill fields quickly, then check before submitting.",
         },
       ],
       featuresTag: "Features",
       featuresTitle: "Everything you need for shuukatsu",
       features: [
         {
-          title: "Autofill forms",
-          desc: "One click fills name, address, education, career — mapped to each site's specific field structure.",
+          title: "Fill forms faster",
+          desc: "Name, address, education, and career fields are mapped to each supported site.",
         },
         {
-          title: "Furigana helper",
-          desc: "Automatically converts kanji names to hiragana and katakana readings — no more manual lookup.",
+          title: "Furigana without guesswork",
+          desc: "Cygnet helps prepare kana readings for Japanese application fields.",
         },
         {
-          title: "Address formatting",
-          desc: "Postal code lookup, prefecture auto-selection, and proper Japanese address formatting built in.",
+          title: "Japanese address support",
+          desc: "Postal code, prefecture, and address fields stay easier to format.",
         },
         {
-          title: "Multi-site support",
-          desc: "Works across major Japanese job platforms out of the box.",
+          title: "Track what happens next",
+          desc: "Save applications, follow-ups, interviews, and deadlines in one place.",
         },
       ],
       modesTag: "Autofill modes",
@@ -102,11 +103,6 @@ export const SITE_COPY = {
       ctaTitle: "Ready to simplify shuukatsu?",
       ctaDesc: "Install Cygnet for free and never hand-type the same info again.",
       ctaButton: "Add to Chrome — it's free",
-      heroStats: [
-        { value: "Local Vault", label: "Saved credentials" },
-        { value: "10+", label: "Sites supported" },
-        { value: "1-Click", label: "Autofill" },
-      ],
       privacyPolicy: "Privacy Policy",
       termsOfService: "Terms of Service",
       contact: "Contact",
@@ -114,7 +110,7 @@ export const SITE_COPY = {
       howItWorksFooter: "How it works",
       rightsReserved: "All rights reserved.",
       trustBadge: "Privacy & control",
-      fullDemoCta: "View full walkthrough",
+      fullDemoCta: "View visual guide",
     },
     demo: {
       badge: "Guided demo",
@@ -335,19 +331,20 @@ export const SITE_COPY = {
   ja: {
     home: {
       heroBadge: "無料のChrome拡張機能",
-      heroTitle: "日本語の就活エントリーを、もっとラクに。",
-      heroTitleEmphasis: "もっとラクに。",
+      heroTitle: "就活フォーム、自動入力。",
+      heroTitleEmphasis: "",
       heroSubtitle:
-        "名前・住所・学歴・職歴を保存しておけば、就活フォームへワンクリックで自動入力できます。",
+        "プロフィールを一度保存すれば、氏名・フリガナ・住所・学校・職歴を応募フォームへ入力できます。",
       addToChrome: "Chromeに追加",
-      howItWorksCta: "使い方を見る",
+      howItWorksCta: "ビジュアルで見る",
       howItWorksTag: "使い方",
-      howItWorksTitle: "3ステップで入力完了",
+      howItWorksTitle: "一度保存。応募時に自動入力。",
+      heroDemoLabels: ["保存済みプロフィール", "フォーム検出", "自動入力済み"],
       steps: [
         {
           num: "1",
           title: "プロフィールを保存",
-          desc: "名前、住所、学歴、職歴を一度入力すれば、Cygnetが記憶します。",
+          desc: "応募でよく使う情報をまとめます。",
         },
         {
           num: "2",
@@ -356,28 +353,28 @@ export const SITE_COPY = {
         },
         {
           num: "3",
-          title: "必要なときに自動入力",
-          desc: "自動モードでも手動モードでも、選んだ方法でフォーム入力を進められます。",
+          title: "自動入力して確認",
+          desc: "入力後は送信前に自分で確認できます。",
         },
       ],
       featuresTag: "機能",
       featuresTitle: "就活に必要な機能をひとつに",
       features: [
         {
-          title: "フォーム自動入力",
-          desc: "サイトごとの入力欄構造に合わせて、プロフィール情報を自動で入力します。",
+          title: "フォーム入力を速く",
+          desc: "氏名、住所、学歴、職歴を対応サイトの入力欄に合わせます。",
         },
         {
-          title: "ふりがな補助",
-          desc: "漢字氏名からひらがな・カタカナを補助変換し、入力の手間を減らします。",
+          title: "フリガナも迷わない",
+          desc: "日本語の応募欄に必要なかな入力を補助します。",
         },
         {
-          title: "住所フォーマット対応",
-          desc: "郵便番号、都道府県、住所の形式を日本の応募フォーム向けに整えます。",
+          title: "日本の住所入力に対応",
+          desc: "郵便番号、都道府県、住所入力の手間を減らします。",
         },
         {
-          title: "主要サイト対応",
-          desc: "主要な日本の就活サイトで使えるよう対応を広げています。",
+          title: "次の予定も管理",
+          desc: "応募先、面接、締切、フォローアップをまとめて確認できます。",
         },
       ],
       modesTag: "入力モード",
@@ -433,11 +430,6 @@ export const SITE_COPY = {
       ctaTitle: "就活入力をもっと速く",
       ctaDesc: "Cygnetを無料で使い始めましょう。",
       ctaButton: "Chromeに追加（無料）",
-      heroStats: [
-        { value: "ローカル保管", label: "保存済み認証情報" },
-        { value: "10+", label: "対応サイト" },
-        { value: "1クリック", label: "自動入力" },
-      ],
       privacyPolicy: "プライバシーポリシー",
       termsOfService: "利用規約",
       contact: "お問い合わせ",
@@ -445,7 +437,7 @@ export const SITE_COPY = {
       howItWorksFooter: "使い方",
       rightsReserved: "All rights reserved.",
       trustBadge: "プライバシーとコントロール",
-      fullDemoCta: "詳しいデモを見る",
+      fullDemoCta: "ビジュアルガイドを見る",
     },
     demo: {
       badge: "デモ",

@@ -165,16 +165,6 @@ export default function HomePage() {
   const heroSecondaryButtonClass = isJapanese
     ? "inline-flex h-14 items-center gap-2 px-0 text-[0.98rem] font-semibold leading-none text-brand-ink transition-colors hover:text-brand"
     : "inline-flex h-14 items-center gap-2 px-0 text-base font-semibold leading-none text-brand-ink transition-colors hover:text-brand";
-  const heroStatsWrapClass = isJapanese
-    ? "mt-12 grid max-w-[35rem] grid-cols-3 gap-4 sm:gap-7"
-    : "mt-12 grid max-w-[34rem] grid-cols-3 gap-6 sm:flex sm:gap-12";
-  const heroStatValueClass = isJapanese
-    ? "text-[1.9rem] font-bold leading-[0.98] tracking-[-0.05em] text-brand-ink sm:text-[2.25rem]"
-    : "text-3xl font-bold leading-none tracking-tight text-brand-ink";
-  const heroStatLabelClass = isJapanese
-    ? "mt-2 text-[0.8rem] leading-[1.45] text-brand-muted sm:text-[0.86rem]"
-    : "mt-2 text-sm leading-[1.45] text-brand-muted";
-
   if (bootState === "bootPending") {
     return <div aria-hidden="true" className="page-shell" />;
   }
@@ -222,14 +212,6 @@ export default function HomePage() {
                   </Link>
                 </div>
 
-                <div className={heroStatsWrapClass}>
-                  {t.heroStats.map((stat) => (
-                    <div key={`${stat.value}-${stat.label}`}>
-                      <div className={heroStatValueClass}>{stat.value}</div>
-                      <div className={heroStatLabelClass}>{stat.label}</div>
-                    </div>
-                  ))}
-                </div>
               </div>
 
               <div className="relative lg:pl-3">
@@ -512,6 +494,21 @@ function renderFeaturesTitle(lang: "en" | "ja", title: string) {
 }
 
 function renderHeroTitle(lang: "en" | "ja", title: string, emphasis: string) {
+  if (!emphasis) {
+    if (lang === "ja" && title.includes("、")) {
+      const [firstLine, ...rest] = title.split("、");
+
+      return (
+        <>
+          <span className="block">{firstLine}、</span>
+          <span className="block">{rest.join("、")}</span>
+        </>
+      );
+    }
+
+    return title;
+  }
+
   const leading = title.replace(emphasis, "").trim();
 
   if (lang === "en") {
