@@ -19,8 +19,8 @@ import {
 } from "@/lib/language";
 
 export const metadata: Metadata = {
-  title: "Applications – Cygnet",
-  description: "Track your application history and upcoming steps in Cygnet.",
+  title: "Calendar – Cygnet",
+  description: "Track your application schedule and upcoming steps in Cygnet.",
 };
 
 export default async function ApplicationsPage() {
@@ -71,14 +71,7 @@ export default async function ApplicationsPage() {
 
   return (
     <main className="page-shell">
-      <div className="mx-auto max-w-7xl px-6 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-brand-ink">{t.pageTitle}</h1>
-          <p className="mt-2 text-sm text-brand-muted">
-            {isPreview ? t.previewSubtitle : t.pageSubtitle}
-          </p>
-        </div>
-
+      <div className="mx-auto max-w-7xl px-6 py-8 sm:py-10">
         <div
           className={
             isPreview

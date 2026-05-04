@@ -4,29 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import LandingDemo from "@/components/LandingDemo";
 import LandingPreloader from "@/components/LandingPreloader";
+import WorkflowSlideshow from "@/components/WorkflowSlideshow";
 import { useLanguage } from "@/components/LanguageProvider";
 import { SITE_COPY } from "@/content/site-copy";
 
 const CHROME_WEB_STORE_URL =
   "https://chromewebstore.google.com/detail/cygnet/glgmodddifcigjdkpjefebdkmpgabnnp";
-
-const STEP_ICONS = [
-  (
-    <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-    </svg>
-  ),
-  (
-    <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5a17.92 17.92 0 0 1-8.716-2.247m0 0A8.966 8.966 0 0 1 3 12c0-1.264.26-2.467.729-3.558" />
-    </svg>
-  ),
-  (
-    <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
-    </svg>
-  ),
-];
 
 const FEATURE_ICONS = [
   (
@@ -162,9 +145,6 @@ export default function HomePage() {
     ? "mt-6 max-w-[29rem] text-[0.99rem] leading-[1.95] text-brand-muted sm:text-[1.05rem]"
     : "mt-6 max-w-lg text-lg leading-relaxed text-brand-muted";
   const heroPrimaryButtonClass = isJapanese ? "primary-cta-button" : "primary-cta-button px-8 text-base";
-  const heroSecondaryButtonClass = isJapanese
-    ? "inline-flex h-14 items-center gap-2 px-0 text-[0.98rem] font-semibold leading-none text-brand-ink transition-colors hover:text-brand"
-    : "inline-flex h-14 items-center gap-2 px-0 text-base font-semibold leading-none text-brand-ink transition-colors hover:text-brand";
   if (bootState === "bootPending") {
     return <div aria-hidden="true" className="page-shell" />;
   }
@@ -206,10 +186,6 @@ export default function HomePage() {
                     <ChromeMarkIcon className="h-5 w-5 shrink-0 text-white" />
                     {t.ctaButton}
                   </a>
-                  <Link href="/how-it-works" className={heroSecondaryButtonClass}>
-                    {t.howItWorksCta}
-                    <ArrowRightIcon />
-                  </Link>
                 </div>
 
               </div>
@@ -227,40 +203,16 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="how-it-works" className="py-24 sm:py-28">
+        <section id="how-it-works" className="py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-6">
-            <div className="mb-16 max-w-xl">
+            <div className="mb-8 max-w-xl">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">{t.howItWorksTag}</p>
               <h2 className="mt-3 text-3xl font-bold tracking-tight text-brand-ink sm:text-4xl lg:text-5xl">
                 {t.howItWorksTitle}
               </h2>
             </div>
 
-            <div className="glass-panel overflow-hidden rounded-[2rem] md:grid md:grid-cols-3">
-              {t.steps.map((step, index) => (
-                <div
-                  key={step.num}
-                  className={`relative p-8 sm:p-10 ${
-                    index < t.steps.length - 1 ? "border-b border-white/45 md:border-b-0 md:border-r" : ""
-                  } border-white/45`}
-                >
-                  <div className="absolute right-6 top-6 text-6xl font-semibold text-white/45">{step.num}</div>
-                  <div className="relative">
-                    <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand text-white shadow-[0_14px_30px_rgba(15,124,171,0.2)]">
-                      {STEP_ICONS[index]}
-                    </div>
-                    <h3 className="text-xl font-semibold text-brand-ink">{step.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed text-brand-muted">{step.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-8 flex justify-start">
-              <Link href="/how-it-works" className="glass-button-secondary px-6 py-3 text-sm font-semibold">
-                {t.fullDemoCta}
-              </Link>
-            </div>
+            <WorkflowSlideshow compact />
           </div>
         </section>
 
@@ -378,7 +330,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="py-24 sm:py-28">
+        <section id="faq" className="py-24 sm:py-28">
           <div className="mx-auto max-w-6xl px-6">
             <div className="glass-panel rounded-[2rem] p-8 sm:p-10">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">{t.faqTag}</p>
@@ -545,14 +497,6 @@ function ChromeMarkIcon({ className }: { className?: string }) {
       <path d="M3.95 6.06 8.54 14" />
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="4" />
-    </svg>
-  );
-}
-
-function ArrowRightIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-5-5 5 5-5 5" />
     </svg>
   );
 }

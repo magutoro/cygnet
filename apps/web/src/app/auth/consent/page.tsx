@@ -22,7 +22,7 @@ const COPY = {
       "Use Google to sign in to Cygnet. Calendar and Gmail sync are optional and can be managed later.",
     cardTitle: "What Cygnet stores",
     bullets: [
-      "Dashboard profile, resumes, and applications can sync through Cygnet's secured backend.",
+      "Profile, resumes, and applications can sync through Cygnet's secured backend.",
       "Saved login passwords stay local-only in the extension and are not uploaded to Cygnet.",
       "Human access is limited to support you request, security review, abuse investigation, or legal compliance.",
     ],
@@ -52,7 +52,7 @@ const COPY = {
       "Google で Cygnet にログインします。Calendar / Gmail 同期は任意で、あとから管理できます。",
     cardTitle: "Cygnet が保存するもの",
     bullets: [
-      "プロフィール・履歴書・応募履歴は Cygnet の保護されたバックエンドで同期できます。",
+      "プロフィール・履歴書・応募情報は Cygnet の保護されたバックエンドで同期できます。",
       "保存済みログインパスワードは拡張機能内のローカル保存のみで、Cygnet へアップロードされません。",
       "人による閲覧は、サポート依頼、セキュリティ確認、不正利用調査、法令対応が必要な場合に限られます。",
     ],
@@ -60,7 +60,7 @@ const COPY = {
     permissionsIntro:
       "通常ログインには不要です。Google 機能を連携したい場合だけオンにしてください。",
     calendarTitle: "Google Calendar と同期",
-    calendarBody: "応募履歴から面接・次回対応の予定を追加、更新できます。",
+    calendarBody: "応募情報から面接・次回対応の予定を追加、更新できます。",
     gmailTitle: "Gmail と同期",
     gmailBody:
       "最近の採用関連メールを検索し、確認用の日程候補を検出します。",

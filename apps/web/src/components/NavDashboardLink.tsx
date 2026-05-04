@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useLanguage } from "@/components/LanguageProvider";
 
 const COPY = {
-  en: "Dashboard",
-  ja: "ダッシュボード",
+  en: "Profile",
+  ja: "プロフィール",
 } as const;
 
 export default function NavDashboardLink() {

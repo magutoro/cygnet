@@ -22,14 +22,14 @@ const COPY = {
     lastSynced: "Last synced",
     neverSynced: "Not synced yet",
     manageHint:
-      "If access is missing or revoked, reconnect from Applications when you need Calendar or Gmail again.",
+      "If access is missing or revoked, reconnect from Calendar when you need Calendar or Gmail again.",
     disconnect: "Disconnect Google access",
     disconnecting: "Disconnecting...",
     disconnected: "Google access was disconnected.",
     disconnectError: "Could not disconnect Google access.",
     dangerTitle: "Delete account",
     dangerDesc:
-      "This permanently deletes your Cygnet account, dashboard profile, resumes, applications, and Google integration data. This cannot be undone.",
+      "This permanently deletes your Cygnet account, profile, resumes, applications, and Google integration data. This cannot be undone.",
     confirmLabel: "Type your email to confirm",
     deleteAccount: "Delete account",
     deleting: "Deleting...",
@@ -52,14 +52,14 @@ const COPY = {
     lastSynced: "最終同期",
     neverSynced: "まだ同期されていません",
     manageHint:
-      "権限が不足している場合や解除後に再度使いたい場合は、応募履歴ページから再連携できます。",
+      "権限が不足している場合や解除後に再度使いたい場合は、カレンダーページから再連携できます。",
     disconnect: "Google 連携を解除",
     disconnecting: "解除中...",
     disconnected: "Google 連携を解除しました。",
     disconnectError: "Google 連携を解除できませんでした。",
     dangerTitle: "アカウント削除",
     dangerDesc:
-      "Cygnet アカウント、プロフィール、履歴書、応募履歴、Google 連携データを完全に削除します。この操作は取り消せません。",
+      "Cygnet アカウント、プロフィール、履歴書、応募情報、Google 連携データを完全に削除します。この操作は取り消せません。",
     confirmLabel: "確認のためメールアドレスを入力",
     deleteAccount: "アカウントを削除",
     deleting: "削除中...",

@@ -9,7 +9,7 @@ export const SITE_COPY = {
       heroSubtitle:
         "Save your profile once. Cygnet fills name, furigana, address, school, and career fields when you apply.",
       addToChrome: "Add to Chrome",
-      howItWorksCta: "See visual guide",
+      howItWorksCta: "How it works",
       howItWorksTag: "How it works",
       howItWorksTitle: "Save once. Autofill when you apply.",
       heroDemoLabels: ["Saved profile", "Detected form", "Autofilled fields"],
@@ -70,7 +70,7 @@ export const SITE_COPY = {
       ],
       trustTitle: "Security and control by default",
       trustDesc:
-        "Saved login passwords stay encrypted locally in the extension. If you sign in, your profile and resumes can sync through Cygnet's secured backend so they appear in the dashboard across devices.",
+        "Saved login passwords stay encrypted locally in the extension. If you sign in, your profile and resumes can sync through Cygnet's secured backend so they appear in your profile across devices.",
       trustPoint1: "Saved passwords remain local-only",
       trustPoint2: "Profile and resume sync is optional",
       trustPoint3: "Choose automatic filling or manual-only filling",
@@ -91,7 +91,7 @@ export const SITE_COPY = {
         {
           question: "What stays local and what can sync?",
           answer:
-            "Saved login passwords stay local-only in the extension. If you choose to sign in, your profile and resumes can sync to Cygnet so they appear in the web dashboard across devices.",
+            "Saved login passwords stay local-only in the extension. If you choose to sign in, your profile and resumes can sync to Cygnet so they appear in your web profile across devices.",
         },
         {
           question: "Where do I go if I need help?",
@@ -110,7 +110,7 @@ export const SITE_COPY = {
       howItWorksFooter: "How it works",
       rightsReserved: "All rights reserved.",
       trustBadge: "Privacy & control",
-      fullDemoCta: "View visual guide",
+      fullDemoCta: "How it works",
     },
     demo: {
       badge: "Guided demo",
@@ -122,7 +122,7 @@ export const SITE_COPY = {
           eyebrow: "Step 1",
           title: "Save your profile once",
           description:
-            "Set up the fields you reuse most often — name, address, education, career, links, and notes — inside the dashboard.",
+            "Set up the fields you reuse most often — name, address, education, career, links, and notes — inside your profile.",
         },
         {
           eyebrow: "Step 2",
@@ -143,16 +143,16 @@ export const SITE_COPY = {
             "Cygnet speeds up the repetitive typing, but you stay in control of the final review before anything gets sent.",
         },
       ],
-      dashboardCta: "Open dashboard",
+      dashboardCta: "Open profile",
       installCta: "Add to Chrome",
       helpCta: "Need troubleshooting instead?",
     },
     howItWorks: {
-      badge: "Visual guide",
+      badge: "How it works",
       title: "Understand Cygnet in seconds",
-      subtitle: "A quick look at the full workflow: profile, autofill, tracking, Gmail, and Calendar.",
+      subtitle: "A quick look at the full workflow: profile, autofill, applications, Gmail, and Calendar.",
       primaryCta: "Add to Chrome",
-      secondaryCta: "Open dashboard",
+      secondaryCta: "Open profile",
       steps: [
         {
           eyebrow: "01",
@@ -206,7 +206,7 @@ export const SITE_COPY = {
         },
         {
           title: "3. Review your saved profile",
-          body: "Check your dashboard data for missing or outdated values, especially kana, address formatting, university details, and graduation dates.",
+          body: "Check your profile data for missing or outdated values, especially kana, address formatting, university details, and graduation dates.",
         },
         {
           title: "4. Report the page if it still fails",
@@ -225,7 +225,7 @@ export const SITE_COPY = {
         },
         {
           question: "What if I use multiple browsers or devices?",
-          answer: "If you sign in, your profile and resumes can sync through the Cygnet dashboard across supported devices.",
+          answer: "If you sign in, your profile and resumes can sync through your Cygnet profile across supported devices.",
         },
         {
           question: "How do I ask for support on a new site?",
@@ -236,10 +236,10 @@ export const SITE_COPY = {
       demoCta: "View the walkthrough",
     },
     applications: {
-      pageTitle: "Applications",
-      pageSubtitle: "Track where you’ve applied and what comes next.",
+      pageTitle: "Calendar",
+      pageSubtitle: "Track interviews, deadlines, and follow-ups.",
       previewSubtitle: "Preview mode",
-      previewBody: "Sign in to save and manage your application history.",
+      previewBody: "Sign in to save and manage your calendar.",
       login: "Sign in with Google",
       scheduleTitle: "Schedule",
       scheduleSubtitle: "View upcoming interviews, deadlines, and follow-ups on a real calendar instead of a simple status summary.",
@@ -349,7 +349,7 @@ export const SITE_COPY = {
       heroSubtitle:
         "プロフィールを一度保存すれば、氏名・フリガナ・住所・学校・職歴を応募フォームへ入力できます。",
       addToChrome: "Chromeに追加",
-      howItWorksCta: "ビジュアルで見る",
+      howItWorksCta: "使い方を見る",
       howItWorksTag: "使い方",
       howItWorksTitle: "一度保存。応募時に自動入力。",
       heroDemoLabels: ["保存済みプロフィール", "フォーム検出", "自動入力済み"],
@@ -431,7 +431,7 @@ export const SITE_COPY = {
         {
           question: "何がローカル保存で、何が同期されますか？",
           answer:
-            "保存済みログインパスワードは拡張機能内だけに残ります。ログインして同期を使う場合のみ、プロフィールや履歴書がダッシュボードに同期されます。",
+            "保存済みログインパスワードは拡張機能内だけに残ります。ログインして同期を使う場合のみ、プロフィールや履歴書がプロフィール画面に同期されます。",
         },
         {
           question: "困ったときはどこを見ればいいですか？",
@@ -450,7 +450,7 @@ export const SITE_COPY = {
       howItWorksFooter: "使い方",
       rightsReserved: "All rights reserved.",
       trustBadge: "プライバシーとコントロール",
-      fullDemoCta: "ビジュアルガイドを見る",
+      fullDemoCta: "使い方を見る",
     },
     demo: {
       badge: "デモ",
@@ -462,7 +462,7 @@ export const SITE_COPY = {
           eyebrow: "ステップ 1",
           title: "プロフィールを一度だけ保存",
           description:
-            "名前、住所、学歴、職歴、リンクなど、応募でよく使う情報をダッシュボードに保存します。",
+            "名前、住所、学歴、職歴、リンクなど、応募でよく使う情報をプロフィールに保存します。",
         },
         {
           eyebrow: "ステップ 2",
@@ -483,16 +483,16 @@ export const SITE_COPY = {
             "繰り返し入力を減らしつつ、最終確認と送信は自分でコントロールできます。",
         },
       ],
-      dashboardCta: "ダッシュボードを開く",
+      dashboardCta: "プロフィールを開く",
       installCta: "Chromeに追加",
       helpCta: "うまくいかないときはこちら",
     },
     howItWorks: {
-      badge: "ビジュアルガイド",
+      badge: "使い方",
       title: "Cygnet の流れをすぐに理解",
-      subtitle: "プロフィール、自動入力、応募履歴、Gmail、Calendar までを短く確認できます。",
+      subtitle: "プロフィール、自動入力、応募管理、Gmail、Calendar までを短く確認できます。",
       primaryCta: "Chromeに追加",
-      secondaryCta: "ダッシュボードを開く",
+      secondaryCta: "プロフィールを開く",
       steps: [
         {
           eyebrow: "01",
@@ -546,7 +546,7 @@ export const SITE_COPY = {
         },
         {
           title: "3. 保存済みプロフィールを見直す",
-          body: "ふりがな、住所形式、大学情報、卒業年月などが最新かをダッシュボードで確認してください。",
+          body: "ふりがな、住所形式、大学情報、卒業年月などが最新かをプロフィールで確認してください。",
         },
         {
           title: "4. それでも難しければページを報告する",
@@ -565,7 +565,7 @@ export const SITE_COPY = {
         },
         {
           question: "複数端末でも使えますか？",
-          answer: "ログインして同期機能を使えば、プロフィールや履歴書をダッシュボード経由で共有できます。",
+          answer: "ログインして同期機能を使えば、プロフィールや履歴書をプロフィール画面で共有できます。",
         },
         {
           question: "新しいサイトの対応はお願いできますか？",
@@ -576,10 +576,10 @@ export const SITE_COPY = {
       demoCta: "デモを見る",
     },
     applications: {
-      pageTitle: "応募履歴",
-      pageSubtitle: "どこに応募したか、次に何をするかをまとめて管理します。",
+      pageTitle: "カレンダー",
+      pageSubtitle: "面接、締切、次回対応をまとめて管理します。",
       previewSubtitle: "プレビューモード",
-      previewBody: "応募履歴を保存・管理するにはログインしてください。",
+      previewBody: "カレンダーを保存・管理するにはログインしてください。",
       login: "Googleでログイン",
       scheduleTitle: "スケジュール",
       scheduleSubtitle: "パイプライン概要の代わりに、面接・締切・次回対応をカレンダーで確認できます。",
@@ -624,7 +624,7 @@ export const SITE_COPY = {
       gmailCandidateApprove: "承認",
       gmailCandidateDismiss: "削除",
       gmailCandidateWorking: "保存中...",
-      gmailCandidateApproved: "Gmail候補を応募履歴に追加しました。",
+      gmailCandidateApproved: "Gmail候補を応募情報に追加しました。",
       gmailCandidateApprovedWithCalendar: "Gmail候補を追加し、Calendarにも反映しました。",
       gmailCandidateDismissed: "Gmail候補を削除しました。",
       gmailCandidateApproveError: "Gmail候補を承認できませんでした",
@@ -632,7 +632,7 @@ export const SITE_COPY = {
       searchPlaceholder: "会社名、職種、メモ、応募元を検索",
       filterAll: "すべてのステータス",
       listTitle: "応募一覧",
-      emptyTitle: "応募履歴はまだありません",
+      emptyTitle: "応募情報はまだありません",
       emptyDesc: "最初の応募を追加して、進捗や次の予定を管理しましょう。",
       createTitle: "応募を追加",
       editTitle: "応募を編集",
@@ -642,11 +642,11 @@ export const SITE_COPY = {
       delete: "削除",
       deleting: "削除中...",
       reset: "リセット",
-      created: "応募履歴を保存しました",
-      updated: "応募履歴を更新しました",
-      deleted: "応募履歴を削除しました",
-      saveError: "応募履歴を保存できませんでした",
-      deleteError: "応募履歴を削除できませんでした",
+      created: "応募情報を保存しました",
+      updated: "応募情報を更新しました",
+      deleted: "応募情報を削除しました",
+      saveError: "応募情報を保存できませんでした",
+      deleteError: "応募情報を削除できませんでした",
       calendarActionsTitle: "カレンダー連携",
       addToGoogleCalendar: "Google Calendarに追加",
       updateGoogleCalendar: "Google Calendarを更新",

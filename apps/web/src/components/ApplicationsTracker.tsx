@@ -160,12 +160,6 @@ function shiftMonth(value: string, delta: number) {
   return monthKey(next);
 }
 
-function formatScheduleTime(item: Application, locale: string): string {
-  if (!item.nextStepStartTime) return "";
-  if (!item.nextStepEndTime) return item.nextStepStartTime;
-  return `${item.nextStepStartTime} – ${item.nextStepEndTime}`;
-}
-
 function updateApplicationInList(items: Application[], next: Application) {
   return sortApplications(items.map((item) => (item.id === next.id ? next : item)));
 }
@@ -287,21 +281,6 @@ export default function ApplicationsTracker({
     [scheduledMap, visibleMonth],
   );
 
-  const selectedDayApplications = useMemo(
-    () => scheduledMap.get(selectedDate) ?? [],
-    [scheduledMap, selectedDate],
-  );
-
-  const overdueApplications = useMemo(() => {
-    const today = todayString();
-    return scheduledApplications.filter((item) => item.nextStepAt < today).slice(0, 4);
-  }, [scheduledApplications]);
-
-  const upcomingApplications = useMemo(() => {
-    const today = todayString();
-    return scheduledApplications.filter((item) => item.nextStepAt >= today).slice(0, 4);
-  }, [scheduledApplications]);
-
   const selectedApplication =
     selectedId === "new"
       ? null
@@ -371,7 +350,7 @@ export default function ApplicationsTracker({
     if (!userId || selectedId === "new") return;
 
     const confirmed = window.confirm(
-      lang === "ja" ? "この応募履歴を削除しますか？" : "Delete this application entry?",
+      lang === "ja" ? "この応募情報を削除しますか？" : "Delete this application entry?",
     );
     if (!confirmed) return;
 
@@ -636,160 +615,100 @@ export default function ApplicationsTracker({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.72fr)]">
-        <div className="glass-panel rounded-[1.75rem] p-6 sm:p-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
-                {t.scheduleTitle}
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-brand-muted">
-                {t.scheduleSubtitle}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setVisibleMonth((current) => shiftMonth(current, -1))}
-                className="glass-button-secondary h-10 px-4 text-sm font-medium"
-              >
-                {t.prevMonth}
-              </button>
-              <div className="rounded-xl border border-white/70 bg-white/58 px-4 py-2 text-sm font-semibold text-brand-ink">
-                {formatMonthLabel(visibleMonth, locale)}
-              </div>
-              <button
-                type="button"
-                onClick={() => setVisibleMonth((current) => shiftMonth(current, 1))}
-                className="glass-button-secondary h-10 px-4 text-sm font-medium"
-              >
-                {t.nextMonth}
-              </button>
-            </div>
+      <div className="glass-panel rounded-[1.75rem] p-6 sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
+              {t.scheduleTitle}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-brand-muted">
+              {t.scheduleSubtitle}
+            </p>
           </div>
-
-          <div className="mt-6 grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">
-            {t.weekdays.map((weekday) => (
-              <div key={weekday}>{weekday}</div>
-            ))}
-          </div>
-
-          <div className="mt-3 grid grid-cols-7 gap-2">
-            {calendarDays.map((day) => {
-              const active = day.key === selectedDate;
-              return (
-                <button
-                  key={day.key}
-                  type="button"
-                  onClick={() => {
-                    setSelectedDate(day.key);
-                    setVisibleMonth(monthKey(parseLocalDate(day.key)));
-                  }}
-                  className={`min-h-[92px] rounded-2xl border p-3 text-left transition-all ${
-                    active
-                      ? "border-brand bg-white/88 shadow-[0_18px_38px_rgba(77,127,181,0.12)]"
-                      : day.inMonth
-                        ? "border-white/62 bg-white/50 hover:border-brand-line"
-                        : "border-white/40 bg-white/24 text-brand-muted/60"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`text-sm font-semibold ${
-                        day.isToday ? "text-brand" : "text-brand-ink"
-                      }`}
-                    >
-                      {day.dayNumber}
-                    </span>
-                    {day.items.length ? (
-                      <span className="rounded-full bg-brand/12 px-2 py-1 text-[11px] font-semibold text-brand">
-                        {day.items.length}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="mt-3 space-y-1">
-                    {day.items.slice(0, 2).map((item) => (
-                      <div
-                        key={item.id}
-                        className="truncate rounded-full bg-brand-strong/10 px-2 py-1 text-[11px] font-medium text-brand-ink"
-                      >
-                        {item.companyName || item.nextStepLabel || "—"}
-                      </div>
-                    ))}
-                    {day.items.length > 2 ? (
-                      <div className="text-[11px] font-medium text-brand-muted">
-                        +{day.items.length - 2}
-                      </div>
-                    ) : null}
-                  </div>
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setVisibleMonth((current) => shiftMonth(current, -1))}
+              className="glass-button-secondary h-10 px-4 text-sm font-medium"
+            >
+              {t.prevMonth}
+            </button>
+            <div className="rounded-xl border border-white/70 bg-white/58 px-4 py-2 text-sm font-semibold text-brand-ink">
+              {formatMonthLabel(visibleMonth, locale)}
+            </div>
+            <button
+              type="button"
+              onClick={() => setVisibleMonth((current) => shiftMonth(current, 1))}
+              className="glass-button-secondary h-10 px-4 text-sm font-medium"
+            >
+              {t.nextMonth}
+            </button>
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="glass-panel rounded-[1.75rem] p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
-              {t.agendaTitle}
-            </p>
-            <div className="mt-4">
-              <div className="text-lg font-semibold text-brand-ink">
-                {new Intl.DateTimeFormat(locale, {
-                  month: "short",
-                  day: "numeric",
-                  weekday: "short",
-                }).format(parseLocalDate(selectedDate))}
-              </div>
-              <div className="mt-4 space-y-3">
-                {selectedDayApplications.length === 0 ? (
-                  <p className="text-sm text-brand-muted">{t.noAgenda}</p>
-                ) : (
-                  selectedDayApplications.map((item) => (
+        <div className="mt-6 grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">
+          {t.weekdays.map((weekday) => (
+            <div key={weekday}>{weekday}</div>
+          ))}
+        </div>
+
+        <div className="mt-3 grid grid-cols-7 gap-2">
+          {calendarDays.map((day) => {
+            const active = day.key === selectedDate;
+            return (
+              <button
+                key={day.key}
+                type="button"
+                onClick={() => {
+                  setSelectedDate(day.key);
+                  setVisibleMonth(monthKey(parseLocalDate(day.key)));
+                }}
+                className={`min-h-[108px] rounded-2xl border p-3 text-left transition-all ${
+                  active
+                    ? "border-brand bg-white/88 shadow-[0_18px_38px_rgba(77,127,181,0.12)]"
+                    : day.inMonth
+                      ? "border-white/62 bg-white/50 hover:border-brand-line"
+                      : "border-white/40 bg-white/24 text-brand-muted/60"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className={`text-sm font-semibold ${
+                      day.isToday ? "text-brand" : "text-brand-ink"
+                    }`}
+                  >
+                    {day.dayNumber}
+                  </span>
+                  {day.items.length ? (
+                    <span className="rounded-full bg-brand/12 px-2 py-1 text-[11px] font-semibold text-brand">
+                      {day.items.length}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-3 space-y-1">
+                  {day.items.slice(0, 3).map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-2xl border border-white/60 bg-white/52 p-4"
+                      className="truncate rounded-full bg-brand-strong/10 px-2 py-1 text-[11px] font-medium text-brand-ink"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="text-sm font-semibold text-brand-ink">
-                            {item.companyName || "—"}
-                          </div>
-                          <div className="mt-1 text-xs text-brand-muted">
-                            {item.nextStepLabel || item.roleTitle || "—"}
-                          </div>
-                        </div>
-                        {formatScheduleTime(item, locale) ? (
-                          <span className="rounded-full bg-brand/10 px-2 py-1 text-[11px] font-semibold text-brand">
-                            {formatScheduleTime(item, locale)}
-                          </span>
-                        ) : null}
-                      </div>
+                      {item.companyName || item.nextStepLabel || "—"}
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
+                  ))}
+                  {day.items.length > 3 ? (
+                    <div className="text-[11px] font-medium text-brand-muted">
+                      +{day.items.length - 3}
+                    </div>
+                  ) : null}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-          <div className="glass-panel rounded-[1.75rem] p-6">
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-1">
-              <StatusSection
-                title={t.upcomingTitle}
-                emptyLabel={t.noUpcoming}
-                items={upcomingApplications}
-                locale={locale}
-              />
-              <StatusSection
-                title={t.overdueTitle}
-                emptyLabel={t.noOverdue}
-                items={overdueApplications}
-                locale={locale}
-              />
-            </div>
-          </div>
-
-          <div className="glass-panel rounded-[1.75rem] p-6">
+      <div className="glass-panel rounded-[1.75rem] p-6">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]">
+          <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
               {t.googleTitle}
             </p>
@@ -803,7 +722,9 @@ export default function ApplicationsTracker({
             <div className="mt-4 rounded-2xl border border-white/65 bg-[rgba(255,255,255,0.46)] px-4 py-3 text-xs leading-relaxed text-brand-muted">
               {t.googleFounderNote}
             </div>
+          </div>
 
+          <div>
             <div className="mt-4 rounded-2xl border border-white/65 bg-white/52 p-4">
               <div className="text-sm font-semibold text-brand-ink">
                 {integration.connected ? integration.googleEmail || t.googleConnected : t.googleNotConnected}
@@ -1239,47 +1160,6 @@ export default function ApplicationsTracker({
             ) : null}
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function StatusSection({
-  title,
-  emptyLabel,
-  items,
-  locale,
-}: {
-  title: string;
-  emptyLabel: string;
-  items: Application[];
-  locale: string;
-}) {
-  return (
-    <div>
-      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">{title}</div>
-      <div className="mt-3 space-y-2">
-        {items.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-brand-line bg-white/32 px-4 py-5 text-sm text-brand-muted">
-            {emptyLabel}
-          </div>
-        ) : (
-          items.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-white/65 bg-white/52 p-4">
-              <div className="text-sm font-semibold text-brand-ink">{item.companyName || "—"}</div>
-              <div className="mt-1 text-xs text-brand-muted">
-                {item.nextStepLabel || item.roleTitle || "—"}
-              </div>
-              <div className="mt-2 text-xs font-medium text-brand">
-                {new Intl.DateTimeFormat(locale, {
-                  month: "short",
-                  day: "numeric",
-                }).format(parseLocalDate(item.nextStepAt))}
-                {item.nextStepStartTime ? ` • ${formatScheduleTime(item, locale)}` : ""}
-              </div>
-            </div>
-          ))
-        )}
       </div>
     </div>
   );

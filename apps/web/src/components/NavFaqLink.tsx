@@ -4,16 +4,16 @@ import Link from "next/link";
 import { useLanguage } from "@/components/LanguageProvider";
 
 const COPY = {
-  en: "Calendar",
-  ja: "カレンダー",
+  en: "FAQ",
+  ja: "FAQ",
 } as const;
 
-export default function NavApplicationsLink() {
+export default function NavFaqLink() {
   const { lang } = useLanguage();
 
   return (
     <Link
-      href="/applications"
+      href="/#faq"
       className={`glass-nav-link inline-flex h-9 items-center whitespace-nowrap font-medium leading-none tracking-[-0.01em] ${
         lang === "ja" ? "text-[14px] lg:text-[15px]" : "text-[15px] lg:text-base"
       }`}

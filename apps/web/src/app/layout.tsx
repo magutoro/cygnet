@@ -4,11 +4,12 @@ import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import AuthButton from "@/components/AuthButton";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import NavPrivacyLink from "@/components/NavPrivacyLink";
-import NavTermsLink from "@/components/NavTermsLink";
 import NavContactLink from "@/components/NavContactLink";
 import NavDashboardLink from "@/components/NavDashboardLink";
 import NavApplicationsLink from "@/components/NavApplicationsLink";
+import NavChromeLink from "@/components/NavChromeLink";
+import NavFaqLink from "@/components/NavFaqLink";
+import NavHowItWorksLink from "@/components/NavHowItWorksLink";
 import {
   LANGUAGE_COOKIE_KEY,
   detectLanguageFromAcceptLanguage,
@@ -89,12 +90,13 @@ export default async function RootLayout({
                 <div className="flex h-10 items-center gap-5 lg:gap-7">
                   <NavDashboardLink />
                   <NavApplicationsLink />
-                  <NavPrivacyLink />
-                  <NavTermsLink />
+                  <NavHowItWorksLink />
+                  <NavFaqLink />
                   <NavContactLink />
                 </div>
               </div>
               <div className="flex h-10 items-center gap-3">
+                <NavChromeLink />
                 <LanguageSwitcher />
                 <AuthButton />
               </div>

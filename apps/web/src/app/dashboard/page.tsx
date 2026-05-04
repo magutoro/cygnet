@@ -9,18 +9,18 @@ import {
   normalizeLanguage,
 } from "@/lib/language";
 
-export const metadata = { title: "Dashboard – Cygnet" };
+export const metadata = { title: "Profile – Cygnet" };
 
 const COPY = {
   en: {
-    dashboard: "Dashboard",
+    dashboard: "Profile",
     preview: "Preview mode",
     manage: "Manage your profile and resumes",
     login: "Log in",
     loginWithGoogle: "Sign in with Google",
   },
   ja: {
-    dashboard: "ダッシュボード",
+    dashboard: "プロフィール",
     preview: "プレビューモード",
     manage: "プロフィールと履歴書を管理",
     login: "ログイン",
