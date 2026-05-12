@@ -44,6 +44,8 @@ export default function HomePage() {
   const isJapanese = lang === "ja";
   const [bootState, setBootState] = useState<BootState>("bootPending");
   const [demoReady, setDemoReady] = useState(false);
+  const [showFloatingInstall, setShowFloatingInstall] = useState(false);
+  const heroCtaRef = useRef<HTMLAnchorElement | null>(null);
   const scrollRestorationRef = useRef<History["scrollRestoration"] | null>(null);
   const forcePreloaderRef = useRef(false);
   const homeReady = bootState === "ready";
@@ -110,6 +112,7 @@ export default function HomePage() {
   useEffect(() => {
     if (!homeReady) {
       setDemoReady(false);
+      setShowFloatingInstall(false);
       return;
     }
 
@@ -124,6 +127,23 @@ export default function HomePage() {
       window.clearTimeout(scrollTimer);
     };
   }, [homeReady, restoreScrollRestoration, scrollToHashTarget]);
+
+  useEffect(() => {
+    if (!homeReady || !heroCtaRef.current) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowFloatingInstall(!entry.isIntersecting);
+      },
+      { threshold: 0.18 },
+    );
+
+    observer.observe(heroCtaRef.current);
+
+    return () => observer.disconnect();
+  }, [homeReady]);
 
   const finishPreloader = () => {
     window.sessionStorage.setItem(PRELOADER_KEY, "1");
@@ -178,6 +198,7 @@ export default function HomePage() {
 
                 <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                   <a
+                    ref={heroCtaRef}
                     href={CHROME_WEB_STORE_URL}
                     target="_blank"
                     rel="noreferrer"
@@ -202,6 +223,21 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        <a
+          href={CHROME_WEB_STORE_URL}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={t.ctaButton}
+          className={`primary-cta-button fixed bottom-6 left-1/2 z-40 min-w-[15.5rem] -translate-x-1/2 px-7 text-sm shadow-[0_20px_52px_rgba(63,127,198,0.24)] transition-all duration-300 sm:left-8 sm:translate-x-0 ${
+            showFloatingInstall
+              ? "pointer-events-auto translate-y-0 opacity-100"
+              : "pointer-events-none translate-y-4 opacity-0"
+          }`}
+        >
+          <ChromeMarkIcon className="h-[1.125rem] w-[1.125rem] shrink-0 text-white" />
+          {t.ctaButton}
+        </a>
 
         <section id="how-it-works" className="py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-6">

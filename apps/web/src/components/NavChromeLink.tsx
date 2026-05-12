@@ -10,7 +10,11 @@ const COPY = {
   ja: "Chromeに追加",
 } as const;
 
-export default function NavChromeLink() {
+type NavChromeLinkProps = {
+  compact?: boolean;
+};
+
+export default function NavChromeLink({ compact = false }: NavChromeLinkProps) {
   const { lang } = useLanguage();
 
   return (
@@ -18,8 +22,8 @@ export default function NavChromeLink() {
       href={CHROME_WEB_STORE_URL}
       target="_blank"
       rel="noreferrer"
-      className={`hidden h-10 items-center whitespace-nowrap rounded-lg bg-brand-strong font-medium leading-none text-white transition-colors hover:bg-brand-ink sm:inline-flex ${
-        lang === "ja" ? "px-3.5 text-[13px]" : "px-4 text-sm"
+      className={`hidden items-center whitespace-nowrap rounded-lg bg-brand-strong font-medium leading-none text-white transition-all duration-500 hover:bg-brand-ink sm:inline-flex ${
+        compact ? "h-8 px-3 text-xs" : lang === "ja" ? "h-10 px-3.5 text-[13px]" : "h-10 px-4 text-sm"
       }`}
     >
       {COPY[lang]}

@@ -1,15 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_JP, Playfair_Display } from "next/font/google";
-import Link from "next/link";
 import { cookies, headers } from "next/headers";
-import AuthButton from "@/components/AuthButton";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
-import NavContactLink from "@/components/NavContactLink";
-import NavDashboardLink from "@/components/NavDashboardLink";
-import NavApplicationsLink from "@/components/NavApplicationsLink";
-import NavChromeLink from "@/components/NavChromeLink";
-import NavFaqLink from "@/components/NavFaqLink";
-import NavHowItWorksLink from "@/components/NavHowItWorksLink";
+import SiteHeader from "@/components/SiteHeader";
 import {
   LANGUAGE_COOKIE_KEY,
   detectLanguageFromAcceptLanguage,
@@ -78,30 +70,7 @@ export default async function RootLayout({
     >
       <body className="font-sans antialiased text-brand-ink">
         <LanguageProvider initialLang={initialLang}>
-          <nav className="glass-nav sticky top-0 z-50">
-            <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-              <div className="flex min-w-0 items-center gap-7 lg:gap-10">
-                <Link
-                  href="/"
-                  className="inline-flex h-10 items-center text-[1.85rem] font-semibold leading-none tracking-[-0.045em] text-brand-ink"
-                >
-                  Cygnet
-                </Link>
-                <div className="flex h-10 items-center gap-5 lg:gap-7">
-                  <NavDashboardLink />
-                  <NavApplicationsLink />
-                  <NavHowItWorksLink />
-                  <NavFaqLink />
-                  <NavContactLink />
-                </div>
-              </div>
-              <div className="flex h-10 items-center gap-3">
-                <NavChromeLink />
-                <LanguageSwitcher />
-                <AuthButton />
-              </div>
-            </div>
-          </nav>
+          <SiteHeader />
           {children}
         </LanguageProvider>
       </body>

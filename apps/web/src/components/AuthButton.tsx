@@ -18,7 +18,11 @@ const COPY = {
   },
 } as const;
 
-export default function AuthButton() {
+type AuthButtonProps = {
+  compact?: boolean;
+};
+
+export default function AuthButton({ compact = false }: AuthButtonProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { lang } = useLanguage();
@@ -42,7 +46,11 @@ export default function AuthButton() {
 
   if (loading) {
     return (
-      <div className="h-10 w-40 animate-pulse rounded-lg bg-brand-line/50" />
+      <div
+        className={`animate-pulse rounded-lg bg-brand-line/50 transition-all duration-500 ${
+          compact ? "h-8 w-28" : "h-10 w-40"
+        }`}
+      />
     );
   }
 
@@ -50,11 +58,19 @@ export default function AuthButton() {
     return (
       <a
         href="/auth/consent?next=/dashboard"
-        className={`inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-lg bg-brand-strong font-medium leading-none text-white transition-colors hover:bg-brand-ink ${
-          lang === "ja" ? "px-3.5 text-[13px]" : "px-4 text-sm"
+        className={`inline-flex items-center whitespace-nowrap rounded-lg bg-brand-strong font-medium leading-none text-white transition-all duration-500 hover:bg-brand-ink ${
+          compact
+            ? "h-8 gap-1.5 px-3 text-xs"
+            : lang === "ja"
+              ? "h-10 gap-2 px-3.5 text-[13px]"
+              : "h-10 gap-2 px-4 text-sm"
         }`}
       >
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+        <svg
+          className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"}`}
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
           <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
           <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
@@ -66,33 +82,51 @@ export default function AuthButton() {
   }
 
   return (
-    <div className="glass-panel-soft flex h-10 items-center gap-3 rounded-full px-3">
+    <div
+      className={`glass-panel-soft flex items-center rounded-full transition-all duration-500 ${
+        compact ? "h-8 gap-2 px-2" : "h-10 gap-3 px-3"
+      }`}
+    >
       <div className="flex items-center gap-2">
         {user.user_metadata?.avatar_url ? (
           <img
             src={user.user_metadata.avatar_url}
             alt=""
-            className="h-8 w-8 rounded-full ring-1 ring-white/70"
+            className={`rounded-full ring-1 ring-white/70 transition-all duration-500 ${
+              compact ? "h-7 w-7" : "h-8 w-8"
+            }`}
             referrerPolicy="no-referrer"
           />
         ) : (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-xs font-bold text-white shadow-[0_8px_18px_rgba(15,124,171,0.24)]">
+          <div
+            className={`flex items-center justify-center rounded-full bg-brand font-bold text-white shadow-[0_8px_18px_rgba(15,124,171,0.24)] transition-all duration-500 ${
+              compact ? "h-7 w-7 text-[11px]" : "h-8 w-8 text-xs"
+            }`}
+          >
             {(user.email?.[0] ?? "?").toUpperCase()}
           </div>
         )}
-        <span className="hidden text-sm text-brand-muted sm:inline">
+        <span
+          className={`hidden text-brand-muted transition-all duration-500 sm:inline ${
+            compact ? "max-w-[10rem] truncate text-xs" : "text-sm"
+          }`}
+        >
           {user.email}
         </span>
       </div>
       <a
         href="/settings"
-        className="glass-button-secondary h-8 px-3 text-xs font-medium leading-none"
+        className={`glass-button-secondary font-medium leading-none transition-all duration-500 ${
+          compact ? "h-7 px-2.5 text-[11px]" : "h-8 px-3 text-xs"
+        }`}
       >
         {t.settings}
       </a>
       <a
         href="/auth/logout"
-        className="glass-button-secondary h-8 px-3 text-xs font-medium leading-none"
+        className={`glass-button-secondary font-medium leading-none transition-all duration-500 ${
+          compact ? "h-7 px-2.5 text-[11px]" : "h-8 px-3 text-xs"
+        }`}
       >
         {t.signOut}
       </a>

@@ -9,7 +9,11 @@ const LABELS: Record<SiteLanguage, string> = {
   ja: "JP",
 };
 
-export default function LanguageSwitcher() {
+type LanguageSwitcherProps = {
+  compact?: boolean;
+};
+
+export default function LanguageSwitcher({ compact = false }: LanguageSwitcherProps) {
   const { lang, setLang } = useLanguage();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -36,12 +40,14 @@ export default function LanguageSwitcher() {
         onClick={() => setOpen((prev) => !prev)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="glass-button-secondary inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-[15px] font-medium leading-none"
+        className={`glass-button-secondary inline-flex items-center rounded-full font-medium leading-none transition-all duration-500 ${
+          compact ? "h-8 gap-1.5 px-3 text-sm" : "h-10 gap-2 px-3.5 text-[15px]"
+        }`}
       >
         <svg
           viewBox="0 0 24 24"
           fill="none"
-          className="h-4 w-4 shrink-0"
+          className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} shrink-0`}
           stroke="currentColor"
           strokeWidth={2}
         >
@@ -55,7 +61,7 @@ export default function LanguageSwitcher() {
         <svg
           viewBox="0 0 24 24"
           fill="none"
-          className="h-3.5 w-3.5 shrink-0"
+          className={`${compact ? "h-3 w-3" : "h-3.5 w-3.5"} shrink-0`}
           stroke="currentColor"
           strokeWidth={2}
         >
